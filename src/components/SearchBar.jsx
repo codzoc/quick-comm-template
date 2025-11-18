@@ -51,7 +51,12 @@ function SearchBar({ onSearch, placeholder = 'Search products...', debounceMs = 
         onChange={(e) => setSearchQuery(e.target.value)}
       />
       {searchQuery && (
-        <button className="search-clear" onClick={handleClear} aria-label="Clear search">
+        <button
+          type="button"
+          className="search-clear"
+          onClick={handleClear}
+          aria-label="Clear search"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"

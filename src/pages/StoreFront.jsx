@@ -47,6 +47,7 @@ function StoreFront() {
   const [showCheckout, setShowCheckout] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [orderId, setOrderId] = useState('');
+  const [orderItems, setOrderItems] = useState([]);
   const [submitting, setSubmitting] = useState(false);
 
   // Customer Form State
@@ -165,6 +166,11 @@ function StoreFront() {
 
       const order = await createOrder(orderData);
       setOrderId(order.orderId);
+      setOrderItems(cartItems.map(item => ({
+        title: item.product.title,
+        quantity: item.quantity,
+        price: item.product.discountedPrice || item.product.price
+      })));
       setOrderSuccess(true);
       clearCart();
       setCustomerInfo({ name: '', phone: '', address: '', pin: '' });
@@ -177,7 +183,13 @@ function StoreFront() {
   const handleWhatsApp = () => {
     if (!storeInfo?.whatsapp) return;
     const phone = storeInfo.whatsapp.replace(/[^0-9]/g, '');
-    const message = `Hi, my order ID is ${orderId}`;
+
+    // Build items list
+    const itemsList = orderItems.map(item =>
+      `${item.quantity}x ${item.title} - ₹${item.price * item.quantity}`
+    ).join('\n');
+
+    const message = `Hi, my order ID is *${orderId}*\n\n*Order Items:*\n${itemsList}\n\nThank you!`;
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
   };

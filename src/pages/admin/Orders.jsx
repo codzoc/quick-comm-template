@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { signOut, onAuthChange } from '../../services/auth';
 import { getAllOrders, updateOrderStatus } from '../../services/orders';
+import { getStoreInfo } from '../../services/storeInfo';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ErrorMessage from '../../components/ErrorMessage';
 import './AdminStyles.css';
@@ -12,6 +13,8 @@ function AdminOrders() {
   const [error, setError] = useState('');
   const [filter, setFilter] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [statusChangeModal, setStatusChangeModal] = useState(null);
+  const [storeInfo, setStoreInfo] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,8 +27,12 @@ function AdminOrders() {
 
   const loadOrders = async () => {
     try {
-      const data = await getAllOrders(filter);
-      setOrders(data);
+      const [ordersData, storeData] = await Promise.all([
+        getAllOrders(filter),
+        getStoreInfo()
+      ]);
+      setOrders(ordersData);
+      setStoreInfo(storeData);
       setError('');
     } catch (err) {
       setError(err.message);
@@ -34,13 +41,46 @@ function AdminOrders() {
     }
   };
 
-  const handleStatusChange = async (orderId, newStatus) => {
+  const handleStatusChangeRequest = (order, newStatus) => {
+    setStatusChangeModal({ order, newStatus });
+  };
+
+  const confirmStatusChange = async () => {
+    if (!statusChangeModal) return;
+
     try {
-      await updateOrderStatus(orderId, newStatus);
+      await updateOrderStatus(statusChangeModal.order.id, statusChangeModal.newStatus);
       loadOrders();
+      // Keep modal open to show WhatsApp option
     } catch (err) {
       alert(err.message);
+      setStatusChangeModal(null);
     }
+  };
+
+  const sendWhatsAppNotification = () => {
+    if (!statusChangeModal || !storeInfo?.whatsapp) return;
+
+    const { order, newStatus } = statusChangeModal;
+    const phone = order.customer.phone.replace(/[^0-9]/g, '');
+
+    // Build items list
+    const itemsList = order.items.map(item =>
+      `${item.quantity}x ${item.title} - ₹${item.subtotal}`
+    ).join('\n');
+
+    const statusMessages = {
+      pending: 'Your order is pending confirmation',
+      processing: 'Your order is being processed',
+      completed: 'Your order has been completed and delivered',
+      cancelled: 'Your order has been cancelled'
+    };
+
+    const message = `Hello ${order.customer.name},\n\nYour order status has been updated!\n\n*Order ID:* ${order.orderId}\n*Status:* ${statusMessages[newStatus]}\n\n*Order Items:*\n${itemsList}\n\n*Total:* ₹${order.total}\n\nThank you for shopping with us!`;
+
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
+    setStatusChangeModal(null);
   };
 
   if (loading) return <div className="admin-layout"><LoadingSpinner size="large" /></div>;
@@ -104,11 +144,25 @@ function AdminOrders() {
                       <button
                         onClick={() => setSelectedOrder(order)}
                         className="btn-secondary"
-                        style={{ padding: 'var(--spacing-xs) var(--spacing-sm)', fontSize: 'var(--font-size-xs)' }}
+                        style={{
+                          padding: 'var(--spacing-xs)',
+                          fontSize: 'var(--font-size-xs)',
+                          minWidth: 'auto',
+                          height: 'auto'
+                        }}
                       >
                         View
                       </button>
-                      <select value={order.status} onChange={(e) => handleStatusChange(order.id, e.target.value)} style={{ padding: 'var(--spacing-xs)', fontSize: 'var(--font-size-xs)' }}>
+                      <select
+                        value={order.status}
+                        onChange={(e) => {
+                          if (e.target.value !== order.status) {
+                            handleStatusChangeRequest(order, e.target.value);
+                            e.target.value = order.status; // Reset dropdown
+                          }
+                        }}
+                        style={{ padding: 'var(--spacing-xs)', fontSize: 'var(--font-size-xs)' }}
+                      >
                         <option value="pending">Pending</option>
                         <option value="processing">Processing</option>
                         <option value="completed">Completed</option>
@@ -122,10 +176,60 @@ function AdminOrders() {
           </table>
         </div>
 
+        {/* Status Change Confirmation Modal */}
+        {statusChangeModal && (
+          <div className="modal-overlay" onClick={() => setStatusChangeModal(null)}>
+            <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+              <div className="modal-header">
+                <h3>Update Order Status</h3>
+                <button className="modal-close" onClick={() => setStatusChangeModal(null)}>&times;</button>
+              </div>
+
+              <div className="modal-body">
+                <p style={{ marginBottom: 'var(--spacing-md)' }}>
+                  Change order <strong>{statusChangeModal.order.orderId}</strong> status to{' '}
+                  <span className={`status-badge status-${statusChangeModal.newStatus}`}>
+                    {statusChangeModal.newStatus}
+                  </span>?
+                </p>
+
+                <div style={{ display: 'flex', gap: 'var(--spacing-sm)', flexDirection: 'column' }}>
+                  <button
+                    className="btn-primary"
+                    onClick={confirmStatusChange}
+                    style={{ width: '100%' }}
+                  >
+                    Confirm Status Change
+                  </button>
+
+                  {storeInfo?.whatsapp && (
+                    <button
+                      className="btn-secondary"
+                      onClick={sendWhatsAppNotification}
+                      style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--spacing-xs)' }}
+                    >
+                      <span>📱</span>
+                      <span>Send WhatsApp Notification to Customer</span>
+                    </button>
+                  )}
+
+                  <button
+                    className="btn-secondary"
+                    onClick={() => setStatusChangeModal(null)}
+                    style={{ width: '100%' }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Order Details Modal */}
         {selectedOrder && (
           <div className="modal-overlay" onClick={() => setSelectedOrder(null)}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+            <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '700px' }}>
               <div className="modal-header">
                 <h3>Order Details</h3>
                 <button className="modal-close" onClick={() => setSelectedOrder(null)}>&times;</button>

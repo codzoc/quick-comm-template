@@ -31,11 +31,15 @@ function Header({ cartItemCount = 0, onSearch, showSearch = true }) {
         )}
 
         {/* Cart Icon */}
-        <button className="header-cart-btn" onClick={() => {
-          // Trigger cart modal opening (handled by parent component)
-          const event = new CustomEvent('openCart');
-          window.dispatchEvent(event);
-        }}>
+        <button
+          type="button"
+          className="header-cart-btn"
+          onClick={() => {
+            // Trigger cart modal opening (handled by parent component)
+            const event = new CustomEvent('openCart');
+            window.dispatchEvent(event);
+          }}
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"

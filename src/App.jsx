@@ -6,6 +6,7 @@ import AdminDashboard from './pages/admin/Dashboard';
 import AdminProducts from './pages/admin/Products';
 import AdminOrders from './pages/admin/Orders';
 import AdminStoreSettings from './pages/admin/StoreSettings';
+import StaticPage from './pages/StaticPage';
 
 /**
  * Main App Component
@@ -25,10 +26,10 @@ function App() {
         <Route path="/admin/orders" element={<AdminOrders />} />
         <Route path="/admin/settings" element={<AdminStoreSettings />} />
 
-        {/* Static Pages - Can be added later */}
-        {/* <Route path="/about" element={<AboutPage />} />
-        <Route path="/terms" element={<TermsPage />} />
-        <Route path="/privacy" element={<PrivacyPage />} /> */}
+        {/* Static Pages */}
+        <Route path="/about" element={<StaticPage pageType="about" />} />
+        <Route path="/terms" element={<StaticPage pageType="terms" />} />
+        <Route path="/privacy" element={<StaticPage pageType="privacy" />} />
 
         {/* 404 - Redirect to home */}
         <Route path="*" element={<StoreFront />} />
