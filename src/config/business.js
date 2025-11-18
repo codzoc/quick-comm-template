@@ -12,7 +12,7 @@
 
 export const business = {
   // Your store name
-  storeName: 'Quick Commerce',
+  storeName: 'Quick Commerce Demo',
 
   // Logo path (relative to /public folder)
   // Upload your logo to /public/images/logo.png
