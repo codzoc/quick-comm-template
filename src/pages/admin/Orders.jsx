@@ -11,6 +11,7 @@ function AdminOrders() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState(null);
+  const [selectedOrder, setSelectedOrder] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -99,18 +100,90 @@ function AdminOrders() {
                   </td>
                   <td>{order.createdAt?.toLocaleDateString()}</td>
                   <td>
-                    <select value={order.status} onChange={(e) => handleStatusChange(order.id, e.target.value)} style={{ padding: 'var(--spacing-xs)', fontSize: 'var(--font-size-xs)' }}>
-                      <option value="pending">Pending</option>
-                      <option value="processing">Processing</option>
-                      <option value="completed">Completed</option>
-                      <option value="cancelled">Cancelled</option>
-                    </select>
+                    <div style={{ display: 'flex', gap: 'var(--spacing-xs)', alignItems: 'center' }}>
+                      <button
+                        onClick={() => setSelectedOrder(order)}
+                        className="btn-secondary"
+                        style={{ padding: 'var(--spacing-xs) var(--spacing-sm)', fontSize: 'var(--font-size-xs)' }}
+                      >
+                        View
+                      </button>
+                      <select value={order.status} onChange={(e) => handleStatusChange(order.id, e.target.value)} style={{ padding: 'var(--spacing-xs)', fontSize: 'var(--font-size-xs)' }}>
+                        <option value="pending">Pending</option>
+                        <option value="processing">Processing</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+
+        {/* Order Details Modal */}
+        {selectedOrder && (
+          <div className="modal-overlay" onClick={() => setSelectedOrder(null)}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+              <div className="modal-header">
+                <h3>Order Details</h3>
+                <button className="modal-close" onClick={() => setSelectedOrder(null)}>&times;</button>
+              </div>
+
+              <div className="modal-body">
+                <div style={{ marginBottom: 'var(--spacing-lg)' }}>
+                  <h4 style={{ marginBottom: 'var(--spacing-sm)', color: 'var(--color-text-light)' }}>Order Information</h4>
+                  <div style={{ display: 'grid', gap: 'var(--spacing-xs)' }}>
+                    <p><strong>Order ID:</strong> <span style={{ fontFamily: 'monospace' }}>{selectedOrder.orderId}</span></p>
+                    <p><strong>Date:</strong> {selectedOrder.createdAt?.toLocaleString()}</p>
+                    <p><strong>Status:</strong> <span className={`status-badge status-${selectedOrder.status}`}>{selectedOrder.status}</span></p>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: 'var(--spacing-lg)' }}>
+                  <h4 style={{ marginBottom: 'var(--spacing-sm)', color: 'var(--color-text-light)' }}>Customer Details</h4>
+                  <div style={{ display: 'grid', gap: 'var(--spacing-xs)' }}>
+                    <p><strong>Name:</strong> {selectedOrder.customer.name}</p>
+                    <p><strong>Phone:</strong> {selectedOrder.customer.phone}</p>
+                    <p><strong>Address:</strong> {selectedOrder.customer.address}</p>
+                    <p><strong>PIN:</strong> {selectedOrder.customer.pin}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 style={{ marginBottom: 'var(--spacing-sm)', color: 'var(--color-text-light)' }}>Order Items</h4>
+                  <table className="admin-table" style={{ fontSize: 'var(--font-size-sm)' }}>
+                    <thead>
+                      <tr>
+                        <th>Product</th>
+                        <th>Price</th>
+                        <th>Qty</th>
+                        <th>Subtotal</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedOrder.items.map((item, index) => (
+                        <tr key={index}>
+                          <td>{item.title}</td>
+                          <td>₹{item.price}</td>
+                          <td>{item.quantity}</td>
+                          <td>₹{item.subtotal}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <td colSpan="3" style={{ textAlign: 'right', fontWeight: 'bold' }}>Total:</td>
+                        <td style={{ fontWeight: 'bold' }}>₹{selectedOrder.total}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

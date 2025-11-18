@@ -295,12 +295,21 @@ function StoreFront() {
                               ₹{getCartTotal()}
                             </span>
                           </div>
-                          <button
-                            className="btn-primary btn-checkout"
-                            onClick={handleCheckout}
-                          >
-                            Proceed to Checkout
-                          </button>
+                          <div style={{ display: 'flex', gap: 'var(--spacing-sm)', flexDirection: 'column' }}>
+                            <button
+                              className="btn-primary btn-checkout"
+                              onClick={handleCheckout}
+                            >
+                              Proceed to Checkout
+                            </button>
+                            <button
+                              className="btn-secondary"
+                              onClick={closeCart}
+                              style={{ width: '100%' }}
+                            >
+                              Continue Shopping
+                            </button>
+                          </div>
                         </div>
                       </>
                     )}
