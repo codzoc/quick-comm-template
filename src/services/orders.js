@@ -31,7 +31,9 @@ export async function createOrder(orderData) {
   try {
     // Run as transaction to ensure stock is updated atomically
     const orderId = await runTransaction(db, async (transaction) => {
-      // Validate stock availability for all items
+      // Read all product data first and validate stock availability
+      const productData = new Map();
+
       for (const item of orderData.items) {
         const productRef = doc(db, 'products', item.product.id);
         const productSnap = await transaction.get(productRef);
@@ -46,7 +48,15 @@ export async function createOrder(orderData) {
             `Insufficient stock for ${item.product.title}. Only ${currentStock} available.`
           );
         }
+
+        // Store product data for later use
+        productData.set(item.product.id, {
+          ref: productRef,
+          currentStock: currentStock
+        });
       }
+
+      // All reads complete - now we can do writes
 
       // Create order
       const ordersRef = collection(db, COLLECTION_NAME);
@@ -68,11 +78,9 @@ export async function createOrder(orderData) {
 
       const docRef = await addDoc(ordersRef, newOrder);
 
-      // Decrease stock for each product
+      // Decrease stock for each product using previously read data
       for (const item of orderData.items) {
-        const productRef = doc(db, 'products', item.product.id);
-        const productSnap = await transaction.get(productRef);
-        const currentStock = productSnap.data().stock || 0;
+        const { ref: productRef, currentStock } = productData.get(item.product.id);
         const newStock = Math.max(0, currentStock - item.quantity);
 
         transaction.update(productRef, {
