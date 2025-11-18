@@ -301,16 +301,18 @@ This step enables the Firestore API automatically and is required before deployi
 If you already created the Firestore database and still see this error, your service account needs additional permissions. Fix it by:
 
 1. Go to [Google Cloud Console IAM](https://console.cloud.google.com/iam-admin/iam)
-2. Select your Firebase project
+2. Select your Firebase project from the dropdown at the top
 3. Find the service account (looks like `firebase-adminsdk-xxxxx@your-project.iam.gserviceaccount.com`)
 4. Click the pencil icon to edit
-5. Add these roles:
-   - **Firebase Rules Admin** (for deploying rules)
-   - **Cloud Datastore Index Admin** (for deploying indexes)
+5. Click "ADD ANOTHER ROLE" and add each of these roles:
+   - **Editor** (gives broad access - easiest option)
+   - **Firebase Rules Admin** (required for deploying Firestore rules)
+   - **Cloud Datastore Index Admin** (required for deploying indexes)
    - **Service Usage Consumer** (for API checks)
-   - **Editor** (recommended for full deployment access)
 6. Click "Save"
 7. Re-run the GitHub Actions workflow
+
+**Note**: If you only have "Editor" role and still see permission errors, you may need to explicitly add "Firebase Rules Admin" as well.
 
 **Alternative: Generate a new service account with proper permissions**
 1. Go to Firebase Console > Project Settings > Service Accounts
@@ -319,6 +321,18 @@ If you already created the Firestore database and still see this error, your ser
 4. Assign the "Editor" role (or the specific roles listed above)
 5. Generate a new private key
 6. Update the `FIREBASE_SERVICE_ACCOUNT` secret in GitHub with the new JSON
+
+**Error: "The caller does not have permission" (firebaserules.googleapis.com)**
+
+This means you need to add the "Firebase Rules Admin" role specifically:
+
+1. Go to [Google Cloud Console IAM](https://console.cloud.google.com/iam-admin/iam)
+2. Find your service account
+3. Click the pencil icon to edit
+4. Click "ADD ANOTHER ROLE"
+5. Search for and select **"Firebase Rules Admin"**
+6. Click "Save"
+7. Re-run the workflow
 
 **Other common issues:**
 - Ensure `FIREBASE_SERVICE_ACCOUNT` secret contains the complete JSON file
