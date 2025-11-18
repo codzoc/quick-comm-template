@@ -55,12 +55,15 @@ A simple, browser-only React + Firebase e-commerce template designed for non-cod
 
 ### Enable Firebase Services
 
-#### A. Enable Firestore Database
+#### A. Enable Firestore Database ⚠️ **REQUIRED**
 1. In Firebase Console, go to "Build" > "Firestore Database"
 2. Click "Create database"
-3. Select "Start in production mode"
+3. Select "Start in production mode" (don't worry, we'll deploy custom rules via GitHub Actions)
 4. Choose a location closest to your customers
 5. Click "Enable"
+6. Wait for the database to be created (this takes 1-2 minutes)
+
+**Important**: This step enables the Firestore API and creates the database. Without this, the GitHub Actions deployment will fail with permission errors. The security rules you see in the console will be automatically replaced when you deploy via GitHub Actions.
 
 #### B. Enable Authentication
 1. Go to "Build" > "Authentication"
@@ -283,7 +286,19 @@ The main customer-facing page is in `src/pages/StoreFront.jsx`. This file is des
 
 **Error: "Permission denied to get service [firestore.googleapis.com]"**
 
-This means your service account needs additional permissions. Fix it by:
+This usually means one of two things:
+
+**Solution 1: Create Firestore Database First (Most Common)**
+1. Go to Firebase Console > "Build" > "Firestore Database"
+2. If you see "Create database", click it and follow the setup
+3. Wait for the database to be created
+4. Re-run the GitHub Actions workflow
+
+This step enables the Firestore API automatically and is required before deploying rules.
+
+**Solution 2: Add Service Account Permissions**
+
+If you already created the Firestore database and still see this error, your service account needs additional permissions. Fix it by:
 
 1. Go to [Google Cloud Console IAM](https://console.cloud.google.com/iam-admin/iam)
 2. Select your Firebase project
