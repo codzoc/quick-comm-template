@@ -51,7 +51,8 @@ function AdminOrders() {
     try {
       await updateOrderStatus(statusChangeModal.order.id, statusChangeModal.newStatus);
       loadOrders();
-      // Keep modal open to show WhatsApp option
+      // Mark as confirmed to show WhatsApp option
+      setStatusChangeModal({ ...statusChangeModal, confirmed: true });
     } catch (err) {
       alert(err.message);
       setStatusChangeModal(null);
@@ -186,41 +187,75 @@ function AdminOrders() {
               </div>
 
               <div className="modal-body">
-                <p style={{ marginBottom: 'var(--spacing-md)' }}>
-                  Change order <strong>{statusChangeModal.order.orderId}</strong> status to{' '}
-                  <span className={`status-badge status-${statusChangeModal.newStatus}`}>
-                    {statusChangeModal.newStatus}
-                  </span>?
-                </p>
+                {!statusChangeModal.confirmed ? (
+                  <>
+                    <p style={{ marginBottom: 'var(--spacing-md)' }}>
+                      Change order <strong>{statusChangeModal.order.orderId}</strong> status to{' '}
+                      <span className={`status-badge status-${statusChangeModal.newStatus}`}>
+                        {statusChangeModal.newStatus}
+                      </span>?
+                    </p>
 
-                <div style={{ display: 'flex', gap: 'var(--spacing-sm)', flexDirection: 'column' }}>
-                  <button
-                    className="btn-primary"
-                    onClick={confirmStatusChange}
-                    style={{ width: '100%' }}
-                  >
-                    Confirm Status Change
-                  </button>
+                    <div style={{ display: 'flex', gap: 'var(--spacing-sm)', flexDirection: 'column' }}>
+                      <button
+                        className="btn-primary"
+                        onClick={confirmStatusChange}
+                        style={{ width: '100%' }}
+                      >
+                        Confirm Status Change
+                      </button>
 
-                  {storeInfo?.whatsapp && (
-                    <button
-                      className="btn-secondary"
-                      onClick={sendWhatsAppNotification}
-                      style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--spacing-xs)' }}
-                    >
-                      <span>📱</span>
-                      <span>Send WhatsApp Notification to Customer</span>
-                    </button>
-                  )}
+                      <button
+                        className="btn-secondary"
+                        onClick={() => setStatusChangeModal(null)}
+                        style={{ width: '100%' }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p style={{ marginBottom: 'var(--spacing-md)', color: 'var(--color-success)' }}>
+                      ✓ Order status updated successfully!
+                    </p>
 
-                  <button
-                    className="btn-secondary"
-                    onClick={() => setStatusChangeModal(null)}
-                    style={{ width: '100%' }}
-                  >
-                    Cancel
-                  </button>
-                </div>
+                    {storeInfo?.whatsapp ? (
+                      <>
+                        <p style={{ marginBottom: 'var(--spacing-md)' }}>
+                          Would you like to notify the customer via WhatsApp?
+                        </p>
+
+                        <div style={{ display: 'flex', gap: 'var(--spacing-sm)', flexDirection: 'column' }}>
+                          <button
+                            className="btn-primary"
+                            onClick={sendWhatsAppNotification}
+                            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--spacing-xs)' }}
+                          >
+                            <span>📱</span>
+                            <span>Send WhatsApp Notification to Customer</span>
+                          </button>
+
+                          <button
+                            className="btn-secondary"
+                            onClick={() => setStatusChangeModal(null)}
+                            style={{ width: '100%' }}
+                          >
+                            Skip
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <button
+                        className="btn-primary"
+                        onClick={() => setStatusChangeModal(null)}
+                        style={{ width: '100%' }}
+                      >
+                        Done
+                      </button>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           </div>

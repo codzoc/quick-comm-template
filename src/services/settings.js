@@ -15,12 +15,12 @@ const COLLECTION_NAME = 'settings';
  */
 export async function getStaticPageContent(pageType) {
   try {
-    const docRef = doc(db, COLLECTION_NAME, 'staticPages');
+    const docRef = doc(db, COLLECTION_NAME, pageType);
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
       const data = docSnap.data();
-      return data[pageType] || null;
+      return data.content || null;
     }
 
     return null;
@@ -38,14 +38,11 @@ export async function getStaticPageContent(pageType) {
  */
 export async function updateStaticPageContent(pageType, content) {
   try {
-    const docRef = doc(db, COLLECTION_NAME, 'staticPages');
-    const docSnap = await getDoc(docRef);
-
-    const currentData = docSnap.exists() ? docSnap.data() : {};
+    const docRef = doc(db, COLLECTION_NAME, pageType);
 
     await setDoc(docRef, {
-      ...currentData,
-      [pageType]: content
+      content: content,
+      updatedAt: new Date()
     });
   } catch (error) {
     console.error('Error updating static page content:', error);

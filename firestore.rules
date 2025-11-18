@@ -60,8 +60,7 @@ service cloud.firestore {
       allow read: if true;
 
       allow write: if isAdmin()
-        && settingId in ['about', 'terms', 'privacy']
-        && request.resource.data.keys().hasAny(['content', 'imagePath', 'updatedAt']);
+        && settingId in ['about', 'terms', 'privacy'];
     }
 
     // Store info collection (contact details, social media)
