@@ -122,7 +122,7 @@ A simple, browser-only React + Firebase e-commerce template designed for non-cod
    - Click "Manage service account permissions"
    - Or go to [Google Cloud Console IAM](https://console.cloud.google.com/iam-admin/iam)
    - Find the service account (looks like `firebase-adminsdk-xxxxx@your-project.iam.gserviceaccount.com`)
-   - Ensure it has the **"Editor"** role (or at minimum: "Firebase Rules Admin", "Cloud Datastore Index Admin", "Service Usage Consumer")
+   - Ensure it has the **"Editor"** role and **"Firebase Rules Admin"** role
 5. Open the JSON file in a text editor
 6. Copy the **entire contents** of the file
 7. Create a secret named `FIREBASE_SERVICE_ACCOUNT` and paste the entire JSON
