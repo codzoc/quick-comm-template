@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useCart } from '../context/CartContext';
 import { getAllProducts } from '../services/products';
 import { createOrder } from '../services/orders';
@@ -107,9 +107,9 @@ function StoreFront() {
     openCart();
   };
 
-  const handleSearch = (query) => {
+  const handleSearch = useCallback((query) => {
     setSearchQuery(query);
-  };
+  }, []);
 
   const handleCheckout = () => {
     if (cartItems.length === 0) return;
