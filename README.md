@@ -115,9 +115,16 @@ A simple, browser-only React + Firebase e-commerce template designed for non-cod
 1. In Firebase Console, go to Project Settings > Service Accounts
 2. Click "Generate new private key"
 3. Download the JSON file
-4. Open the JSON file in a text editor
-5. Copy the **entire contents** of the file
-6. Create a secret named `FIREBASE_SERVICE_ACCOUNT` and paste the entire JSON
+4. **Important**: Grant proper permissions to the service account:
+   - Click "Manage service account permissions"
+   - Or go to [Google Cloud Console IAM](https://console.cloud.google.com/iam-admin/iam)
+   - Find the service account (looks like `firebase-adminsdk-xxxxx@your-project.iam.gserviceaccount.com`)
+   - Ensure it has the **"Editor"** role (or at minimum: "Firebase Rules Admin", "Cloud Datastore Index Admin", "Service Usage Consumer")
+5. Open the JSON file in a text editor
+6. Copy the **entire contents** of the file
+7. Create a secret named `FIREBASE_SERVICE_ACCOUNT` and paste the entire JSON
+
+**Note**: If you skip step 4, the deployment may fail with permission errors. You can always add permissions later if needed.
 
 ---
 
@@ -273,8 +280,33 @@ The main customer-facing page is in `src/pages/StoreFront.jsx`. This file is des
 - Check the error logs in Actions tab
 
 ### Firestore Rules Deployment Fails
+
+**Error: "Permission denied to get service [firestore.googleapis.com]"**
+
+This means your service account needs additional permissions. Fix it by:
+
+1. Go to [Google Cloud Console IAM](https://console.cloud.google.com/iam-admin/iam)
+2. Select your Firebase project
+3. Find the service account (looks like `firebase-adminsdk-xxxxx@your-project.iam.gserviceaccount.com`)
+4. Click the pencil icon to edit
+5. Add these roles:
+   - **Firebase Rules Admin** (for deploying rules)
+   - **Cloud Datastore Index Admin** (for deploying indexes)
+   - **Service Usage Consumer** (for API checks)
+   - **Editor** (recommended for full deployment access)
+6. Click "Save"
+7. Re-run the GitHub Actions workflow
+
+**Alternative: Generate a new service account with proper permissions**
+1. Go to Firebase Console > Project Settings > Service Accounts
+2. Click "Manage service account permissions"
+3. Create a new service account or select existing one
+4. Assign the "Editor" role (or the specific roles listed above)
+5. Generate a new private key
+6. Update the `FIREBASE_SERVICE_ACCOUNT` secret in GitHub with the new JSON
+
+**Other common issues:**
 - Ensure `FIREBASE_SERVICE_ACCOUNT` secret contains the complete JSON file
-- Verify the service account has "Firebase Rules Admin" permission
 - Check that `firestore.rules` and `firestore.indexes.json` files exist in the repository
 
 ### Admin Login Not Working
