@@ -1,10 +1,411 @@
-# quick-comm-template
+# Quick Commerce Template
 
+A simple, browser-only React + Firebase e-commerce template designed for non-coders. Set up your online store entirely through your browser - no terminal, no coding required!
+
+## Features
+
+### Customer-Facing
+- Product catalog with search functionality
+- Shopping cart (session-based, in-memory)
+- Mobile-responsive design
+- Order placement with customer info collection
+- WhatsApp integration for order tracking
+- Out-of-stock badges and inventory tracking
+- Discount pricing support
+
+### Admin Panel
+- Secure admin authentication
+- Product management (CRUD operations)
+- Order management with status tracking
+- Inventory management
+- Store settings (contact info, social media)
+- Dashboard with statistics and low stock alerts
+
+### Developer-Friendly
+- 100% browser-based setup
+- Google Fonts integration (just specify font name)
+- PR preview deployments for testing
+- Centralized theme configuration
+- Mobile-first, responsive design
+- Firebase hosting included
+
+## Browser-Only Setup Guide
+
+### Prerequisites
+- GitHub account (free)
+- Firebase account (free)
+- No local development environment needed!
+
+---
+
+## Step 1: Fork This Repository
+
+1. Click the "Fork" button at the top of this repository
+2. This creates your own copy of the template
+
+---
+
+## Step 2: Create Firebase Project
+
+1. Go to [Firebase Console](https://console.firebase.google.com/)
+2. Click "Add Project"
+3. Enter project name (e.g., `my-store`)
+4. Disable Google Analytics (optional)
+5. Click "Create Project"
+
+### Enable Firebase Services
+
+#### A. Enable Firestore Database
+1. In Firebase Console, go to "Build" > "Firestore Database"
+2. Click "Create database"
+3. Select "Start in production mode"
+4. Choose a location closest to your customers
+5. Click "Enable"
+
+#### B. Enable Authentication
+1. Go to "Build" > "Authentication"
+2. Click "Get Started"
+3. Go to "Sign-in method" tab
+4. Enable "Email/Password"
+5. Click "Save"
+
+#### C. Enable Hosting
+1. Go to "Build" > "Hosting"
+2. Click "Get Started"
+3. Follow the setup wizard (we'll deploy via GitHub Actions, so you can skip the CLI steps)
+
+### Get Firebase Configuration
+
+1. In Firebase Console, click the gear icon ⚙️ > "Project settings"
+2. Scroll down to "Your apps"
+3. Click the web icon `</>`
+4. Register your app with a nickname
+5. Copy the Firebase configuration object - you'll need these values:
+   - `apiKey`
+   - `authDomain`
+   - `projectId`
+   - `storageBucket`
+   - `messagingSenderId`
+   - `appId`
+
+---
+
+## Step 3: Configure GitHub Secrets
+
+1. Go to your forked repository on GitHub
+2. Click "Settings" tab
+3. Go to "Secrets and variables" > "Actions"
+4. Click "New repository secret" for each of the following:
+
+### Required Secrets
+
+| Secret Name | Value | Where to Find |
+|------------|-------|---------------|
+| `VITE_FIREBASE_API_KEY` | Your Firebase API Key | Firebase Config |
+| `VITE_FIREBASE_AUTH_DOMAIN` | Your auth domain | Firebase Config |
+| `VITE_FIREBASE_PROJECT_ID` | Your project ID | Firebase Config |
+| `VITE_FIREBASE_STORAGE_BUCKET` | Your storage bucket | Firebase Config |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Your sender ID | Firebase Config |
+| `VITE_FIREBASE_APP_ID` | Your app ID | Firebase Config |
+| `FIREBASE_PROJECT_ID` | Your project ID (same as above) | Firebase Config |
+| `FIREBASE_SERVICE_ACCOUNT` | Service account JSON | See below |
+
+### Get Firebase Service Account
+
+1. In Firebase Console, go to Project Settings > Service Accounts
+2. Click "Generate new private key"
+3. Download the JSON file
+4. Open the JSON file in a text editor
+5. Copy the **entire contents** of the file
+6. Create a secret named `FIREBASE_SERVICE_ACCOUNT` and paste the entire JSON
+
+---
+
+## Step 4: Update Firebase Project ID
+
+1. In your GitHub repository, click on `.firebaserc` file
+2. Click the pencil icon to edit
+3. Replace `your-project-id` with your actual Firebase project ID
+4. Commit changes
+
+---
+
+## Step 5: Deploy Firestore Rules and Indexes
+
+You need to deploy the security rules and indexes to Firebase:
+
+### Option A: Using GitHub Codespaces (Recommended for beginners)
+1. Click "Code" button > "Codespaces" > "Create codespace on main"
+2. Wait for the environment to load
+3. In the terminal, run:
+   ```bash
+   npm install -g firebase-tools
+   firebase login --no-localhost
+   firebase deploy --only firestore
+   ```
+
+### Option B: Using Local Terminal (if available)
+1. Install Firebase CLI: `npm install -g firebase-tools`
+2. Login: `firebase login`
+3. Deploy: `firebase deploy --only firestore`
+
+---
+
+## Step 6: Create First Admin User
+
+1. Go to Firebase Console > Authentication > Users
+2. Click "Add user"
+3. Enter email and password for your admin account
+4. Click "Add user"
+5. Save these credentials securely - you'll use them to login to `/admin`
+
+---
+
+## Step 7: Customize Your Store
+
+All customization can be done through GitHub's web interface:
+
+### A. Change Store Name and Logo
+
+1. Edit `src/config/business.js`:
+   ```javascript
+   storeName: 'Your Store Name',
+   logoPath: '/images/your-logo.png'
+   ```
+
+### B. Upload Your Logo
+
+1. Go to `public/images/` folder
+2. Click "Add file" > "Upload files"
+3. Upload your logo as `logo.png` (or update the path in business.js)
+4. Commit changes
+
+### C. Customize Theme (Colors & Font)
+
+1. Edit `src/config/theme.js`:
+   ```javascript
+   fontFamily: 'Roboto', // Try: Poppins, Inter, Montserrat, Lato
+   colors: {
+     primary: '#3B82F6',  // Your brand color
+     secondary: '#10B981',
+     // ... etc
+   }
+   ```
+2. The Google Font will load automatically!
+
+### D. Add Product Images
+
+1. Go to `public/images/`
+2. Upload your product images
+3. Use paths like `/images/product-1.jpg` when adding products in admin
+
+---
+
+## Step 8: Test with PR Preview
+
+1. Create a new branch in GitHub (click "main" dropdown > type new branch name)
+2. Make a small change (e.g., edit store name)
+3. Create a Pull Request to `main`
+4. GitHub Actions will automatically:
+   - Build your site
+   - Deploy to a preview URL
+   - Comment on the PR with the preview link
+5. Test your changes on the preview URL
+6. If everything looks good, merge the PR
+
+---
+
+## Step 9: Access Your Live Store
+
+After merging to `main`, GitHub Actions will deploy to production:
+
+- **Storefront**: `https://YOUR-PROJECT-ID.web.app`
+- **Admin Panel**: `https://YOUR-PROJECT-ID.web.app/admin`
+
+---
+
+## Managing Your Store
+
+### Adding Products
+
+1. Go to `https://YOUR-PROJECT-ID.web.app/admin`
+2. Login with your admin credentials
+3. Go to "Products" tab
+4. Click "Add Product"
+5. Fill in details:
+   - Title
+   - Description
+   - Price
+   - Discounted Price (optional)
+   - Image Path (e.g., `/images/product-1.jpg`)
+   - Stock quantity
+6. Click "Save"
+
+### Managing Orders
+
+1. Go to admin panel > "Orders"
+2. View all orders with customer details
+3. Update order status:
+   - Pending
+   - Processing
+   - Completed
+   - Cancelled
+4. Customers will see their order ID and can WhatsApp you
+
+### Store Settings
+
+1. Go to admin panel > "Settings"
+2. Update:
+   - Store name
+   - Phone number
+   - WhatsApp number (for customer support)
+   - Social media links
+   - About Us, Terms, Privacy pages
+
+---
+
+## Customizing the Storefront
+
+The main customer-facing page is in `src/pages/StoreFront.jsx`. This file is designed to be easily edited:
+
+1. Find the file in GitHub
+2. Click the pencil icon to edit
+3. Modify text, layout, or functionality
+4. Commit changes
+5. Create a PR to test changes
+
+---
+
+## Troubleshooting
+
+### Build Fails in GitHub Actions
+- Check that all secrets are set correctly
+- Ensure `.firebaserc` has correct project ID
+- Check the error logs in Actions tab
+
+### Admin Login Not Working
+- Verify you created an admin user in Firebase Console
+- Check that Authentication is enabled in Firebase
+- Clear browser cache and try again
+
+### Products Not Showing
+- Check Firestore rules are deployed
+- Verify products are added in admin panel
+- Check browser console for errors
+
+### Images Not Loading
+- Ensure images are uploaded to `public/images/`
+- Check image paths start with `/images/`
+- Verify image files are properly named
+
+---
+
+## Editing Without AI
+
+This template is designed for non-coders, but some common edits:
+
+### Change Header Text
+File: `src/components/Header.jsx`
+
+### Change Footer Links
+File: `src/components/Footer.jsx`
+
+### Modify Product Card Layout
+File: `src/components/ProductCard.jsx`
+
+### Update Checkout Form Fields
+File: `src/pages/StoreFront.jsx` (search for "customerInfo")
+
+---
+
+## Advanced Customization
+
+### Add More Payment Methods
+Currently supports cash on delivery. To add payment gateways:
+1. Integrate Razorpay/Stripe in `src/pages/StoreFront.jsx`
+2. Add payment gateway credentials to secrets
+3. Update order creation logic
+
+### Add Email Notifications
+1. Use a service like EmailJS or SendGrid
+2. Add email sending in order creation function
+3. Configure email templates
+
+### Enable Local Storage for Cart
+Currently, cart is in-memory only. To persist:
+1. Modify `src/context/CartContext.jsx`
+2. Add localStorage save/load logic
+
+---
+
+## Project Structure
+
+```
+quick-comm-template/
+├── public/
+│   └── images/              # Store all images here
+├── src/
+│   ├── components/          # Reusable UI components
+│   ├── config/             # Configuration files
+│   │   ├── business.js     # Store name, logo
+│   │   ├── firebase.js     # Firebase setup
+│   │   └── theme.js        # Colors, fonts, spacing
+│   ├── context/            # React context (cart state)
+│   ├── pages/
+│   │   ├── StoreFront.jsx  # Main customer page ⭐
+│   │   └── admin/          # Admin panel pages
+│   ├── services/           # Firebase operations
+│   └── utils/              # Helper functions
+├── .github/workflows/      # CI/CD automation
+└── firestore.rules         # Database security
+```
+
+---
+
+## Support
+
+### Video Tutorials
+- [Initial Setup](https://youtube.com/@build.with.justin)
+- [Adding Products](https://youtube.com/@build.with.justin)
+- [Managing Orders](https://youtube.com/@build.with.justin)
+
+### Common Questions
+- **Q: Can I use my own domain?**
+  A: Yes! Configure in Firebase Hosting settings
+
+- **Q: How much does it cost?**
+  A: Free for small stores (Firebase free tier)
+
+- **Q: Can I add more features?**
+  A: Yes! Edit the code or ask AI to help
+
+- **Q: How do I backup my data?**
+  A: Export Firestore data from Firebase Console
+
+---
 
 ## Attribution
 
-This template was created by **[build.with.justin Youtube Channel(Codzoc Technolabs)](https://www.youtube.com/@build.with.justin
-)**.  
-If you use this project or any part of it, please include a small link such as:
+This template was created by **[@build.with.justin](https://youtube.com/@build.with.justin)** (Codzoc Technolabs).
 
-**"@build.with.justin"**
+**Required Attribution**: If you use this project, please include a link to @build.with.justin:
+- Instagram: [build.with.justin](https://instagram.com/build.with.justin)
+- YouTube: [@build.with.justin](https://youtube.com/@build.with.justin)
+
+---
+
+## License
+
+MIT License - Free to use for personal and commercial projects with attribution.
+
+---
+
+## Need Help?
+
+- 📺 Watch setup videos: [YouTube Channel](https://youtube.com/@build.with.justin)
+- 📸 Follow on Instagram: [@build.with.justin](https://instagram.com/build.with.justin)
+- 💬 Ask questions in the video comments
+
+---
+
+**Happy Selling! 🛍️**

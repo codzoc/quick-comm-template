@@ -1,0 +1,30 @@
+{
+  "name": "quick-comm-template",
+  "version": "1.0.0",
+  "description": "A simple React + Firebase e-commerce template for quick deployment - no coding required",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "react",
+    "firebase",
+    "ecommerce",
+    "template",
+    "no-code"
+  ],
+  "author": "@build.with.justin",
+  "license": "MIT",
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.0",
+    "firebase": "^10.13.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "vite": "^5.4.2"
+  }
+}
