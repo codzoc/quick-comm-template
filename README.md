@@ -121,34 +121,32 @@ A simple, browser-only React + Firebase e-commerce template designed for non-cod
 
 ---
 
-## Step 4: Deploy Firestore Rules and Indexes
-
-You need to deploy the security rules and indexes to Firebase:
-
-### Option A: Using GitHub Codespaces (Recommended for beginners)
-1. Click "Code" button > "Codespaces" > "Create codespace on main"
-2. Wait for the environment to load
-3. In the terminal, run:
-   ```bash
-   npm install -g firebase-tools
-   firebase login --no-localhost
-   firebase deploy --only firestore
-   ```
-
-### Option B: Using Local Terminal (if available)
-1. Install Firebase CLI: `npm install -g firebase-tools`
-2. Login: `firebase login`
-3. Deploy: `firebase deploy --only firestore`
-
----
-
-## Step 5: Create First Admin User
+## Step 4: Create First Admin User
 
 1. Go to Firebase Console > Authentication > Users
 2. Click "Add user"
 3. Enter email and password for your admin account
 4. Click "Add user"
 5. Save these credentials securely - you'll use them to login to `/admin`
+
+---
+
+## Step 5: Initial Deployment (Triggers Automatic Setup)
+
+The first deployment will automatically set up Firestore rules and indexes:
+
+1. In your forked repository, go to the "Actions" tab
+2. Click "Enable GitHub Actions" if prompted
+3. Click on "Firebase Deploy" workflow
+4. Click "Run workflow" > "Run workflow" on the main branch
+5. Wait for the deployment to complete (2-3 minutes)
+6. This will automatically:
+   - Build your site
+   - Deploy Firestore security rules
+   - Deploy Firestore indexes
+   - Deploy to Firebase Hosting
+
+**Note**: Firestore rules and indexes are now automatically deployed on every push to main and in PR previews. No manual setup required!
 
 ---
 
@@ -270,17 +268,23 @@ The main customer-facing page is in `src/pages/StoreFront.jsx`. This file is des
 ## Troubleshooting
 
 ### Build Fails in GitHub Actions
-- Check that all secrets are set correctly
-- Ensure `.firebaserc` has correct project ID
+- Check that all secrets are set correctly (especially `FIREBASE_SERVICE_ACCOUNT`)
+- Verify the service account has proper permissions in Firebase Console
 - Check the error logs in Actions tab
+
+### Firestore Rules Deployment Fails
+- Ensure `FIREBASE_SERVICE_ACCOUNT` secret contains the complete JSON file
+- Verify the service account has "Firebase Rules Admin" permission
+- Check that `firestore.rules` and `firestore.indexes.json` files exist in the repository
 
 ### Admin Login Not Working
 - Verify you created an admin user in Firebase Console
 - Check that Authentication is enabled in Firebase
+- Make sure the initial deployment completed successfully
 - Clear browser cache and try again
 
 ### Products Not Showing
-- Check Firestore rules are deployed
+- Verify Firestore rules were deployed (check GitHub Actions logs)
 - Verify products are added in admin panel
 - Check browser console for errors
 
@@ -306,6 +310,38 @@ File: `src/components/ProductCard.jsx`
 
 ### Update Checkout Form Fields
 File: `src/pages/StoreFront.jsx` (search for "customerInfo")
+
+---
+
+## How Automatic Deployment Works
+
+The GitHub Actions workflow automatically handles all Firebase deployments:
+
+### On Every Push to Main
+1. Builds your React app with all configuration
+2. Deploys Firestore security rules from [firestore.rules](firestore.rules)
+3. Deploys Firestore indexes from [firestore.indexes.json](firestore.indexes.json)
+4. Deploys the built site to Firebase Hosting (production)
+
+### On Every Pull Request
+1. Builds your React app
+2. Deploys Firestore rules and indexes to your project
+3. Creates a preview deployment URL
+4. Comments the preview URL on the PR
+
+**Benefits**:
+- No local setup or CLI tools required
+- Firestore rules stay in sync with your code
+- Test everything (including database rules) in PR previews
+- Automatic rollback by reverting commits
+
+### Modifying Firestore Rules
+
+If you need to change database security rules:
+1. Edit [firestore.rules](firestore.rules) in GitHub's web interface
+2. Commit to a new branch and create a PR
+3. Test with the preview deployment
+4. Merge to automatically deploy to production
 
 ---
 

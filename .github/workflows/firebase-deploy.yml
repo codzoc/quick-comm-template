@@ -58,6 +58,21 @@ jobs:
           name: dist
           path: dist/
 
+      - name: Generate .firebaserc from secrets
+        run: |
+          echo '{
+            "projects": {
+              "default": "${{ secrets.FIREBASE_PROJECT_ID }}"
+            }
+          }' > .firebaserc
+
+      - name: Deploy Firestore Rules and Indexes (Preview)
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only firestore
+        env:
+          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
       - name: Deploy to Firebase Preview Channel
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
