@@ -121,16 +121,7 @@ A simple, browser-only React + Firebase e-commerce template designed for non-cod
 
 ---
 
-## Step 4: Update Firebase Project ID
-
-1. In your GitHub repository, click on `.firebaserc` file
-2. Click the pencil icon to edit
-3. Replace `your-project-id` with your actual Firebase project ID
-4. Commit changes
-
----
-
-## Step 5: Deploy Firestore Rules and Indexes
+## Step 4: Deploy Firestore Rules and Indexes
 
 You need to deploy the security rules and indexes to Firebase:
 
@@ -151,7 +142,7 @@ You need to deploy the security rules and indexes to Firebase:
 
 ---
 
-## Step 6: Create First Admin User
+## Step 5: Create First Admin User
 
 1. Go to Firebase Console > Authentication > Users
 2. Click "Add user"
@@ -161,7 +152,7 @@ You need to deploy the security rules and indexes to Firebase:
 
 ---
 
-## Step 7: Customize Your Store
+## Step 6: Customize Your Store
 
 All customization can be done through GitHub's web interface:
 
@@ -201,7 +192,7 @@ All customization can be done through GitHub's web interface:
 
 ---
 
-## Step 8: Test with PR Preview
+## Step 7: Test with PR Preview
 
 1. Create a new branch in GitHub (click "main" dropdown > type new branch name)
 2. Make a small change (e.g., edit store name)
@@ -215,7 +206,7 @@ All customization can be done through GitHub's web interface:
 
 ---
 
-## Step 9: Access Your Live Store
+## Step 8: Access Your Live Store
 
 After merging to `main`, GitHub Actions will deploy to production:
 
