@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { signOut, onAuthChange } from '../../services/auth';
 import { getStoreInfo, updateStoreInfo, getAllStaticPages, updateStaticPage } from '../../services/storeInfo';
+import { getTheme, updateTheme } from '../../services/theme';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ErrorMessage from '../../components/ErrorMessage';
 import './AdminStyles.css';
@@ -16,13 +17,17 @@ function AdminStoreSettings() {
     whatsapp: '',
     facebook: '',
     instagram: '',
-    youtube: ''
+    youtube: '',
+    seoTitle: '',
+    seoDescription: '',
+    seoKeywords: ''
   });
   const [staticPages, setStaticPages] = useState({
     about: { content: '', imagePath: '' },
     terms: { content: '', imagePath: '' },
     privacy: { content: '', imagePath: '' }
   });
+  const [theme, setTheme] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -35,9 +40,14 @@ function AdminStoreSettings() {
 
   const loadSettings = async () => {
     try {
-      const [info, pages] = await Promise.all([getStoreInfo(), getAllStaticPages()]);
+      const [info, pages, themeData] = await Promise.all([
+        getStoreInfo(),
+        getAllStaticPages(),
+        getTheme()
+      ]);
       setStoreInfo(info);
       setStaticPages(pages);
+      setTheme(themeData);
       setError('');
     } catch (err) {
       setError(err.message);
@@ -67,12 +77,33 @@ function AdminStoreSettings() {
     }
   };
 
+  const handleSaveTheme = async (e) => {
+    e.preventDefault();
+    try {
+      await updateTheme(theme);
+      setSuccess('Theme saved successfully! Refresh the page to see changes.');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleColorChange = (key, value) => {
+    setTheme({
+      ...theme,
+      colors: {
+        ...theme.colors,
+        [key]: value
+      }
+    });
+  };
+
   if (loading) return <div className="admin-layout"><LoadingSpinner size="large" /></div>;
 
   return (
     <div className="admin-layout">
       <header className="admin-header">
-        <h1>Store Settings</h1>
+        <h1>{storeInfo?.storeName || 'Quick Commerce'} - Settings</h1>
         <nav className="admin-nav">
           <Link to="/admin/dashboard">Dashboard</Link>
           <Link to="/admin/products">Products</Link>
@@ -116,9 +147,185 @@ function AdminStoreSettings() {
               <label>YouTube URL</label>
               <input type="url" value={storeInfo.youtube} onChange={(e) => setStoreInfo({ ...storeInfo, youtube: e.target.value })} placeholder="https://youtube.com/@yourchannel" />
             </div>
+
+            <h4 style={{ marginTop: 'var(--spacing-xl)', marginBottom: 'var(--spacing-md)' }}>SEO Settings</h4>
+            <div className="form-group">
+              <label>SEO Title</label>
+              <input
+                type="text"
+                value={storeInfo.seoTitle || ''}
+                onChange={(e) => setStoreInfo({ ...storeInfo, seoTitle: e.target.value })}
+                placeholder="Best Online Store - Your Store Name"
+                maxLength="60"
+              />
+              <small style={{ color: 'var(--color-text-light)', marginTop: '4px', display: 'block' }}>
+                Recommended: 50-60 characters. This appears in search engine results.
+              </small>
+            </div>
+            <div className="form-group">
+              <label>SEO Description</label>
+              <textarea
+                rows="3"
+                value={storeInfo.seoDescription || ''}
+                onChange={(e) => setStoreInfo({ ...storeInfo, seoDescription: e.target.value })}
+                placeholder="Shop the best products at affordable prices. Fast delivery across India."
+                maxLength="160"
+              />
+              <small style={{ color: 'var(--color-text-light)', marginTop: '4px', display: 'block' }}>
+                Recommended: 150-160 characters. This appears as the description in search results.
+              </small>
+            </div>
+            <div className="form-group">
+              <label>SEO Keywords</label>
+              <input
+                type="text"
+                value={storeInfo.seoKeywords || ''}
+                onChange={(e) => setStoreInfo({ ...storeInfo, seoKeywords: e.target.value })}
+                placeholder="online shopping, buy products, ecommerce, best deals"
+              />
+              <small style={{ color: 'var(--color-text-light)', marginTop: '4px', display: 'block' }}>
+                Comma-separated keywords relevant to your store (e.g., "online shopping, electronics, fast delivery")
+              </small>
+            </div>
+
             <button type="submit" className="btn-primary">Save Store Info</button>
           </form>
         </div>
+
+        {/* Theme Configuration */}
+        {theme && (
+          <div style={{ backgroundColor: 'white', padding: 'var(--spacing-xl)', borderRadius: 'var(--border-radius-lg)', marginBottom: 'var(--spacing-xl)' }}>
+            <h3 style={{ marginBottom: 'var(--spacing-lg)' }}>Theme Configuration</h3>
+            <form onSubmit={handleSaveTheme} className="admin-form">
+              <div className="form-group">
+                <label>Font Family</label>
+                <input
+                  type="text"
+                  value={theme.fontFamily || ''}
+                  onChange={(e) => setTheme({ ...theme, fontFamily: e.target.value })}
+                  placeholder="e.g., Poppins, Roboto, Inter"
+                />
+                <small style={{ color: 'var(--color-text-light)', marginTop: '4px', display: 'block' }}>
+                  Popular options: Poppins, Roboto, Inter, Montserrat, Open Sans, Lato
+                </small>
+              </div>
+
+              <h4 style={{ marginTop: 'var(--spacing-lg)', marginBottom: 'var(--spacing-md)' }}>Brand Colors</h4>
+              <div className="form-row two-col">
+                <div className="form-group">
+                  <label>Primary Color</label>
+                  <div style={{ display: 'flex', gap: 'var(--spacing-sm)', alignItems: 'center' }}>
+                    <input
+                      type="color"
+                      value={theme.colors?.primary || '#3B82F6'}
+                      onChange={(e) => handleColorChange('primary', e.target.value)}
+                      style={{ width: '50px', height: '38px' }}
+                    />
+                    <input
+                      type="text"
+                      value={theme.colors?.primary || ''}
+                      onChange={(e) => handleColorChange('primary', e.target.value)}
+                      placeholder="#3B82F6"
+                    />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Primary Hover</label>
+                  <div style={{ display: 'flex', gap: 'var(--spacing-sm)', alignItems: 'center' }}>
+                    <input
+                      type="color"
+                      value={theme.colors?.primaryHover || '#2563EB'}
+                      onChange={(e) => handleColorChange('primaryHover', e.target.value)}
+                      style={{ width: '50px', height: '38px' }}
+                    />
+                    <input
+                      type="text"
+                      value={theme.colors?.primaryHover || ''}
+                      onChange={(e) => handleColorChange('primaryHover', e.target.value)}
+                      placeholder="#2563EB"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-row two-col">
+                <div className="form-group">
+                  <label>Secondary Color</label>
+                  <div style={{ display: 'flex', gap: 'var(--spacing-sm)', alignItems: 'center' }}>
+                    <input
+                      type="color"
+                      value={theme.colors?.secondary || '#10B981'}
+                      onChange={(e) => handleColorChange('secondary', e.target.value)}
+                      style={{ width: '50px', height: '38px' }}
+                    />
+                    <input
+                      type="text"
+                      value={theme.colors?.secondary || ''}
+                      onChange={(e) => handleColorChange('secondary', e.target.value)}
+                      placeholder="#10B981"
+                    />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Background</label>
+                  <div style={{ display: 'flex', gap: 'var(--spacing-sm)', alignItems: 'center' }}>
+                    <input
+                      type="color"
+                      value={theme.colors?.background || '#FFFFFF'}
+                      onChange={(e) => handleColorChange('background', e.target.value)}
+                      style={{ width: '50px', height: '38px' }}
+                    />
+                    <input
+                      type="text"
+                      value={theme.colors?.background || ''}
+                      onChange={(e) => handleColorChange('background', e.target.value)}
+                      placeholder="#FFFFFF"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-row two-col">
+                <div className="form-group">
+                  <label>Text Color</label>
+                  <div style={{ display: 'flex', gap: 'var(--spacing-sm)', alignItems: 'center' }}>
+                    <input
+                      type="color"
+                      value={theme.colors?.text || '#1F2937'}
+                      onChange={(e) => handleColorChange('text', e.target.value)}
+                      style={{ width: '50px', height: '38px' }}
+                    />
+                    <input
+                      type="text"
+                      value={theme.colors?.text || ''}
+                      onChange={(e) => handleColorChange('text', e.target.value)}
+                      placeholder="#1F2937"
+                    />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Text Light</label>
+                  <div style={{ display: 'flex', gap: 'var(--spacing-sm)', alignItems: 'center' }}>
+                    <input
+                      type="color"
+                      value={theme.colors?.textLight || '#6B7280'}
+                      onChange={(e) => handleColorChange('textLight', e.target.value)}
+                      style={{ width: '50px', height: '38px' }}
+                    />
+                    <input
+                      type="text"
+                      value={theme.colors?.textLight || ''}
+                      onChange={(e) => handleColorChange('textLight', e.target.value)}
+                      placeholder="#6B7280"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <button type="submit" className="btn-primary">Save Theme</button>
+            </form>
+          </div>
+        )}
 
         {/* Static Pages */}
         {['about', 'terms', 'privacy'].map((pageType) => (

@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { business } from '../config/business';
+import { getStoreInfo } from '../services/storeInfo';
 import SearchBar from './SearchBar';
 import './Header.css';
 
@@ -14,13 +15,32 @@ import './Header.css';
  * - showSearch: Boolean to show/hide search bar (default: true)
  */
 function Header({ cartItemCount = 0, onSearch, showSearch = true }) {
+  const [storeName, setStoreName] = useState('Quick Commerce');
+
+  useEffect(() => {
+    // Fetch store name from Firebase
+    const fetchStoreName = async () => {
+      try {
+        const storeInfo = await getStoreInfo();
+        if (storeInfo.storeName) {
+          setStoreName(storeInfo.storeName);
+        }
+      } catch (error) {
+        console.error('Error fetching store name:', error);
+        // Keep default name on error
+      }
+    };
+
+    fetchStoreName();
+  }, []);
+
   return (
     <header className="header">
       <div className="header-container">
         {/* Logo */}
         <Link to="/" className="header-logo">
-          <img src={business.logoPath} alt={business.storeName} />
-          <span className="header-store-name">{business.storeName}</span>
+          <img src={business.logoPath} alt={storeName} />
+          <span className="header-store-name">{storeName}</span>
         </Link>
 
         {/* Search Bar (Desktop) */}

@@ -89,7 +89,7 @@ function AdminOrders() {
   return (
     <div className="admin-layout">
       <header className="admin-header">
-        <h1>Orders</h1>
+        <h1>{storeInfo?.storeName || 'Quick Commerce'} - Orders</h1>
         <nav className="admin-nav">
           <Link to="/admin/dashboard">Dashboard</Link>
           <Link to="/admin/products">Products</Link>

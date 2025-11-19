@@ -2,18 +2,14 @@
  * Business Configuration
  *
  * CUSTOMIZATION GUIDE:
- * - storeName: Your store's name
  * - logoPath: Path to your logo in /public/images/ folder
  * - attribution: Required links to @build.with.justin (DO NOT REMOVE)
  *
- * Store contact info (phone, WhatsApp, social media) is managed
+ * Store name and contact info (phone, WhatsApp, social media) are managed
  * via the Admin Panel > Store Settings (stored in Firestore)
  */
 
 export const business = {
-  // Your store name
-  storeName: 'Quick Commerce Demo',
-
   // Logo path (relative to /public folder)
   // Upload your logo to /public/images/logo.png
   logoPath: '/images/logo.png',

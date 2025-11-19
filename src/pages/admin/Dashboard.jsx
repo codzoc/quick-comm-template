@@ -3,12 +3,14 @@ import { useNavigate, Link } from 'react-router-dom';
 import { signOut, onAuthChange } from '../../services/auth';
 import { getOrderStats } from '../../services/orders';
 import { getAllProducts } from '../../services/products';
+import { getStoreInfo } from '../../services/storeInfo';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import './AdminStyles.css';
 
 function AdminDashboard() {
   const [stats, setStats] = useState({ totalOrders: 0, pendingOrders: 0, totalRevenue: 0 });
   const [lowStockProducts, setLowStockProducts] = useState([]);
+  const [storeName, setStoreName] = useState('Quick Commerce');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -25,10 +27,17 @@ function AdminDashboard() {
 
   const loadDashboardData = async () => {
     try {
-      const [orderStats, products] = await Promise.all([getOrderStats(), getAllProducts()]);
+      const [orderStats, products, storeInfo] = await Promise.all([
+        getOrderStats(),
+        getAllProducts(),
+        getStoreInfo()
+      ]);
       setStats(orderStats);
       const lowStock = products.filter((p) => p.stock < 5);
       setLowStockProducts(lowStock);
+      if (storeInfo.storeName) {
+        setStoreName(storeInfo.storeName);
+      }
     } catch (error) {
       console.error('Error loading dashboard:', error);
     } finally {
@@ -52,7 +61,7 @@ function AdminDashboard() {
   return (
     <div className="admin-layout">
       <header className="admin-header">
-        <h1>Admin Dashboard</h1>
+        <h1>{storeName} - Dashboard</h1>
         <nav className="admin-nav">
           <Link to="/admin/dashboard" className="active">Dashboard</Link>
           <Link to="/admin/products">Products</Link>

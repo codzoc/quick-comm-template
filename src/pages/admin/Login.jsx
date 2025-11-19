@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signIn, onAuthChange } from '../../services/auth';
-import { business } from '../../config/business';
+import { getStoreInfo } from '../../services/storeInfo';
 import ErrorMessage from '../../components/ErrorMessage';
 import './AdminStyles.css';
 
@@ -10,9 +10,24 @@ function AdminLogin() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [storeName, setStoreName] = useState('Quick Commerce');
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Fetch store name
+    const fetchStoreName = async () => {
+      try {
+        const storeInfo = await getStoreInfo();
+        if (storeInfo.storeName) {
+          setStoreName(storeInfo.storeName);
+        }
+      } catch (error) {
+        console.error('Error fetching store name:', error);
+      }
+    };
+
+    fetchStoreName();
+
     // Redirect if already logged in
     const unsubscribe = onAuthChange((user) => {
       if (user) {
@@ -41,7 +56,7 @@ function AdminLogin() {
     <div className="admin-login-page">
       <div className="login-container">
         <div className="login-header">
-          <h1>{business.storeName}</h1>
+          <h1>{storeName}</h1>
           <p>Admin Login</p>
         </div>
 
