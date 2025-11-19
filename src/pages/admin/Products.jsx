@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { signOut, onAuthChange } from '../../services/auth';
 import { getAllProducts, createProduct, updateProduct, deleteProduct } from '../../services/products';
+import { getStoreInfo } from '../../services/storeInfo';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ErrorMessage from '../../components/ErrorMessage';
 import './AdminStyles.css';
 
 function AdminProducts() {
   const [products, setProducts] = useState([]);
+  const [storeName, setStoreName] = useState('Quick Commerce');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -18,7 +20,8 @@ function AdminProducts() {
     price: '',
     discountedPrice: '',
     imagePath: '/images/placeholder.png',
-    stock: ''
+    stock: '',
+    tags: ''
   });
   const navigate = useNavigate();
 
@@ -32,8 +35,14 @@ function AdminProducts() {
 
   const loadProducts = async () => {
     try {
-      const data = await getAllProducts();
+      const [data, storeInfo] = await Promise.all([
+        getAllProducts(),
+        getStoreInfo()
+      ]);
       setProducts(data);
+      if (storeInfo.storeName) {
+        setStoreName(storeInfo.storeName);
+      }
       setError('');
     } catch (err) {
       setError(err.message);
@@ -44,7 +53,7 @@ function AdminProducts() {
 
   const handleAdd = () => {
     setEditingProduct(null);
-    setFormData({ title: '', description: '', price: '', discountedPrice: '', imagePath: '/images/placeholder.png', stock: '' });
+    setFormData({ title: '', description: '', price: '', discountedPrice: '', imagePath: '/images/placeholder.png', stock: '', tags: '' });
     setShowModal(true);
   };
 
@@ -84,7 +93,7 @@ function AdminProducts() {
   return (
     <div className="admin-layout">
       <header className="admin-header">
-        <h1>Products</h1>
+        <h1>{storeName} - Products</h1>
         <nav className="admin-nav">
           <Link to="/admin/dashboard">Dashboard</Link>
           <Link to="/admin/products" className="active">Products</Link>
@@ -165,6 +174,18 @@ function AdminProducts() {
                 <div className="form-group">
                   <label>Stock *</label>
                   <input type="number" value={formData.stock} onChange={(e) => setFormData({ ...formData, stock: e.target.value })} required />
+                </div>
+                <div className="form-group">
+                  <label>SEO Tags/Keywords</label>
+                  <input
+                    type="text"
+                    value={formData.tags || ''}
+                    onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                    placeholder="electronics, smartphone, gadgets, best deals"
+                  />
+                  <small style={{ color: 'var(--color-text-light)', marginTop: '4px', display: 'block' }}>
+                    Comma-separated tags for search optimization (e.g., "electronics, affordable, quality")
+                  </small>
                 </div>
               </div>
               <div className="modal-footer">

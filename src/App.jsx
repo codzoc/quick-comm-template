@@ -7,6 +7,7 @@ import AdminProducts from './pages/admin/Products';
 import AdminOrders from './pages/admin/Orders';
 import AdminStoreSettings from './pages/admin/StoreSettings';
 import StaticPage from './pages/StaticPage';
+import SEO from './components/SEO';
 
 /**
  * Main App Component
@@ -15,6 +16,7 @@ import StaticPage from './pages/StaticPage';
 function App() {
   return (
     <BrowserRouter>
+      <SEO />
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<StoreFront />} />

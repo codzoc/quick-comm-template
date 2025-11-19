@@ -29,7 +29,7 @@ service cloud.firestore {
         && request.resource.data.stock >= 0;
 
       allow update: if isAdmin()
-        && request.resource.data.keys().hasAny(['title', 'description', 'price', 'discountedPrice', 'imagePath', 'stock', 'updatedAt']);
+        && request.resource.data.keys().hasAny(['title', 'description', 'price', 'discountedPrice', 'imagePath', 'stock', 'tags', 'updatedAt']);
 
       // Allow public to update stock during order transactions (stock decrease only)
       allow update: if request.resource.data.stock is number
@@ -59,17 +59,17 @@ service cloud.firestore {
         && request.resource.data.status in ['pending', 'processing', 'completed', 'cancelled'];
     }
 
-    // Settings collection (about, terms, privacy static pages)
+    // Settings collection (about, terms, privacy static pages, theme)
     // Public: read
     // Admin: read, write
     match /settings/{settingId} {
       allow read: if true;
 
       allow write: if isAdmin()
-        && settingId in ['about', 'terms', 'privacy'];
+        && settingId in ['about', 'terms', 'privacy', 'theme'];
     }
 
-    // Store info collection (contact details, social media)
+    // Store info collection (contact details, social media, SEO)
     // Public: read
     // Admin: read, write
     match /storeInfo/{infoId} {
@@ -77,7 +77,7 @@ service cloud.firestore {
 
       allow write: if isAdmin()
         && infoId == 'contact'
-        && request.resource.data.keys().hasAny(['storeName', 'phone', 'whatsapp', 'facebook', 'instagram', 'youtube', 'updatedAt']);
+        && request.resource.data.keys().hasAny(['storeName', 'phone', 'whatsapp', 'facebook', 'instagram', 'youtube', 'seoTitle', 'seoDescription', 'seoKeywords', 'updatedAt']);
     }
   }
 }

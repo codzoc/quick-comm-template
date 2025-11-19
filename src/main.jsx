@@ -2,20 +2,15 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { CartProvider } from './context/CartContext';
-import { theme } from './config/theme';
+import { getTheme } from './services/theme';
 import { initializeFont } from './utils/googleFonts';
 import './index.css';
 import './theme.css';
 
 /**
- * Initialize Google Font from theme configuration
- */
-initializeFont(theme);
-
-/**
  * Apply theme CSS variables to :root
  */
-function applyThemeVariables() {
+function applyThemeVariables(theme) {
   const root = document.documentElement;
 
   // Colors
@@ -55,14 +50,32 @@ function applyThemeVariables() {
   });
 }
 
-// Apply theme on load
-applyThemeVariables();
+/**
+ * Initialize and apply theme from Firebase
+ */
+async function initializeTheme() {
+  try {
+    // Fetch theme from Firebase
+    const theme = await getTheme();
 
-// Render app
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <CartProvider>
-      <App />
-    </CartProvider>
-  </React.StrictMode>
-);
+    // Initialize Google Font from theme configuration
+    initializeFont(theme);
+
+    // Apply theme CSS variables
+    applyThemeVariables(theme);
+  } catch (error) {
+    console.error('Error initializing theme:', error);
+    // Theme service will return default theme on error
+  }
+}
+
+// Initialize theme and render app
+initializeTheme().then(() => {
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    <React.StrictMode>
+      <CartProvider>
+        <App />
+      </CartProvider>
+    </React.StrictMode>
+  );
+});

@@ -34,7 +34,10 @@ export async function getStoreInfo() {
         whatsapp: '',
         facebook: '',
         instagram: '',
-        youtube: ''
+        youtube: '',
+        seoTitle: '',
+        seoDescription: '',
+        seoKeywords: ''
       };
     }
   } catch (error) {

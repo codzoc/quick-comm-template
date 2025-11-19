@@ -122,7 +122,6 @@ function Footer() {
 
         {/* Attribution (Required) */}
         <div className="footer-section">
-          <h3 className="footer-heading">Built With</h3>
           <div className="footer-links">
             <a
               href={business.attribution.instagram}
@@ -146,7 +145,7 @@ function Footer() {
 
       {/* Copyright */}
       <div className="footer-bottom">
-        <p>&copy; {new Date().getFullYear()} {business.storeName}. All rights reserved.</p>
+        <p>&copy; {new Date().getFullYear()} {storeInfo?.storeName || 'Quick Commerce'}. All rights reserved.</p>
       </div>
     </footer>
   );
