@@ -77,20 +77,6 @@ A simple, browser-only React + Firebase e-commerce template designed for non-cod
 2. Click "Get Started"
 3. Follow the setup wizard (we'll deploy via GitHub Actions, so you can skip the CLI steps)
 
-### Get Firebase Configuration
-
-1. In Firebase Console, click the gear icon ⚙️ > "Project settings"
-2. Scroll down to "Your apps"
-3. Click the web icon `</>`
-4. Register your app with a nickname
-5. Copy the Firebase configuration object - you'll need these values:
-   - `apiKey`
-   - `authDomain`
-   - `projectId`
-   - `storageBucket`
-   - `messagingSenderId`
-   - `appId`
-
 ---
 
 ## Step 3: Configure GitHub Secrets
@@ -102,16 +88,32 @@ A simple, browser-only React + Firebase e-commerce template designed for non-cod
 
 ### Required Secrets
 
+You only need **2 secrets** for the entire setup:
+
 | Secret Name | Value | Where to Find |
 |------------|-------|---------------|
-| `VITE_FIREBASE_API_KEY` | Your Firebase API Key | Firebase Config |
-| `VITE_FIREBASE_AUTH_DOMAIN` | Your auth domain | Firebase Config |
-| `VITE_FIREBASE_PROJECT_ID` | Your project ID | Firebase Config |
-| `VITE_FIREBASE_STORAGE_BUCKET` | Your storage bucket | Firebase Config |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Your sender ID | Firebase Config |
-| `VITE_FIREBASE_APP_ID` | Your app ID | Firebase Config |
-| `FIREBASE_PROJECT_ID` | Your project ID (same as above) | Firebase Config |
+| `VITE_FIREBASE_CONFIG` | Your complete Firebase config as JSON | Firebase Config (see below) |
 | `FIREBASE_SERVICE_ACCOUNT` | Service account JSON | See below |
+
+### How to Set Up VITE_FIREBASE_CONFIG
+
+1. In Firebase Console, click the gear icon ⚙️ > "Project settings"
+2. Scroll down to "Your apps"
+3. Click the web icon `</>`
+4. Register your app with a nickname (if not already done)
+5. Copy the Firebase configuration object
+6. Format it as a **single-line JSON** and paste as the secret value:
+
+```json
+{"apiKey":"YOUR_API_KEY","authDomain":"your-project.firebaseapp.com","projectId":"your-project-id","storageBucket":"your-project.firebasestorage.app","messagingSenderId":"123456789","appId":"1:123456789:web:abcdef","measurementId":"G-XXXXXXXXXX"}
+```
+
+**Example:**
+```json
+{"apiKey":"AIzaSyA4P67skiUQu5MqHvN93cgHUKC63HS6zv8","authDomain":"snackspot-kochi.firebaseapp.com","projectId":"snackspot-kochi","storageBucket":"snackspot-kochi.firebasestorage.app","messagingSenderId":"1035236098674","appId":"1:1035236098674:web:ed56b3cc184aa8fa35b8eb","measurementId":"G-KBE2534FRQ"}
+```
+
+**Important**: Make sure to format the JSON correctly - all keys must be in quotes, and it should be valid JSON
 
 ### Get Firebase Service Account
 
@@ -143,7 +145,7 @@ A simple, browser-only React + Firebase e-commerce template designed for non-cod
 
 ## Step 5: Initial Deployment (Triggers Automatic Setup)
 
-The first deployment will automatically set up Firestore rules and indexes:
+The first deployment will automatically set up everything you need:
 
 1. In your forked repository, go to the "Actions" tab
 2. Click "Enable GitHub Actions" if prompted
@@ -151,12 +153,15 @@ The first deployment will automatically set up Firestore rules and indexes:
 4. Click "Run workflow" > "Run workflow" on the main branch
 5. Wait for the deployment to complete (2-3 minutes)
 6. This will automatically:
+   - Parse your `VITE_FIREBASE_CONFIG` secret
+   - Generate `.env` file with all Firebase environment variables
+   - Generate `.firebaserc` file with your project ID
    - Build your site
    - Deploy Firestore security rules
    - Deploy Firestore indexes
    - Deploy to Firebase Hosting
 
-**Note**: Firestore rules and indexes are now automatically deployed on every push to main and in PR previews. No manual setup required!
+**Note**: You don't need to create any local `.env` or `.firebaserc` files - the GitHub Actions workflow handles everything automatically from your secrets!
 
 ---
 
@@ -278,9 +283,18 @@ The main customer-facing page is in `src/pages/StoreFront.jsx`. This file is des
 ## Troubleshooting
 
 ### Build Fails in GitHub Actions
-- Check that all secrets are set correctly (especially `FIREBASE_SERVICE_ACCOUNT`)
+- Check that both secrets are set correctly:
+  - `VITE_FIREBASE_CONFIG` must be valid JSON (all keys in quotes)
+  - `FIREBASE_SERVICE_ACCOUNT` must contain the complete service account JSON
 - Verify the service account has proper permissions in Firebase Console
-- Check the error logs in Actions tab
+- Check the error logs in Actions tab for specific errors
+
+### Invalid JSON Error
+If you see "parse error" or "Invalid JSON" in the Actions logs:
+- Make sure `VITE_FIREBASE_CONFIG` is formatted as a single-line JSON
+- All keys must be in double quotes: `"apiKey"`, `"authDomain"`, etc.
+- No trailing commas
+- You can validate your JSON at [jsonlint.com](https://jsonlint.com)
 
 ### Firestore Rules Deployment Fails
 
@@ -379,22 +393,27 @@ File: `src/pages/StoreFront.jsx` (search for "customerInfo")
 The GitHub Actions workflow automatically handles all Firebase deployments:
 
 ### On Every Push to Main
-1. Builds your React app with all configuration
-2. Deploys Firestore security rules from [firestore.rules](firestore.rules)
-3. Deploys Firestore indexes from [firestore.indexes.json](firestore.indexes.json)
-4. Deploys the built site to Firebase Hosting (production)
+1. Parses your `VITE_FIREBASE_CONFIG` secret and generates `.env` and `.firebaserc` files
+2. Builds your React app with all configuration
+3. Deploys Firestore security rules from [firestore.rules](firestore.rules)
+4. Deploys Firestore indexes from [firestore.indexes.json](firestore.indexes.json)
+5. Deploys the built site to Firebase Hosting (production)
 
 ### On Every Pull Request
-1. Builds your React app
-2. Deploys Firestore rules and indexes to your project
-3. Creates a preview deployment URL
-4. Comments the preview URL on the PR
+1. Parses your `VITE_FIREBASE_CONFIG` secret and generates configuration files
+2. Builds your React app
+3. Deploys Firestore rules and indexes to your project
+4. Creates a preview deployment URL
+5. Comments the preview URL on the PR
 
 **Benefits**:
+- Only 2 secrets required for complete setup
 - No local setup or CLI tools required
+- No need to manually create `.env` or `.firebaserc` files
 - Firestore rules stay in sync with your code
 - Test everything (including database rules) in PR previews
 - Automatic rollback by reverting commits
+- Easy to copy Firebase config - just paste the JSON object as-is
 
 ### Modifying Firestore Rules
 

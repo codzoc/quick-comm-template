@@ -1,5 +1,6 @@
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { themeTemplates, defaultTemplate, getThemeTemplate } from '../config/themeTemplates';
 
 const COLLECTION_NAME = 'settings';
 const THEME_DOC_ID = 'theme';
@@ -79,7 +80,7 @@ const defaultTheme = {
 
 /**
  * Get theme configuration from Firebase
- * Returns default theme if no theme is set
+ * Returns theme based on selected template or default
  * @returns {Promise<Object>} Theme configuration
  */
 export async function getTheme() {
@@ -89,16 +90,30 @@ export async function getTheme() {
 
     if (docSnap.exists()) {
       const data = docSnap.data();
-      // Merge with default theme to ensure all properties exist
-      return { ...defaultTheme, ...data.theme };
+
+      // If template is specified, use template and merge with custom overrides
+      if (data.templateKey) {
+        const template = getThemeTemplate(data.templateKey);
+        const customOverrides = data.customOverrides || {};
+        return {
+          ...template,
+          ...customOverrides,
+          templateKey: data.templateKey
+        };
+      }
+
+      // Legacy support: if no template, use old theme format
+      if (data.theme) {
+        return { ...defaultTheme, ...data.theme };
+      }
     }
 
-    // Return default theme if document doesn't exist
-    return defaultTheme;
+    // Return default template theme if document doesn't exist
+    return { ...getThemeTemplate(defaultTemplate), templateKey: defaultTemplate };
   } catch (error) {
     console.error('Error fetching theme:', error);
-    // Return default theme on error
-    return defaultTheme;
+    // Return default template theme on error
+    return { ...getThemeTemplate(defaultTemplate), templateKey: defaultTemplate };
   }
 }
 
@@ -122,6 +137,48 @@ export async function updateTheme(theme) {
 }
 
 /**
+ * Update theme template selection in Firebase (admin only)
+ * @param {string} templateKey - Template key (e.g., 'flat', 'minimal')
+ * @param {Object} customOverrides - Optional custom overrides to template
+ * @returns {Promise<void>}
+ */
+export async function updateThemeTemplate(templateKey, customOverrides = {}) {
+  try {
+    const docRef = doc(db, COLLECTION_NAME, THEME_DOC_ID);
+
+    await setDoc(docRef, {
+      templateKey,
+      customOverrides,
+      updatedAt: new Date()
+    });
+  } catch (error) {
+    console.error('Error updating theme template:', error);
+    throw new Error('Failed to update theme template. Please try again.');
+  }
+}
+
+/**
+ * Get current theme template key
+ * @returns {Promise<string>} Current template key
+ */
+export async function getCurrentTemplate() {
+  try {
+    const docRef = doc(db, COLLECTION_NAME, THEME_DOC_ID);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      return data.templateKey || defaultTemplate;
+    }
+
+    return defaultTemplate;
+  } catch (error) {
+    console.error('Error fetching current template:', error);
+    return defaultTemplate;
+  }
+}
+
+/**
  * Get default theme configuration
  * @returns {Object} Default theme
  */
@@ -132,5 +189,7 @@ export function getDefaultTheme() {
 export default {
   getTheme,
   updateTheme,
+  updateThemeTemplate,
+  getCurrentTemplate,
   getDefaultTheme
 };

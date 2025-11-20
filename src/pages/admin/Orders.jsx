@@ -1,8 +1,37 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { signOut, onAuthChange } from '../../services/auth';
+import { useNavigate } from 'react-router-dom';
+import {
+  Box,
+  Card,
+  Typography,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Chip,
+  IconButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Grid,
+  Divider,
+  Alert
+} from '@mui/material';
+import { Eye, Edit, MessageCircle, X } from 'lucide-react';
+import { onAuthChange } from '../../services/auth';
 import { getAllOrders, updateOrderStatus } from '../../services/orders';
 import { getStoreInfo } from '../../services/storeInfo';
+import AdminLayout from '../../components/AdminLayout';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ErrorMessage from '../../components/ErrorMessage';
 import './AdminStyles.css';
@@ -11,9 +40,10 @@ function AdminOrders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filter, setFilter] = useState(null);
+  const [filter, setFilter] = useState('');
   const [selectedOrder, setSelectedOrder] = useState(null);
-  const [statusChangeModal, setStatusChangeModal] = useState(null);
+  const [statusDialog, setStatusDialog] = useState({ open: false, order: null, newStatus: '' });
+  const [whatsappDialog, setWhatsappDialog] = useState({ open: false, order: null, message: '' });
   const [storeInfo, setStoreInfo] = useState(null);
   const navigate = useNavigate();
 
@@ -28,7 +58,7 @@ function AdminOrders() {
   const loadOrders = async () => {
     try {
       const [ordersData, storeData] = await Promise.all([
-        getAllOrders(filter),
+        getAllOrders(filter || null),
         getStoreInfo()
       ]);
       setOrders(ordersData);
@@ -41,290 +71,486 @@ function AdminOrders() {
     }
   };
 
-  const handleStatusChangeRequest = (order, newStatus) => {
-    setStatusChangeModal({ order, newStatus });
+  const getStatusColor = (status) => {
+    const colors = {
+      pending: 'warning',
+      processing: 'info',
+      completed: 'success',
+      cancelled: 'error'
+    };
+    return colors[status] || 'default';
+  };
+
+  const handleViewDetails = (order) => {
+    setSelectedOrder(order);
+  };
+
+  const handleStatusChangeRequest = (order) => {
+    setStatusDialog({
+      open: true,
+      order: order,
+      newStatus: order.status
+    });
+  };
+
+  const handleStatusDialogClose = () => {
+    setStatusDialog({ open: false, order: null, newStatus: '' });
   };
 
   const confirmStatusChange = async () => {
-    if (!statusChangeModal) return;
+    if (!statusDialog.order || statusDialog.newStatus === statusDialog.order.status) {
+      handleStatusDialogClose();
+      return;
+    }
 
     try {
-      await updateOrderStatus(statusChangeModal.order.id, statusChangeModal.newStatus);
-      loadOrders();
-      // Mark as confirmed to show WhatsApp option
-      setStatusChangeModal({ ...statusChangeModal, confirmed: true });
+      await updateOrderStatus(statusDialog.order.id, statusDialog.newStatus);
+      await loadOrders();
+
+      // Ask if user wants to send WhatsApp notification
+      if (storeInfo?.whatsapp && statusDialog.order.customer.phone) {
+        prepareWhatsAppMessage(statusDialog.order, statusDialog.newStatus);
+      }
+
+      handleStatusDialogClose();
     } catch (err) {
       alert(err.message);
-      setStatusChangeModal(null);
     }
   };
 
-  const sendWhatsAppNotification = () => {
-    if (!statusChangeModal || !storeInfo?.whatsapp) return;
-
-    const { order, newStatus } = statusChangeModal;
-    const phone = order.customer.phone.replace(/[^0-9]/g, '');
-
-    // Build items list
-    const itemsList = order.items.map(item =>
-      `${item.quantity}x ${item.title} - ₹${item.subtotal}`
-    ).join('\n');
-
+  const prepareWhatsAppMessage = (order, newStatus) => {
     const statusMessages = {
       pending: 'Your order is pending confirmation',
-      processing: 'Your order is being processed',
+      processing: 'Your order is being processed and will be delivered soon',
       completed: 'Your order has been completed and delivered',
       cancelled: 'Your order has been cancelled'
     };
 
-    const message = `Hello ${order.customer.name},\n\nYour order status has been updated!\n\n*Order ID:* ${order.orderId}\n*Status:* ${statusMessages[newStatus]}\n\n*Order Items:*\n${itemsList}\n\n*Total:* ₹${order.total}\n\nThank you for shopping with us!`;
+    const itemsList = order.items.map(item =>
+      `${item.quantity}x ${item.title} - ₹${item.subtotal}`
+    ).join('\n');
 
-    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
-    setStatusChangeModal(null);
+    const message = `Hello ${order.customer.name},
+
+Your order status has been updated!
+
+*Order ID:* ${order.orderId}
+*Status:* ${statusMessages[newStatus]}
+
+*Order Items:*
+${itemsList}
+
+*Total Amount:* ₹${order.total}
+
+${order.customer.address ? `*Delivery Address:*\n${order.customer.address}, ${order.customer.pin}` : ''}
+
+Thank you for shopping with us!
+- ${storeInfo.storeName || 'Quick Commerce'}`;
+
+    setWhatsappDialog({
+      open: true,
+      order: order,
+      message: message
+    });
   };
 
-  if (loading) return <div className="admin-layout"><LoadingSpinner size="large" /></div>;
+  const sendWhatsAppMessage = () => {
+    if (!whatsappDialog.order) return;
+
+    const phone = whatsappDialog.order.customer.phone.replace(/[^0-9]/g, '');
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(whatsappDialog.message)}`;
+    window.open(url, '_blank');
+    setWhatsappDialog({ open: false, order: null, message: '' });
+  };
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <LoadingSpinner size="large" message="Loading orders..." />
+      </AdminLayout>
+    );
+  }
 
   return (
-    <div className="admin-layout">
-      <header className="admin-header">
-        <h1>{storeInfo?.storeName || 'Quick Commerce'} - Orders</h1>
-        <nav className="admin-nav">
-          <Link to="/admin/dashboard">Dashboard</Link>
-          <Link to="/admin/products">Products</Link>
-          <Link to="/admin/orders" className="active">Orders</Link>
-          <Link to="/admin/settings">Settings</Link>
-          <button onClick={() => signOut().then(() => navigate('/admin'))} className="logout-btn">Logout</button>
-        </nav>
-      </header>
-
-      <main className="admin-content">
-        <div className="page-header">
-          <h2>Manage Orders</h2>
-          <div className="page-actions">
-            <select value={filter || ''} onChange={(e) => setFilter(e.target.value || null)} style={{ padding: 'var(--spacing-sm) var(--spacing-md)', borderRadius: 'var(--border-radius-sm)' }}>
-              <option value="">All Orders</option>
-              <option value="pending">Pending</option>
-              <option value="processing">Processing</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-          </div>
-        </div>
+    <AdminLayout>
+      <Box>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Typography variant="h4" sx={{ fontWeight: 600 }}>
+            Manage Orders
+          </Typography>
+          <FormControl sx={{ minWidth: 180 }}>
+            <InputLabel>Filter by Status</InputLabel>
+            <Select
+              value={filter}
+              label="Filter by Status"
+              onChange={(e) => setFilter(e.target.value)}
+              size="small"
+            >
+              <MenuItem value="">All Orders</MenuItem>
+              <MenuItem value="pending">Pending</MenuItem>
+              <MenuItem value="processing">Processing</MenuItem>
+              <MenuItem value="completed">Completed</MenuItem>
+              <MenuItem value="cancelled">Cancelled</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
 
         {error && <ErrorMessage message={error} onRetry={loadOrders} />}
 
-        <div className="admin-table-container">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Order ID</th>
-                <th>Customer</th>
-                <th>Total</th>
-                <th>Status</th>
-                <th>Date</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+        <TableContainer component={Paper} sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+          <Table>
+            <TableHead sx={{ backgroundColor: 'var(--color-surface)' }}>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 600 }}>Order ID</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Customer</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Total</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
+                <TableCell sx={{ fontWeight: 600 }} align="center">Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
               {orders.map((order) => (
-                <tr key={order.id}>
-                  <td style={{ fontFamily: 'monospace' }}>{order.orderId}</td>
-                  <td>
-                    <div>{order.customer.name}</div>
-                    <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-light)' }}>{order.customer.phone}</div>
-                  </td>
-                  <td>₹{order.total}</td>
-                  <td>
-                    <span className={`status-badge status-${order.status}`}>{order.status}</span>
-                  </td>
-                  <td>{order.createdAt?.toLocaleDateString()}</td>
-                  <td>
-                    <div style={{ display: 'flex', gap: 'var(--spacing-xs)', alignItems: 'center' }}>
-                      <button
-                        onClick={() => setSelectedOrder(order)}
-                        className="btn-secondary"
-                        style={{
-                          padding: 'var(--spacing-xs)',
-                          fontSize: 'var(--font-size-xs)',
-                          minWidth: 'auto',
-                          height: 'auto'
-                        }}
+                <TableRow key={order.id} hover>
+                  <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                    {order.orderId}
+                  </TableCell>
+                  <TableCell>
+                    <Box>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {order.customer.name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {order.customer.phone}
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      ₹{order.total}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={order.status}
+                      color={getStatusColor(order.status)}
+                      size="small"
+                      sx={{ textTransform: 'capitalize', fontWeight: 500 }}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" color="text.secondary">
+                      {order.createdAt?.toLocaleDateString()}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="center">
+                    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                      <IconButton
+                        size="small"
+                        color="primary"
+                        onClick={() => handleViewDetails(order)}
+                        title="View Details"
                       >
-                        View
-                      </button>
-                      <select
-                        value={order.status}
-                        onChange={(e) => {
-                          if (e.target.value !== order.status) {
-                            handleStatusChangeRequest(order, e.target.value);
-                            e.target.value = order.status; // Reset dropdown
-                          }
-                        }}
-                        style={{ padding: 'var(--spacing-xs)', fontSize: 'var(--font-size-xs)' }}
+                        <Eye size={18} />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        color="secondary"
+                        onClick={() => handleStatusChangeRequest(order)}
+                        title="Update Status"
                       >
-                        <option value="pending">Pending</option>
-                        <option value="processing">Processing</option>
-                        <option value="completed">Completed</option>
-                        <option value="cancelled">Cancelled</option>
-                      </select>
-                    </div>
-                  </td>
-                </tr>
+                        <Edit size={18} />
+                      </IconButton>
+                    </Box>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        </div>
+              {orders.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                    <Typography color="text.secondary">
+                      No orders found
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Box>
 
-        {/* Status Change Confirmation Modal */}
-        {statusChangeModal && (
-          <div className="modal-overlay" onClick={() => setStatusChangeModal(null)}>
-            <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
-              <div className="modal-header">
-                <h3>Update Order Status</h3>
-                <button className="modal-close" onClick={() => setStatusChangeModal(null)}>&times;</button>
-              </div>
+      {/* View Details Dialog */}
+      <Dialog
+        open={Boolean(selectedOrder)}
+        onClose={() => setSelectedOrder(null)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            Order Details
+          </Typography>
+          <IconButton size="small" onClick={() => setSelectedOrder(null)}>
+            <X size={20} />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          {selectedOrder && (
+            <Box>
+              {/* Order Information */}
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  Order Information
+                </Typography>
+                <Grid container spacing={2} sx={{ mt: 0.5 }}>
+                  <Grid item xs={6}>
+                    <Typography variant="body2">
+                      <strong>Order ID:</strong>
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontFamily: 'monospace', mt: 0.5 }}>
+                      {selectedOrder.orderId}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="body2">
+                      <strong>Date:</strong>
+                    </Typography>
+                    <Typography variant="body2" sx={{ mt: 0.5 }}>
+                      {selectedOrder.createdAt?.toLocaleString()}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="body2">
+                      <strong>Status:</strong>
+                    </Typography>
+                    <Box sx={{ mt: 0.5 }}>
+                      <Chip
+                        label={selectedOrder.status}
+                        color={getStatusColor(selectedOrder.status)}
+                        size="small"
+                        sx={{ textTransform: 'capitalize' }}
+                      />
+                    </Box>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="body2">
+                      <strong>Total Amount:</strong>
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600, mt: 0.5 }}>
+                      ₹{selectedOrder.total}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Box>
 
-              <div className="modal-body">
-                {!statusChangeModal.confirmed ? (
-                  <>
-                    <p style={{ marginBottom: 'var(--spacing-md)' }}>
-                      Change order <strong>{statusChangeModal.order.orderId}</strong> status to{' '}
-                      <span className={`status-badge status-${statusChangeModal.newStatus}`}>
-                        {statusChangeModal.newStatus}
-                      </span>?
-                    </p>
+              <Divider />
 
-                    <div style={{ display: 'flex', gap: 'var(--spacing-sm)', flexDirection: 'column' }}>
-                      <button
-                        className="btn-primary"
-                        onClick={confirmStatusChange}
-                        style={{ width: '100%' }}
-                      >
-                        Confirm Status Change
-                      </button>
+              {/* Customer Details */}
+              <Box sx={{ my: 3 }}>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  Customer Details
+                </Typography>
+                <Grid container spacing={2} sx={{ mt: 0.5 }}>
+                  <Grid item xs={6}>
+                    <Typography variant="body2">
+                      <strong>Name:</strong>
+                    </Typography>
+                    <Typography variant="body2" sx={{ mt: 0.5 }}>
+                      {selectedOrder.customer.name}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="body2">
+                      <strong>Phone:</strong>
+                    </Typography>
+                    <Typography variant="body2" sx={{ mt: 0.5 }}>
+                      {selectedOrder.customer.phone}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Typography variant="body2">
+                      <strong>Delivery Address:</strong>
+                    </Typography>
+                    <Typography variant="body2" sx={{ mt: 0.5 }}>
+                      {selectedOrder.customer.address}
+                      <br />
+                      PIN: {selectedOrder.customer.pin}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Box>
 
-                      <button
-                        className="btn-secondary"
-                        onClick={() => setStatusChangeModal(null)}
-                        style={{ width: '100%' }}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <p style={{ marginBottom: 'var(--spacing-md)', color: 'var(--color-success)' }}>
-                      ✓ Order status updated successfully!
-                    </p>
+              <Divider />
 
-                    {storeInfo?.whatsapp ? (
-                      <>
-                        <p style={{ marginBottom: 'var(--spacing-md)' }}>
-                          Would you like to notify the customer via WhatsApp?
-                        </p>
-
-                        <div style={{ display: 'flex', gap: 'var(--spacing-sm)', flexDirection: 'column' }}>
-                          <button
-                            className="btn-primary"
-                            onClick={sendWhatsAppNotification}
-                            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--spacing-xs)' }}
-                          >
-                            <span>📱</span>
-                            <span>Send WhatsApp Notification to Customer</span>
-                          </button>
-
-                          <button
-                            className="btn-secondary"
-                            onClick={() => setStatusChangeModal(null)}
-                            style={{ width: '100%' }}
-                          >
-                            Skip
-                          </button>
-                        </div>
-                      </>
-                    ) : (
-                      <button
-                        className="btn-primary"
-                        onClick={() => setStatusChangeModal(null)}
-                        style={{ width: '100%' }}
-                      >
-                        Done
-                      </button>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Order Details Modal */}
-        {selectedOrder && (
-          <div className="modal-overlay" onClick={() => setSelectedOrder(null)}>
-            <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '700px' }}>
-              <div className="modal-header">
-                <h3>Order Details</h3>
-                <button className="modal-close" onClick={() => setSelectedOrder(null)}>&times;</button>
-              </div>
-
-              <div className="modal-body">
-                <div style={{ marginBottom: 'var(--spacing-lg)' }}>
-                  <h4 style={{ marginBottom: 'var(--spacing-sm)', color: 'var(--color-text-light)' }}>Order Information</h4>
-                  <div style={{ display: 'grid', gap: 'var(--spacing-xs)' }}>
-                    <p><strong>Order ID:</strong> <span style={{ fontFamily: 'monospace' }}>{selectedOrder.orderId}</span></p>
-                    <p><strong>Date:</strong> {selectedOrder.createdAt?.toLocaleString()}</p>
-                    <p><strong>Status:</strong> <span className={`status-badge status-${selectedOrder.status}`}>{selectedOrder.status}</span></p>
-                  </div>
-                </div>
-
-                <div style={{ marginBottom: 'var(--spacing-lg)' }}>
-                  <h4 style={{ marginBottom: 'var(--spacing-sm)', color: 'var(--color-text-light)' }}>Customer Details</h4>
-                  <div style={{ display: 'grid', gap: 'var(--spacing-xs)' }}>
-                    <p><strong>Name:</strong> {selectedOrder.customer.name}</p>
-                    <p><strong>Phone:</strong> {selectedOrder.customer.phone}</p>
-                    <p><strong>Address:</strong> {selectedOrder.customer.address}</p>
-                    <p><strong>PIN:</strong> {selectedOrder.customer.pin}</p>
-                  </div>
-                </div>
-
-                <div>
-                  <h4 style={{ marginBottom: 'var(--spacing-sm)', color: 'var(--color-text-light)' }}>Order Items</h4>
-                  <table className="admin-table" style={{ fontSize: 'var(--font-size-sm)' }}>
-                    <thead>
-                      <tr>
-                        <th>Product</th>
-                        <th>Price</th>
-                        <th>Qty</th>
-                        <th>Subtotal</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+              {/* Order Items */}
+              <Box sx={{ mt: 3 }}>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  Order Items
+                </Typography>
+                <TableContainer sx={{ mt: 1 }}>
+                  <Table size="small">
+                    <TableHead sx={{ backgroundColor: 'var(--color-surface)' }}>
+                      <TableRow>
+                        <TableCell>Image</TableCell>
+                        <TableCell>Product</TableCell>
+                        <TableCell align="center">Qty</TableCell>
+                        <TableCell align="right">Price</TableCell>
+                        <TableCell align="right">Subtotal</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
                       {selectedOrder.items.map((item, index) => (
-                        <tr key={index}>
-                          <td>{item.title}</td>
-                          <td>₹{item.price}</td>
-                          <td>{item.quantity}</td>
-                          <td>₹{item.subtotal}</td>
-                        </tr>
+                        <TableRow key={index}>
+                          <TableCell>
+                            <Box
+                              component="img"
+                              src={item.imagePath || '/images/placeholder.png'}
+                              alt={item.title}
+                              sx={{
+                                width: 50,
+                                height: 50,
+                                objectFit: 'cover',
+                                borderRadius: 1,
+                                border: '1px solid',
+                                borderColor: 'divider'
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                              {item.title}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="center">
+                            <Typography variant="body2">
+                              {item.quantity}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography variant="body2">
+                              ₹{item.price}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                              ₹{item.subtotal}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                    <tfoot>
-                      <tr>
-                        <td colSpan="3" style={{ textAlign: 'right', fontWeight: 'bold' }}>Total:</td>
-                        <td style={{ fontWeight: 'bold' }}>₹{selectedOrder.total}</td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </main>
-    </div>
+                      <TableRow>
+                        <TableCell colSpan={4} align="right">
+                          <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                            Total:
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="body1" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                            ₹{selectedOrder.total}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSelectedOrder(null)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Update Status Dialog */}
+      <Dialog
+        open={statusDialog.open}
+        onClose={handleStatusDialogClose}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Update Order Status</DialogTitle>
+        <DialogContent>
+          {statusDialog.order && (
+            <Box sx={{ pt: 1 }}>
+              <Alert severity="info" sx={{ mb: 2 }}>
+                Update status for order <strong>{statusDialog.order.orderId}</strong>
+              </Alert>
+              <FormControl fullWidth>
+                <InputLabel>New Status</InputLabel>
+                <Select
+                  value={statusDialog.newStatus}
+                  label="New Status"
+                  onChange={(e) => setStatusDialog({ ...statusDialog, newStatus: e.target.value })}
+                >
+                  <MenuItem value="pending">Pending</MenuItem>
+                  <MenuItem value="processing">Processing</MenuItem>
+                  <MenuItem value="completed">Completed</MenuItem>
+                  <MenuItem value="cancelled">Cancelled</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleStatusDialogClose}>Cancel</Button>
+          <Button
+            onClick={confirmStatusChange}
+            variant="contained"
+            disabled={!statusDialog.newStatus || statusDialog.newStatus === statusDialog.order?.status}
+          >
+            Confirm Update
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* WhatsApp Message Dialog */}
+      <Dialog
+        open={whatsappDialog.open}
+        onClose={() => setWhatsappDialog({ open: false, order: null, message: '' })}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <MessageCircle size={24} />
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            Send WhatsApp Notification
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1 }}>
+            <Alert severity="success" sx={{ mb: 2 }}>
+              Order status updated successfully!
+            </Alert>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              Edit the message below before sending to the customer:
+            </Typography>
+            <TextField
+              fullWidth
+              multiline
+              rows={10}
+              value={whatsappDialog.message}
+              onChange={(e) => setWhatsappDialog({ ...whatsappDialog, message: e.target.value })}
+              sx={{ mt: 2 }}
+              placeholder="Enter your message..."
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setWhatsappDialog({ open: false, order: null, message: '' })}>
+            Skip
+          </Button>
+          <Button
+            onClick={sendWhatsAppMessage}
+            variant="contained"
+            startIcon={<MessageCircle size={18} />}
+            disabled={!whatsappDialog.message.trim()}
+          >
+            Send WhatsApp Message
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </AdminLayout>
   );
 }
 

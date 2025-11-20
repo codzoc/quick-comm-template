@@ -1,4 +1,5 @@
 import React from 'react';
+import { ShoppingBag, AlertCircle } from 'lucide-react';
 import './ProductCard.css';
 
 /**
@@ -65,12 +66,16 @@ function ProductCard({ product, onAddToCart }) {
           onClick={handleAddToCart}
           disabled={isOutOfStock}
         >
-          {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
+          <ShoppingBag size={18} />
+          <span>{isOutOfStock ? 'Out of Stock' : 'Add to Cart'}</span>
         </button>
 
         {/* Low Stock Warning */}
         {!isOutOfStock && stock < 5 && (
-          <p className="low-stock-warning">Only {stock} left in stock!</p>
+          <p className="low-stock-warning">
+            <AlertCircle size={14} />
+            <span>Only {stock} left in stock!</span>
+          </p>
         )}
       </div>
     </div>

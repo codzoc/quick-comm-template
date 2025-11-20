@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { Menu, X, ShoppingCart, Search } from 'lucide-react';
 import { business } from '../config/business';
 import { getStoreInfo } from '../services/storeInfo';
 import SearchBar from './SearchBar';
@@ -7,7 +8,7 @@ import './Header.css';
 
 /**
  * Header Component
- * Sticky header with logo, search, and cart
+ * Sticky header with logo, search, cart, and mobile menu
  *
  * Props:
  * - cartItemCount: Number of items in cart
@@ -16,6 +17,8 @@ import './Header.css';
  */
 function Header({ cartItemCount = 0, onSearch, showSearch = true }) {
   const [storeName, setStoreName] = useState('Quick Commerce');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   useEffect(() => {
     // Fetch store name from Firebase
@@ -34,11 +37,31 @@ function Header({ cartItemCount = 0, onSearch, showSearch = true }) {
     fetchStoreName();
   }, []);
 
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+    setMobileSearchOpen(false);
+  };
+
+  const toggleMobileSearch = () => {
+    setMobileSearchOpen(!mobileSearchOpen);
+    setMobileMenuOpen(false);
+  };
+
   return (
     <header className="header">
       <div className="header-container">
+        {/* Hamburger Menu (Mobile) */}
+        <button
+          type="button"
+          className="header-hamburger"
+          onClick={toggleMobileMenu}
+          aria-label="Toggle menu"
+        >
+          {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+
         {/* Logo */}
-        <Link to="/" className="header-logo">
+        <Link to="/" className="header-logo" onClick={() => setMobileMenuOpen(false)}>
           <img src={business.logoPath} alt={storeName} />
           <span className="header-store-name">{storeName}</span>
         </Link>
@@ -50,42 +73,63 @@ function Header({ cartItemCount = 0, onSearch, showSearch = true }) {
           </div>
         )}
 
-        {/* Cart Icon */}
-        <button
-          type="button"
-          className="header-cart-btn"
-          onClick={() => {
-            // Trigger cart modal opening (handled by parent component)
-            const event = new CustomEvent('openCart');
-            window.dispatchEvent(event);
-          }}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            className="cart-icon"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
-            />
-          </svg>
-          {cartItemCount > 0 && (
-            <span className="cart-badge">{cartItemCount}</span>
+        {/* Right Actions */}
+        <div className="header-actions">
+          {/* Search Icon (Mobile) */}
+          {showSearch && (
+            <button
+              type="button"
+              className="header-search-icon"
+              onClick={toggleMobileSearch}
+              aria-label="Toggle search"
+            >
+              <Search size={20} />
+            </button>
           )}
-          <span className="cart-text">Cart</span>
-        </button>
+
+          {/* Cart Icon */}
+          <button
+            type="button"
+            className="header-cart-btn"
+            onClick={() => {
+              // Trigger cart modal opening (handled by parent component)
+              const event = new CustomEvent('openCart');
+              window.dispatchEvent(event);
+            }}
+            aria-label="Open cart"
+          >
+            <ShoppingCart size={20} className="cart-icon" />
+            {cartItemCount > 0 && (
+              <span className="cart-badge">{cartItemCount}</span>
+            )}
+            <span className="cart-text">Cart</span>
+          </button>
+        </div>
       </div>
 
-      {/* Search Bar (Mobile) */}
-      {showSearch && (
+      {/* Mobile Search Bar */}
+      {showSearch && mobileSearchOpen && (
         <div className="header-search-mobile">
           <SearchBar onSearch={onSearch} />
         </div>
+      )}
+
+      {/* Mobile Menu Dropdown */}
+      {mobileMenuOpen && (
+        <nav className="header-mobile-nav">
+          <Link to="/" className="mobile-nav-link" onClick={toggleMobileMenu}>
+            Home
+          </Link>
+          <Link to="/about" className="mobile-nav-link" onClick={toggleMobileMenu}>
+            About
+          </Link>
+          <Link to="/terms" className="mobile-nav-link" onClick={toggleMobileMenu}>
+            Terms
+          </Link>
+          <Link to="/privacy" className="mobile-nav-link" onClick={toggleMobileMenu}>
+            Privacy
+          </Link>
+        </nav>
       )}
     </header>
   );

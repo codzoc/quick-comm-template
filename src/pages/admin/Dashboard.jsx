@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { signOut, onAuthChange } from '../../services/auth';
+import { useNavigate } from 'react-router-dom';
+import { Card, CardContent, Typography, Box } from '@mui/material';
+import { TrendingUp, ShoppingCart, Package, AlertTriangle } from 'lucide-react';
+import { onAuthChange } from '../../services/auth';
 import { getOrderStats } from '../../services/orders';
 import { getAllProducts } from '../../services/products';
-import { getStoreInfo } from '../../services/storeInfo';
+import AdminLayout from '../../components/AdminLayout';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import './AdminStyles.css';
 
 function AdminDashboard() {
   const [stats, setStats] = useState({ totalOrders: 0, pendingOrders: 0, totalRevenue: 0 });
   const [lowStockProducts, setLowStockProducts] = useState([]);
-  const [storeName, setStoreName] = useState('Quick Commerce');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -27,17 +28,13 @@ function AdminDashboard() {
 
   const loadDashboardData = async () => {
     try {
-      const [orderStats, products, storeInfo] = await Promise.all([
+      const [orderStats, products] = await Promise.all([
         getOrderStats(),
-        getAllProducts(),
-        getStoreInfo()
+        getAllProducts()
       ]);
       setStats(orderStats);
       const lowStock = products.filter((p) => p.stock < 5);
       setLowStockProducts(lowStock);
-      if (storeInfo.storeName) {
-        setStoreName(storeInfo.storeName);
-      }
     } catch (error) {
       console.error('Error loading dashboard:', error);
     } finally {
@@ -45,73 +42,94 @@ function AdminDashboard() {
     }
   };
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate('/admin');
-  };
-
   if (loading) {
     return (
-      <div className="admin-layout">
+      <AdminLayout>
         <LoadingSpinner size="large" message="Loading dashboard..." />
-      </div>
+      </AdminLayout>
     );
   }
 
+  const statCards = [
+    {
+      title: 'Total Orders',
+      value: stats.totalOrders,
+      icon: ShoppingCart,
+      color: '#3b82f6'
+    },
+    {
+      title: 'Pending Orders',
+      value: stats.pendingOrders,
+      icon: Package,
+      color: '#f59e0b'
+    },
+    {
+      title: 'Total Revenue',
+      value: `₹${stats.totalRevenue.toLocaleString()}`,
+      icon: TrendingUp,
+      color: '#10b981'
+    }
+  ];
+
   return (
-    <div className="admin-layout">
-      <header className="admin-header">
-        <h1>{storeName} - Dashboard</h1>
-        <nav className="admin-nav">
-          <Link to="/admin/dashboard" className="active">Dashboard</Link>
-          <Link to="/admin/products">Products</Link>
-          <Link to="/admin/orders">Orders</Link>
-          <Link to="/admin/settings">Settings</Link>
-          <button onClick={handleSignOut} className="logout-btn">Logout</button>
-        </nav>
-      </header>
+    <AdminLayout>
+      <Typography variant="h4" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
+        Dashboard
+      </Typography>
 
-      <main className="admin-content">
-        <div className="stats-grid">
-          <div className="stat-card">
-            <h3>Total Orders</h3>
-            <div className="stat-value">{stats.totalOrders}</div>
-          </div>
-          <div className="stat-card">
-            <h3>Pending Orders</h3>
-            <div className="stat-value">{stats.pendingOrders}</div>
-          </div>
-          <div className="stat-card">
-            <h3>Total Revenue</h3>
-            <div className="stat-value">₹{stats.totalRevenue}</div>
-          </div>
-        </div>
+      {/* Stats Grid */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, gap: 3, mb: 4 }}>
+        {statCards.map((stat) => (
+          <Card key={stat.title} sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                  {stat.title}
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: 1, bgcolor: `${stat.color}15` }}>
+                  <stat.icon size={20} style={{ color: stat.color }} />
+                </Box>
+              </Box>
+              <Typography variant="h4" sx={{ fontWeight: 700 }}>
+                {stat.value}
+              </Typography>
+            </CardContent>
+          </Card>
+        ))}
+      </Box>
 
-        {lowStockProducts.length > 0 && (
-          <div className="admin-table-container">
-            <div style={{ padding: 'var(--spacing-lg)' }}>
-              <h3>Low Stock Alert</h3>
-            </div>
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Product</th>
-                  <th>Stock</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lowStockProducts.map((product) => (
-                  <tr key={product.id}>
-                    <td>{product.title}</td>
-                    <td style={{ color: 'var(--color-error)', fontWeight: 'bold' }}>{product.stock}</td>
+      {/* Low Stock Alert */}
+      {lowStockProducts.length > 0 && (
+        <Card sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+              <AlertTriangle size={20} style={{ color: '#ef4444' }} />
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                Low Stock Alert
+              </Typography>
+            </Box>
+            <Box sx={{ overflowX: 'auto' }}>
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Stock</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </main>
-    </div>
+                </thead>
+                <tbody>
+                  {lowStockProducts.map((product) => (
+                    <tr key={product.id}>
+                      <td>{product.title}</td>
+                      <td style={{ color: 'var(--color-error)', fontWeight: 'bold' }}>{product.stock}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Box>
+          </CardContent>
+        </Card>
+      )}
+    </AdminLayout>
   );
 }
 
