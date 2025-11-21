@@ -48,17 +48,13 @@ jobs:
       - name: Build project
         run: npm run build
 
-      - name: Upload build artifacts
+      - name: Upload build artifacts and config
         uses: actions/upload-artifact@v4
         with:
-          name: dist
-          path: dist/
-
-      - name: Upload .firebaserc
-        uses: actions/upload-artifact@v4
-        with:
-          name: firebaserc
-          path: .firebaserc
+          name: build-output
+          path: |
+            dist/
+            .firebaserc
 
   deploy-preview:
     needs: build
@@ -69,16 +65,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Download build artifacts
+      - name: Download build artifacts and config
         uses: actions/download-artifact@v4
         with:
-          name: dist
-          path: dist/
-
-      - name: Download .firebaserc
-        uses: actions/download-artifact@v4
-        with:
-          name: firebaserc
+          name: build-output
           path: .
 
       - name: Deploy Firestore Rules and Indexes (Preview)
@@ -113,16 +103,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Download build artifacts
+      - name: Download build artifacts and config
         uses: actions/download-artifact@v4
         with:
-          name: dist
-          path: dist/
-
-      - name: Download .firebaserc
-        uses: actions/download-artifact@v4
-        with:
-          name: firebaserc
+          name: build-output
           path: .
 
       - name: Deploy Firestore Rules and Indexes
