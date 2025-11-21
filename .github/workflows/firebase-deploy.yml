@@ -58,13 +58,23 @@ jobs:
         run: npm run build
 
       - name: Copy .firebaserc to dist
-        run: cp .firebaserc dist/.firebaserc
+        run: |
+          cp .firebaserc dist/.firebaserc
+          echo "=== Verifying .firebaserc copied to dist ==="
+          ls -la dist/.firebaserc
+          cat dist/.firebaserc
+
+      - name: Debug - List dist contents before upload
+        run: |
+          echo "=== All files in dist (including hidden) ==="
+          ls -laR dist/
 
       - name: Upload build artifacts and config
         uses: actions/upload-artifact@v4
         with:
           name: build-output
           path: dist/
+          include-hidden-files: true
 
   deploy-preview:
     needs: build
@@ -80,6 +90,13 @@ jobs:
         with:
           name: build-output
           path: dist/
+
+      - name: Debug - Check downloaded artifact contents
+        run: |
+          echo "=== All files in dist (including hidden) ==="
+          ls -laR dist/
+          echo "=== Checking for .firebaserc ==="
+          find dist/ -name "*firebaserc*" || echo "No firebaserc found"
 
       - name: Copy .firebaserc from dist to root
         run: cp dist/.firebaserc .firebaserc
@@ -130,6 +147,13 @@ jobs:
         with:
           name: build-output
           path: dist/
+
+      - name: Debug - Check downloaded artifact contents
+        run: |
+          echo "=== All files in dist (including hidden) ==="
+          ls -laR dist/
+          echo "=== Checking for .firebaserc ==="
+          find dist/ -name "*firebaserc*" || echo "No firebaserc found"
 
       - name: Copy .firebaserc from dist to root
         run: cp dist/.firebaserc .firebaserc
