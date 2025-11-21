@@ -199,6 +199,8 @@ export async function getOrderStats() {
 
     let totalOrders = 0;
     let pendingOrders = 0;
+    let processingOrders = 0;
+    let completedOrders = 0;
     let totalRevenue = 0;
 
     snapshot.forEach((doc) => {
@@ -207,6 +209,10 @@ export async function getOrderStats() {
 
       if (order.status === 'pending') {
         pendingOrders++;
+      } else if (order.status === 'processing') {
+        processingOrders++;
+      } else if (order.status === 'completed') {
+        completedOrders++;
       }
 
       if (order.status !== 'cancelled') {
@@ -217,6 +223,8 @@ export async function getOrderStats() {
     return {
       totalOrders,
       pendingOrders,
+      processingOrders,
+      completedOrders,
       totalRevenue
     };
   } catch (error) {
@@ -224,6 +232,8 @@ export async function getOrderStats() {
     return {
       totalOrders: 0,
       pendingOrders: 0,
+      processingOrders: 0,
+      completedOrders: 0,
       totalRevenue: 0
     };
   }

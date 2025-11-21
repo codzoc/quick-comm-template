@@ -25,7 +25,15 @@ export async function getStoreInfo() {
     const storeSnap = await getDoc(storeRef);
 
     if (storeSnap.exists()) {
-      return storeSnap.data();
+      const data = storeSnap.data();
+      // Ensure pricing fields have defaults
+      return {
+        ...data,
+        currencySymbol: data.currencySymbol || '₹',
+        taxPercentage: data.taxPercentage ?? 0,
+        shippingCost: data.shippingCost ?? 0,
+        logoUrl: data.logoUrl || '/images/logo.png'
+      };
     } else {
       // Return default values if not set
       return {
@@ -37,7 +45,11 @@ export async function getStoreInfo() {
         youtube: '',
         seoTitle: '',
         seoDescription: '',
-        seoKeywords: ''
+        seoKeywords: '',
+        currencySymbol: '₹',
+        taxPercentage: 0,
+        shippingCost: 0,
+        logoUrl: '/images/logo.png'
       };
     }
   } catch (error) {

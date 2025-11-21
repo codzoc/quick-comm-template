@@ -2,32 +2,60 @@
 
 A simple, browser-only React + Firebase e-commerce template designed for non-coders. Set up your online store entirely through your browser - no terminal, no coding required!
 
+## Quick Start Summary
+
+**5 Simple Steps to Launch Your Store:**
+
+1. **Create your repo**: Click "Use this template" → Create private repository
+2. **Set up Firebase**: Create Firebase project, enable Firestore, Authentication, and Hosting
+3. **Add secrets**: Copy 2 JSON configs to GitHub Secrets (use [JSON validator](https://jsonformatter.curiousconcept.com/))
+4. **Create admin user**: Add your email/password in Firebase Console
+5. **Deploy**: Run GitHub Actions workflow → Your store is live!
+
+**Helpful Tools:**
+- 🔧 [JSON Validator](https://jsonformatter.curiousconcept.com/) - Validate Firebase config
+- 🖼️ [Image Compressor](https://tinyjpg.com/) - Compress product images
+- 📸 [Image Host](https://imgbb.com/) - Quick image URLs
+
+---
+
 ## Features
 
 ### Customer-Facing
 - Product catalog with search functionality
-- Shopping cart (session-based, in-memory)
-- Mobile-responsive design
+- Shopping cart with real-time stock validation
+- Mobile-responsive design with professional layout
 - Order placement with customer info collection
+- "Remember me" functionality for customer information
 - WhatsApp integration for order tracking
 - Out-of-stock badges and inventory tracking
-- Discount pricing support
+- Discount pricing support with percentage badges
+- Dynamic currency symbol support (₹, $, €, £, ¥, etc.)
+- Decimal formatting for all prices
+- Responsive cart modal with column-based layout
 
 ### Admin Panel
 - Secure admin authentication
 - Product management (CRUD operations)
-- Order management with status tracking
-- Inventory management
-- Store settings (contact info, social media)
-- Dashboard with statistics and low stock alerts
+- Order management with status tracking (Pending, Processing, Completed, Cancelled)
+- Enhanced dashboard with order statistics and low stock alerts
+- Store settings with tabbed interface:
+  - **General**: Store name, logo URL, contact info, social media
+  - **Appearance**: Theme templates (Professional, Vibrant, Minimal, Elegant, Modern)
+  - **Pages**: About Us, Terms & Conditions, Privacy Policy
+  - **SEO**: Meta title, description, keywords
+  - **Pricing**: Currency symbol, tax percentage, shipping cost
+- Settings tab persistence via URL parameters
+- Logo URL configuration (local paths or external URLs)
 
 ### Developer-Friendly
 - 100% browser-based setup
 - Google Fonts integration (just specify font name)
 - PR preview deployments for testing
-- Centralized theme configuration
+- Multiple theme templates to choose from
 - Mobile-first, responsive design
 - Firebase hosting included
+- Automatic CI/CD via GitHub Actions
 
 ## Browser-Only Setup Guide
 
@@ -36,12 +64,21 @@ A simple, browser-only React + Firebase e-commerce template designed for non-cod
 - Firebase account (free)
 - No local development environment needed!
 
+### Helpful Tools
+- **JSON Validator**: [jsonformatter.curiousconcept.com](https://jsonformatter.curiousconcept.com/) - Validate and format your Firebase config JSON
+- **Image Compression**: [tinyjpg.com](https://tinyjpg.com/) - Compress product images for faster loading
+- **Temporary Image Hosting**: [imgbb.com](https://imgbb.com/) - Upload product images and get direct URLs
+
 ---
 
-## Step 1: Fork This Repository
+## Step 1: Create Your Repository from Template
 
-1. Click the "Fork" button at the top of this repository
-2. This creates your own copy of the template
+1. Click the green "Use this template" button at the top of this repository
+2. Select "Create a new repository"
+3. Choose a name for your store (e.g., `my-online-store`)
+4. Select "Private" for repository visibility (recommended)
+5. Click "Create repository from template"
+6. This creates your own private copy of the template
 
 ---
 
@@ -77,41 +114,48 @@ A simple, browser-only React + Firebase e-commerce template designed for non-cod
 2. Click "Get Started"
 3. Follow the setup wizard (we'll deploy via GitHub Actions, so you can skip the CLI steps)
 
-### Get Firebase Configuration
-
-1. In Firebase Console, click the gear icon ⚙️ > "Project settings"
-2. Scroll down to "Your apps"
-3. Click the web icon `</>`
-4. Register your app with a nickname
-5. Copy the Firebase configuration object - you'll need these values:
-   - `apiKey`
-   - `authDomain`
-   - `projectId`
-   - `storageBucket`
-   - `messagingSenderId`
-   - `appId`
-
 ---
 
 ## Step 3: Configure GitHub Secrets
 
-1. Go to your forked repository on GitHub
+1. Go to your new repository on GitHub
 2. Click "Settings" tab
 3. Go to "Secrets and variables" > "Actions"
 4. Click "New repository secret" for each of the following:
 
 ### Required Secrets
 
+You only need **2 secrets** for the entire setup:
+
 | Secret Name | Value | Where to Find |
 |------------|-------|---------------|
-| `VITE_FIREBASE_API_KEY` | Your Firebase API Key | Firebase Config |
-| `VITE_FIREBASE_AUTH_DOMAIN` | Your auth domain | Firebase Config |
-| `VITE_FIREBASE_PROJECT_ID` | Your project ID | Firebase Config |
-| `VITE_FIREBASE_STORAGE_BUCKET` | Your storage bucket | Firebase Config |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Your sender ID | Firebase Config |
-| `VITE_FIREBASE_APP_ID` | Your app ID | Firebase Config |
-| `FIREBASE_PROJECT_ID` | Your project ID (same as above) | Firebase Config |
+| `VITE_FIREBASE_CONFIG` | Your complete Firebase config as compact JSON | Firebase Config (see below) |
 | `FIREBASE_SERVICE_ACCOUNT` | Service account JSON | See below |
+
+### How to Set Up VITE_FIREBASE_CONFIG
+
+1. In Firebase Console, click the gear icon ⚙️ > "Project settings"
+2. Scroll down to "Your apps"
+3. Click the web icon `</>`
+4. Register your app with a nickname (if not already done)
+5. Copy the Firebase configuration object
+6. **Validate and format the JSON**:
+   - Go to [jsonformatter.curiousconcept.com](https://jsonformatter.curiousconcept.com/)
+   - Paste your Firebase config
+   - Click "Process" to validate
+   - Copy the compact (single-line) output
+7. Paste the validated JSON as the secret value:
+
+```json
+{"apiKey":"YOUR_API_KEY","authDomain":"your-project.firebaseapp.com","projectId":"your-project-id","storageBucket":"your-project.firebasestorage.app","messagingSenderId":"123456789","appId":"1:123456789:web:abcdef","measurementId":"G-XXXXXXXXXX"}
+```
+
+**Example:**
+```json
+{"apiKey":"AIzaSyA4P67skiUQu5MqHvN93cgHUKC63HS6zv8","authDomain":"snackspot-kochi.firebaseapp.com","projectId":"snackspot-kochi","storageBucket":"snackspot-kochi.firebasestorage.app","messagingSenderId":"1035236098674","appId":"1:1035236098674:web:ed56b3cc184aa8fa35b8eb","measurementId":"G-KBE2534FRQ"}
+```
+
+**Important**: The JSON must be valid RFC 8259 format - all keys in quotes, no trailing commas, compact single-line. Use the JSON validator to ensure it's correct!
 
 ### Get Firebase Service Account
 
@@ -143,7 +187,7 @@ A simple, browser-only React + Firebase e-commerce template designed for non-cod
 
 ## Step 5: Initial Deployment (Triggers Automatic Setup)
 
-The first deployment will automatically set up Firestore rules and indexes:
+The first deployment will automatically set up everything you need:
 
 1. In your forked repository, go to the "Actions" tab
 2. Click "Enable GitHub Actions" if prompted
@@ -151,37 +195,68 @@ The first deployment will automatically set up Firestore rules and indexes:
 4. Click "Run workflow" > "Run workflow" on the main branch
 5. Wait for the deployment to complete (2-3 minutes)
 6. This will automatically:
+   - Parse your `VITE_FIREBASE_CONFIG` secret
+   - Generate `.env` file with all Firebase environment variables
+   - Generate `.firebaserc` file with your project ID
    - Build your site
    - Deploy Firestore security rules
    - Deploy Firestore indexes
    - Deploy to Firebase Hosting
 
-**Note**: Firestore rules and indexes are now automatically deployed on every push to main and in PR previews. No manual setup required!
+**Note**: You don't need to create any local `.env` or `.firebaserc` files - the GitHub Actions workflow handles everything automatically from your secrets!
 
 ---
 
 ## Step 6: Customize Your Store
 
-All customization can be done through GitHub's web interface:
+You can customize your store in two ways:
 
-### A. Change Store Name and Logo
+### Option A: Through Admin Panel (Recommended)
 
-1. Edit `src/config/business.js`:
-   ```javascript
-   storeName: 'Your Store Name',
-   logoPath: '/images/your-logo.png'
-   ```
+1. Go to `https://YOUR-PROJECT-ID.web.app/admin`
+2. Login with your admin credentials
+3. Navigate to **"Settings"** tab
 
-### B. Upload Your Logo
+**General Tab**:
+- Store name
+- **Logo URL**: Enter `/images/logo.png` for local images or paste a direct URL (e.g., from imgbb.com)
+- Phone and WhatsApp numbers
+- Social media links (Facebook, Instagram, YouTube)
 
-1. Go to `public/images/` folder
-2. Click "Add file" > "Upload files"
-3. Upload your logo as `logo.png` (or update the path in business.js)
-4. Commit changes
+**Appearance Tab**:
+- Choose from 5 theme templates:
+  - Professional (Blue & Modern)
+  - Vibrant (Purple & Energetic)
+  - Minimal (Clean & Simple)
+  - Elegant (Dark & Sophisticated)
+  - Modern (Teal & Fresh)
 
-### C. Customize Theme (Colors & Font)
+**SEO Tab**:
+- SEO Title (50-60 characters)
+- SEO Description (150-160 characters)
+- SEO Keywords (comma-separated)
 
-1. Edit `src/config/theme.js`:
+**Pricing Tab**:
+- Currency symbol (₹, $, €, £, ¥, د.إ, SR)
+- Tax percentage (%)
+- Shipping cost (flat rate)
+
+**Pages Tab**:
+- About Us content and image
+- Terms & Conditions
+- Privacy Policy
+
+### Option B: Through Code (Advanced)
+
+**Upload Your Logo**:
+1. Compress your logo using [tinyjpg.com](https://tinyjpg.com/)
+2. Go to `public/images/` folder in GitHub
+3. Click "Add file" > "Upload files"
+4. Upload your logo as `logo.png`
+5. Or use Admin Panel > Settings > General > Logo URL to set it
+
+**Customize Theme Manually**:
+1. Edit `src/config/theme.js` in GitHub:
    ```javascript
    fontFamily: 'Roboto', // Try: Poppins, Inter, Montserrat, Lato
    colors: {
@@ -192,11 +267,9 @@ All customization can be done through GitHub's web interface:
    ```
 2. The Google Font will load automatically!
 
-### D. Add Product Images
-
-1. Go to `public/images/`
-2. Upload your product images
-3. Use paths like `/images/product-1.jpg` when adding products in admin
+**Add Product Images**:
+- **Option 1**: Upload to `public/images/` and use paths like `/images/product-1.jpg`
+- **Option 2**: Compress images with [tinyjpg.com](https://tinyjpg.com/), upload to [imgbb.com](https://imgbb.com/), and use the direct URL
 
 ---
 
@@ -225,41 +298,104 @@ After merging to `main`, GitHub Actions will deploy to production:
 
 ## Managing Your Store
 
-### Adding Products
+### Dashboard
 
 1. Go to `https://YOUR-PROJECT-ID.web.app/admin`
-2. Login with your admin credentials
-3. Go to "Products" tab
-4. Click "Add Product"
-5. Fill in details:
-   - Title
-   - Description
-   - Price
-   - Discounted Price (optional)
-   - Image Path (e.g., `/images/product-1.jpg`)
-   - Stock quantity
-6. Click "Save"
+2. View real-time statistics:
+   - Total Orders
+   - Pending Orders (new orders)
+   - Processing Orders (being fulfilled)
+   - Completed Orders
+   - Total Revenue (excludes cancelled orders)
+   - Low Stock Alerts (products with less than 5 items)
+
+### Adding Products
+
+1. Go to admin panel > "Products" tab
+2. Click "Add Product"
+3. Fill in details:
+   - **Title**: Product name
+   - **Description**: Short description
+   - **Price**: Regular price (in your selected currency)
+   - **Discounted Price** (optional): Sale price - shows % OFF badge
+   - **Image Path**: Choose one option:
+     - Upload to `/public/images/` and use `/images/product-1.jpg`
+     - Or compress with [tinyjpg.com](https://tinyjpg.com/), upload to [imgbb.com](https://imgbb.com/), paste direct URL
+   - **Stock**: Available quantity (cart validates against this)
+4. Click "Save"
+
+**Tips**:
+- Compress images before uploading for faster page loads
+- Use descriptive file names
+- Keep stock updated to prevent overselling
 
 ### Managing Orders
 
-1. Go to admin panel > "Orders"
-2. View all orders with customer details
+1. Go to admin panel > "Orders" tab
+2. View all orders with:
+   - Order ID
+   - Customer name, phone, address
+   - Ordered items with quantities
+   - Total amount (with tax and shipping if configured)
+   - Order status
+   - Order date/time
 3. Update order status:
-   - Pending
-   - Processing
-   - Completed
-   - Cancelled
-4. Customers will see their order ID and can WhatsApp you
+   - **Pending**: New orders awaiting confirmation
+   - **Processing**: Order confirmed, being prepared
+   - **Completed**: Order delivered/fulfilled
+   - **Cancelled**: Order cancelled
+4. Dashboard automatically updates with status counts
+5. Customers can WhatsApp you with their Order ID for tracking
 
 ### Store Settings
 
-1. Go to admin panel > "Settings"
-2. Update:
-   - Store name
-   - Phone number
-   - WhatsApp number (for customer support)
+1. Go to admin panel > "Settings" tab
+2. **General Tab**:
+   - Store name (appears in header and page title)
+   - Logo URL (supports `/images/` paths or full URLs)
+   - Contact information (phone, WhatsApp)
    - Social media links
-   - About Us, Terms, Privacy pages
+3. **Appearance Tab**:
+   - Select theme template
+   - Click "Apply" and page will refresh with new theme
+4. **Pages Tab**:
+   - Customize About Us, Terms, Privacy Policy pages
+   - Add images for pages (optional)
+5. **SEO Tab**:
+   - Set meta tags for better search engine visibility
+6. **Pricing Tab**:
+   - Select currency symbol (appears throughout the site)
+   - Set tax percentage (automatically calculated in cart)
+   - Set flat shipping cost (added to all orders)
+
+**Note**: Settings tabs remember your last position via URL parameters
+
+---
+
+## Customer Shopping Experience
+
+### Cart Features
+- **Real-time stock validation**: Cart prevents adding more items than available in stock
+- **Auto-open cart**: Cart modal opens automatically when products are added
+- **Column layout**: Clean, vertical layout with right-aligned prices
+- **Decimal formatting**: All prices show with 2 decimal places
+- **Dynamic currency**: Prices display in your configured currency symbol
+- **Live calculations**: Subtotal, tax, and shipping calculated in real-time
+
+### Checkout Features
+- **Customer information form**: Name, phone, address, PIN code
+- **Form validation**: Ensures all required fields are filled
+- **"Remember me" checkbox**: Saves customer info in browser (checked by default)
+- **Clear saved info**: Customers can clear their saved information
+- **Order summary**: Shows itemized breakdown with tax and shipping
+- **WhatsApp integration**: After order placement, customers can message you directly
+
+### Product Browsing
+- **Search functionality**: Real-time search across product titles and descriptions
+- **Stock indicators**: "Out of Stock" badges and "Only X left" warnings
+- **Discount badges**: Automatic percentage OFF calculation
+- **Responsive images**: Optimized for all screen sizes
+- **Placeholder handling**: Graceful fallback for missing images
 
 ---
 
@@ -278,9 +414,23 @@ The main customer-facing page is in `src/pages/StoreFront.jsx`. This file is des
 ## Troubleshooting
 
 ### Build Fails in GitHub Actions
-- Check that all secrets are set correctly (especially `FIREBASE_SERVICE_ACCOUNT`)
+- Check that both secrets are set correctly:
+  - `VITE_FIREBASE_CONFIG` must be valid JSON (all keys in quotes)
+  - `FIREBASE_SERVICE_ACCOUNT` must contain the complete service account JSON
 - Verify the service account has proper permissions in Firebase Console
-- Check the error logs in Actions tab
+- Check the error logs in Actions tab for specific errors
+
+### Invalid JSON Error
+If you see "parse error" or "Invalid JSON" in the Actions logs:
+- Make sure `VITE_FIREBASE_CONFIG` is formatted as a single-line JSON
+- All keys must be in double quotes: `"apiKey"`, `"authDomain"`, etc.
+- No trailing commas
+- The JSON must be valid RFC 8259 format
+- **Validate your JSON** at [jsonformatter.curiousconcept.com](https://jsonformatter.curiousconcept.com/)
+  1. Paste your Firebase config
+  2. Click "Process"
+  3. Copy the validated compact output
+  4. Update your GitHub secret with the corrected JSON
 
 ### Firestore Rules Deployment Fails
 
@@ -379,22 +529,27 @@ File: `src/pages/StoreFront.jsx` (search for "customerInfo")
 The GitHub Actions workflow automatically handles all Firebase deployments:
 
 ### On Every Push to Main
-1. Builds your React app with all configuration
-2. Deploys Firestore security rules from [firestore.rules](firestore.rules)
-3. Deploys Firestore indexes from [firestore.indexes.json](firestore.indexes.json)
-4. Deploys the built site to Firebase Hosting (production)
+1. Parses your `VITE_FIREBASE_CONFIG` secret and generates `.env` and `.firebaserc` files
+2. Builds your React app with all configuration
+3. Deploys Firestore security rules from [firestore.rules](firestore.rules)
+4. Deploys Firestore indexes from [firestore.indexes.json](firestore.indexes.json)
+5. Deploys the built site to Firebase Hosting (production)
 
 ### On Every Pull Request
-1. Builds your React app
-2. Deploys Firestore rules and indexes to your project
-3. Creates a preview deployment URL
-4. Comments the preview URL on the PR
+1. Parses your `VITE_FIREBASE_CONFIG` secret and generates configuration files
+2. Builds your React app
+3. Deploys Firestore rules and indexes to your project
+4. Creates a preview deployment URL
+5. Comments the preview URL on the PR
 
 **Benefits**:
+- Only 2 secrets required for complete setup
 - No local setup or CLI tools required
+- No need to manually create `.env` or `.firebaserc` files
 - Firestore rules stay in sync with your code
 - Test everything (including database rules) in PR previews
 - Automatic rollback by reverting commits
+- Easy to copy Firebase config - just paste the JSON object as-is
 
 ### Modifying Firestore Rules
 
@@ -458,17 +613,39 @@ quick-comm-template/
 - [Managing Orders](https://youtube.com/@build.with.justin)
 
 ### Common Questions
-- **Q: Can I use my own domain?**
-  A: Yes! Configure in Firebase Hosting settings
 
-- **Q: How much does it cost?**
-  A: Free for small stores (Firebase free tier)
+**Q: Can I use my own domain?**
+A: Yes! Configure custom domain in Firebase Hosting settings
 
-- **Q: Can I add more features?**
-  A: Yes! Edit the code or ask AI to help
+**Q: How much does it cost?**
+A: Free for small stores (Firebase free tier). GitHub and Firebase both have generous free tiers.
 
-- **Q: How do I backup my data?**
-  A: Export Firestore data from Firebase Console
+**Q: Where should I upload product images?**
+A: Three options:
+1. Upload to `/public/images/` in your repository (recommended for permanent images)
+2. Upload to [imgbb.com](https://imgbb.com/) for quick testing (get direct URLs)
+3. Use any image hosting service that provides direct image URLs
+
+**Q: Should I compress my images?**
+A: Yes! Use [tinyjpg.com](https://tinyjpg.com/) to compress images before uploading. This makes your site load faster.
+
+**Q: How do I validate my Firebase JSON config?**
+A: Use [jsonformatter.curiousconcept.com](https://jsonformatter.curiousconcept.com/) to validate and format your JSON correctly.
+
+**Q: Can I change the currency?**
+A: Yes! Go to Admin Panel > Settings > Pricing tab and select your currency. It updates throughout the entire site.
+
+**Q: What theme templates are available?**
+A: Professional, Vibrant, Minimal, Elegant, and Modern. Change in Admin Panel > Settings > Appearance.
+
+**Q: Can customers save their information?**
+A: Yes! The "Remember this information" checkbox (checked by default) saves customer details in their browser.
+
+**Q: Can I add more features?**
+A: Yes! Edit the code directly in GitHub or ask AI to help customize
+
+**Q: How do I backup my data?**
+A: Export Firestore data from Firebase Console > Firestore Database > Import/Export
 
 ---
 

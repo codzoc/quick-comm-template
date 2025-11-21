@@ -1,18 +1,50 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { signOut, onAuthChange } from '../../services/auth';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import {
+  Box,
+  Card,
+  CardContent,
+  Tabs,
+  Tab,
+  TextField,
+  Button,
+  Typography,
+  Alert,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Divider
+} from '@mui/material';
+import { Save } from 'lucide-react';
+import { onAuthChange } from '../../services/auth';
 import { getStoreInfo, updateStoreInfo, getAllStaticPages, updateStaticPage } from '../../services/storeInfo';
-import { getTheme, updateTheme } from '../../services/theme';
+import { getCurrentTemplate, updateThemeTemplate } from '../../services/theme';
+import { getThemeTemplateOptions } from '../../config/themeTemplates';
+import AdminLayout from '../../components/AdminLayout';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import ErrorMessage from '../../components/ErrorMessage';
 import './AdminStyles.css';
 
+function TabPanel({ children, value, index }) {
+  return (
+    <div role="tabpanel" hidden={value !== index}>
+      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
+    </div>
+  );
+}
+
 function AdminStoreSettings() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // Initialize tab from URL params, default to 0
+  const initialTab = parseInt(searchParams.get('tab') || '0', 10);
+  const [tabValue, setTabValue] = useState(initialTab);
+
   const [storeInfo, setStoreInfo] = useState({
     storeName: '',
+    logoUrl: '/images/logo.png',
     phone: '',
     whatsapp: '',
     facebook: '',
@@ -20,14 +52,19 @@ function AdminStoreSettings() {
     youtube: '',
     seoTitle: '',
     seoDescription: '',
-    seoKeywords: ''
+    seoKeywords: '',
+    currencySymbol: '₹',
+    taxPercentage: 0,
+    shippingCost: 0
   });
+
   const [staticPages, setStaticPages] = useState({
     about: { content: '', imagePath: '' },
     terms: { content: '', imagePath: '' },
     privacy: { content: '', imagePath: '' }
   });
-  const [theme, setTheme] = useState(null);
+
+  const [selectedTemplate, setSelectedTemplate] = useState('professional');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -40,312 +77,482 @@ function AdminStoreSettings() {
 
   const loadSettings = async () => {
     try {
-      const [info, pages, themeData] = await Promise.all([
+      const [info, pages, currentTemplate] = await Promise.all([
         getStoreInfo(),
         getAllStaticPages(),
-        getTheme()
+        getCurrentTemplate()
       ]);
       setStoreInfo(info);
       setStaticPages(pages);
-      setTheme(themeData);
-      setError('');
+      setSelectedTemplate(currentTemplate);
     } catch (err) {
-      setError(err.message);
+      console.error('Error loading settings:', err);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+    setSearchParams({ tab: newValue.toString() });
+  };
+
+  const showSuccess = (message) => {
+    setSuccess(message);
+    setTimeout(() => setSuccess(''), 3000);
+  };
+
+  // General Tab Handlers
   const handleSaveStoreInfo = async (e) => {
     e.preventDefault();
     try {
       await updateStoreInfo(storeInfo);
-      setSuccess('Store information saved successfully!');
-      setTimeout(() => setSuccess(''), 3000);
+      showSuccess('Store information saved successfully!');
     } catch (err) {
       alert(err.message);
     }
   };
 
+  const handleStoreInfoChange = (field, value) => {
+    setStoreInfo({ ...storeInfo, [field]: value });
+  };
+
+  // Appearance Tab Handlers
+  const handleSaveTheme = async () => {
+    try {
+      await updateThemeTemplate(selectedTemplate);
+      showSuccess('Theme template saved! Refreshing page...');
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  // Pages Tab Handlers
   const handleSaveStaticPage = async (pageType) => {
     try {
       await updateStaticPage(pageType, staticPages[pageType]);
-      setSuccess(`${pageType.charAt(0).toUpperCase() + pageType.slice(1)} page saved successfully!`);
-      setTimeout(() => setSuccess(''), 3000);
+      showSuccess(`${pageType.charAt(0).toUpperCase() + pageType.slice(1)} page saved successfully!`);
     } catch (err) {
       alert(err.message);
     }
   };
 
-  const handleSaveTheme = async (e) => {
-    e.preventDefault();
-    try {
-      await updateTheme(theme);
-      setSuccess('Theme saved successfully! Refresh the page to see changes.');
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      alert(err.message);
-    }
-  };
-
-  const handleColorChange = (key, value) => {
-    setTheme({
-      ...theme,
-      colors: {
-        ...theme.colors,
-        [key]: value
+  const handlePageContentChange = (pageType, field, value) => {
+    setStaticPages({
+      ...staticPages,
+      [pageType]: {
+        ...staticPages[pageType],
+        [field]: value
       }
     });
   };
 
-  if (loading) return <div className="admin-layout"><LoadingSpinner size="large" /></div>;
+  // SEO Tab Handlers
+  const handleSaveSEO = async (e) => {
+    e.preventDefault();
+    try {
+      await updateStoreInfo({
+        seoTitle: storeInfo.seoTitle,
+        seoDescription: storeInfo.seoDescription,
+        seoKeywords: storeInfo.seoKeywords
+      });
+      showSuccess('SEO settings saved successfully!');
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <LoadingSpinner size="large" message="Loading settings..." />
+      </AdminLayout>
+    );
+  }
+
+  const themeOptions = getThemeTemplateOptions();
 
   return (
-    <div className="admin-layout">
-      <header className="admin-header">
-        <h1>{storeInfo?.storeName || 'Quick Commerce'} - Settings</h1>
-        <nav className="admin-nav">
-          <Link to="/admin/dashboard">Dashboard</Link>
-          <Link to="/admin/products">Products</Link>
-          <Link to="/admin/orders">Orders</Link>
-          <Link to="/admin/settings" className="active">Settings</Link>
-          <button onClick={() => signOut().then(() => navigate('/admin'))} className="logout-btn">Logout</button>
-        </nav>
-      </header>
+    <AdminLayout>
+      <Typography variant="h4" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
+        Store Settings
+      </Typography>
 
-      <main className="admin-content">
-        {error && <ErrorMessage message={error} onRetry={loadSettings} />}
-        {success && <div style={{ padding: 'var(--spacing-md)', backgroundColor: 'var(--color-success)', color: 'white', borderRadius: 'var(--border-radius-md)', marginBottom: 'var(--spacing-lg)' }}>{success}</div>}
+      {success && (
+        <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess('')}>
+          {success}
+        </Alert>
+      )}
 
-        {/* Store Contact Info */}
-        <div style={{ backgroundColor: 'white', padding: 'var(--spacing-xl)', borderRadius: 'var(--border-radius-lg)', marginBottom: 'var(--spacing-xl)' }}>
-          <h3 style={{ marginBottom: 'var(--spacing-lg)' }}>Store Contact Information</h3>
-          <form onSubmit={handleSaveStoreInfo} className="admin-form">
-            <div className="form-group">
-              <label>Store Name</label>
-              <input type="text" value={storeInfo.storeName} onChange={(e) => setStoreInfo({ ...storeInfo, storeName: e.target.value })} />
-            </div>
-            <div className="form-row two-col">
-              <div className="form-group">
-                <label>Phone</label>
-                <input type="tel" value={storeInfo.phone} onChange={(e) => setStoreInfo({ ...storeInfo, phone: e.target.value })} placeholder="+91 1234567890" />
-              </div>
-              <div className="form-group">
-                <label>WhatsApp</label>
-                <input type="tel" value={storeInfo.whatsapp} onChange={(e) => setStoreInfo({ ...storeInfo, whatsapp: e.target.value })} placeholder="+91 1234567890" />
-              </div>
-            </div>
-            <div className="form-group">
-              <label>Facebook URL</label>
-              <input type="url" value={storeInfo.facebook} onChange={(e) => setStoreInfo({ ...storeInfo, facebook: e.target.value })} placeholder="https://facebook.com/yourpage" />
-            </div>
-            <div className="form-group">
-              <label>Instagram URL</label>
-              <input type="url" value={storeInfo.instagram} onChange={(e) => setStoreInfo({ ...storeInfo, instagram: e.target.value })} placeholder="https://instagram.com/yourprofile" />
-            </div>
-            <div className="form-group">
-              <label>YouTube URL</label>
-              <input type="url" value={storeInfo.youtube} onChange={(e) => setStoreInfo({ ...storeInfo, youtube: e.target.value })} placeholder="https://youtube.com/@yourchannel" />
-            </div>
+      <Card sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tabs value={tabValue} onChange={handleTabChange} sx={{ px: 2 }}>
+            <Tab label="General" />
+            <Tab label="Appearance" />
+            <Tab label="Pages" />
+            <Tab label="SEO" />
+            <Tab label="Pricing" />
+          </Tabs>
+        </Box>
 
-            <h4 style={{ marginTop: 'var(--spacing-xl)', marginBottom: 'var(--spacing-md)' }}>SEO Settings</h4>
-            <div className="form-group">
-              <label>SEO Title</label>
-              <input
-                type="text"
-                value={storeInfo.seoTitle || ''}
-                onChange={(e) => setStoreInfo({ ...storeInfo, seoTitle: e.target.value })}
-                placeholder="Best Online Store - Your Store Name"
-                maxLength="60"
+        {/* Tab 1: General */}
+        <TabPanel value={tabValue} index={0}>
+          <CardContent>
+            <form onSubmit={handleSaveStoreInfo}>
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
+                Store Information
+              </Typography>
+
+              <TextField
+                fullWidth
+                label="Store Name"
+                value={storeInfo.storeName || ''}
+                onChange={(e) => handleStoreInfoChange('storeName', e.target.value)}
+                margin="normal"
+                required
               />
-              <small style={{ color: 'var(--color-text-light)', marginTop: '4px', display: 'block' }}>
-                Recommended: 50-60 characters. This appears in search engine results.
-              </small>
-            </div>
-            <div className="form-group">
-              <label>SEO Description</label>
-              <textarea
-                rows="3"
-                value={storeInfo.seoDescription || ''}
-                onChange={(e) => setStoreInfo({ ...storeInfo, seoDescription: e.target.value })}
-                placeholder="Shop the best products at affordable prices. Fast delivery across India."
-                maxLength="160"
+
+              <TextField
+                fullWidth
+                label="Logo URL"
+                value={storeInfo.logoUrl || ''}
+                onChange={(e) => handleStoreInfoChange('logoUrl', e.target.value)}
+                margin="normal"
+                placeholder="/images/logo.png or https://example.com/logo.png"
+                helperText="Path to your logo (e.g., /images/logo.png) or full URL"
               />
-              <small style={{ color: 'var(--color-text-light)', marginTop: '4px', display: 'block' }}>
-                Recommended: 150-160 characters. This appears as the description in search results.
-              </small>
-            </div>
-            <div className="form-group">
-              <label>SEO Keywords</label>
-              <input
-                type="text"
-                value={storeInfo.seoKeywords || ''}
-                onChange={(e) => setStoreInfo({ ...storeInfo, seoKeywords: e.target.value })}
-                placeholder="online shopping, buy products, ecommerce, best deals"
+
+              <Divider sx={{ my: 3 }} />
+
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
+                Contact Information
+              </Typography>
+
+              <TextField
+                fullWidth
+                label="Phone Number"
+                value={storeInfo.phone || ''}
+                onChange={(e) => handleStoreInfoChange('phone', e.target.value)}
+                margin="normal"
+                placeholder="+91 1234567890"
               />
-              <small style={{ color: 'var(--color-text-light)', marginTop: '4px', display: 'block' }}>
-                Comma-separated keywords relevant to your store (e.g., "online shopping, electronics, fast delivery")
-              </small>
-            </div>
 
-            <button type="submit" className="btn-primary">Save Store Info</button>
-          </form>
-        </div>
+              <TextField
+                fullWidth
+                label="WhatsApp Number"
+                value={storeInfo.whatsapp || ''}
+                onChange={(e) => handleStoreInfoChange('whatsapp', e.target.value)}
+                margin="normal"
+                placeholder="+91 1234567890"
+              />
 
-        {/* Theme Configuration */}
-        {theme && (
-          <div style={{ backgroundColor: 'white', padding: 'var(--spacing-xl)', borderRadius: 'var(--border-radius-lg)', marginBottom: 'var(--spacing-xl)' }}>
-            <h3 style={{ marginBottom: 'var(--spacing-lg)' }}>Theme Configuration</h3>
-            <form onSubmit={handleSaveTheme} className="admin-form">
-              <div className="form-group">
-                <label>Font Family</label>
-                <input
-                  type="text"
-                  value={theme.fontFamily || ''}
-                  onChange={(e) => setTheme({ ...theme, fontFamily: e.target.value })}
-                  placeholder="e.g., Poppins, Roboto, Inter"
-                />
-                <small style={{ color: 'var(--color-text-light)', marginTop: '4px', display: 'block' }}>
-                  Popular options: Poppins, Roboto, Inter, Montserrat, Open Sans, Lato
-                </small>
-              </div>
+              <Divider sx={{ my: 3 }} />
 
-              <h4 style={{ marginTop: 'var(--spacing-lg)', marginBottom: 'var(--spacing-md)' }}>Brand Colors</h4>
-              <div className="form-row two-col">
-                <div className="form-group">
-                  <label>Primary Color</label>
-                  <div style={{ display: 'flex', gap: 'var(--spacing-sm)', alignItems: 'center' }}>
-                    <input
-                      type="color"
-                      value={theme.colors?.primary || '#3B82F6'}
-                      onChange={(e) => handleColorChange('primary', e.target.value)}
-                      style={{ width: '50px', height: '38px' }}
-                    />
-                    <input
-                      type="text"
-                      value={theme.colors?.primary || ''}
-                      onChange={(e) => handleColorChange('primary', e.target.value)}
-                      placeholder="#3B82F6"
-                    />
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label>Primary Hover</label>
-                  <div style={{ display: 'flex', gap: 'var(--spacing-sm)', alignItems: 'center' }}>
-                    <input
-                      type="color"
-                      value={theme.colors?.primaryHover || '#2563EB'}
-                      onChange={(e) => handleColorChange('primaryHover', e.target.value)}
-                      style={{ width: '50px', height: '38px' }}
-                    />
-                    <input
-                      type="text"
-                      value={theme.colors?.primaryHover || ''}
-                      onChange={(e) => handleColorChange('primaryHover', e.target.value)}
-                      placeholder="#2563EB"
-                    />
-                  </div>
-                </div>
-              </div>
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
+                Social Media
+              </Typography>
 
-              <div className="form-row two-col">
-                <div className="form-group">
-                  <label>Secondary Color</label>
-                  <div style={{ display: 'flex', gap: 'var(--spacing-sm)', alignItems: 'center' }}>
-                    <input
-                      type="color"
-                      value={theme.colors?.secondary || '#10B981'}
-                      onChange={(e) => handleColorChange('secondary', e.target.value)}
-                      style={{ width: '50px', height: '38px' }}
-                    />
-                    <input
-                      type="text"
-                      value={theme.colors?.secondary || ''}
-                      onChange={(e) => handleColorChange('secondary', e.target.value)}
-                      placeholder="#10B981"
-                    />
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label>Background</label>
-                  <div style={{ display: 'flex', gap: 'var(--spacing-sm)', alignItems: 'center' }}>
-                    <input
-                      type="color"
-                      value={theme.colors?.background || '#FFFFFF'}
-                      onChange={(e) => handleColorChange('background', e.target.value)}
-                      style={{ width: '50px', height: '38px' }}
-                    />
-                    <input
-                      type="text"
-                      value={theme.colors?.background || ''}
-                      onChange={(e) => handleColorChange('background', e.target.value)}
-                      placeholder="#FFFFFF"
-                    />
-                  </div>
-                </div>
-              </div>
+              <TextField
+                fullWidth
+                label="Facebook URL"
+                value={storeInfo.facebook || ''}
+                onChange={(e) => handleStoreInfoChange('facebook', e.target.value)}
+                margin="normal"
+                placeholder="https://facebook.com/yourpage"
+              />
 
-              <div className="form-row two-col">
-                <div className="form-group">
-                  <label>Text Color</label>
-                  <div style={{ display: 'flex', gap: 'var(--spacing-sm)', alignItems: 'center' }}>
-                    <input
-                      type="color"
-                      value={theme.colors?.text || '#1F2937'}
-                      onChange={(e) => handleColorChange('text', e.target.value)}
-                      style={{ width: '50px', height: '38px' }}
-                    />
-                    <input
-                      type="text"
-                      value={theme.colors?.text || ''}
-                      onChange={(e) => handleColorChange('text', e.target.value)}
-                      placeholder="#1F2937"
-                    />
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label>Text Light</label>
-                  <div style={{ display: 'flex', gap: 'var(--spacing-sm)', alignItems: 'center' }}>
-                    <input
-                      type="color"
-                      value={theme.colors?.textLight || '#6B7280'}
-                      onChange={(e) => handleColorChange('textLight', e.target.value)}
-                      style={{ width: '50px', height: '38px' }}
-                    />
-                    <input
-                      type="text"
-                      value={theme.colors?.textLight || ''}
-                      onChange={(e) => handleColorChange('textLight', e.target.value)}
-                      placeholder="#6B7280"
-                    />
-                  </div>
-                </div>
-              </div>
+              <TextField
+                fullWidth
+                label="Instagram URL"
+                value={storeInfo.instagram || ''}
+                onChange={(e) => handleStoreInfoChange('instagram', e.target.value)}
+                margin="normal"
+                placeholder="https://instagram.com/yourprofile"
+              />
 
-              <button type="submit" className="btn-primary">Save Theme</button>
+              <TextField
+                fullWidth
+                label="YouTube URL"
+                value={storeInfo.youtube || ''}
+                onChange={(e) => handleStoreInfoChange('youtube', e.target.value)}
+                margin="normal"
+                placeholder="https://youtube.com/@yourchannel"
+              />
+
+              <Button
+                type="submit"
+                variant="contained"
+                startIcon={<Save size={18} />}
+                sx={{ mt: 3 }}
+              >
+                Save Store Information
+              </Button>
             </form>
-          </div>
-        )}
+          </CardContent>
+        </TabPanel>
 
-        {/* Static Pages */}
-        {['about', 'terms', 'privacy'].map((pageType) => (
-          <div key={pageType} style={{ backgroundColor: 'white', padding: 'var(--spacing-xl)', borderRadius: 'var(--border-radius-lg)', marginBottom: 'var(--spacing-xl)' }}>
-            <h3 style={{ marginBottom: 'var(--spacing-lg)', textTransform: 'capitalize' }}>{pageType} Page</h3>
-            <div className="admin-form">
-              <div className="form-group">
-                <label>Content</label>
-                <textarea rows="6" value={staticPages[pageType].content} onChange={(e) => setStaticPages({ ...staticPages, [pageType]: { ...staticPages[pageType], content: e.target.value } })} />
-              </div>
-              <div className="form-group">
-                <label>Image Path (Optional)</label>
-                <input type="text" value={staticPages[pageType].imagePath} onChange={(e) => setStaticPages({ ...staticPages, [pageType]: { ...staticPages[pageType], imagePath: e.target.value } })} placeholder="/images/banner.jpg" />
-              </div>
-              <button type="button" onClick={() => handleSaveStaticPage(pageType)} className="btn-primary">Save {pageType.charAt(0).toUpperCase() + pageType.slice(1)}</button>
-            </div>
-          </div>
-        ))}
-      </main>
-    </div>
+        {/* Tab 2: Appearance */}
+        <TabPanel value={tabValue} index={1}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
+              Theme Template
+            </Typography>
+
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Choose a pre-designed theme template for your store. Each template includes a complete design system with colors, spacing, shadows, and typography.
+            </Typography>
+
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel>Select Theme Template</InputLabel>
+              <Select
+                value={selectedTemplate}
+                label="Select Theme Template"
+                onChange={(e) => setSelectedTemplate(e.target.value)}
+              >
+                {themeOptions.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    <Box>
+                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                        {option.label}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {option.description}
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            {themeOptions.find(opt => opt.value === selectedTemplate) && (
+              <Alert severity="info" sx={{ mb: 3 }}>
+                <Typography variant="body2">
+                  <strong>Selected: {themeOptions.find(opt => opt.value === selectedTemplate).label}</strong><br />
+                  {themeOptions.find(opt => opt.value === selectedTemplate).description}
+                </Typography>
+              </Alert>
+            )}
+
+            <Button
+              variant="contained"
+              startIcon={<Save size={18} />}
+              onClick={handleSaveTheme}
+            >
+              Apply Theme Template
+            </Button>
+          </CardContent>
+        </TabPanel>
+
+        {/* Tab 3: Pages */}
+        <TabPanel value={tabValue} index={2}>
+          <CardContent>
+            {/* About Page */}
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
+              About Page
+            </Typography>
+
+            <TextField
+              fullWidth
+              label="About Page Content"
+              value={staticPages.about?.content || ''}
+              onChange={(e) => handlePageContentChange('about', 'content', e.target.value)}
+              multiline
+              rows={6}
+              margin="normal"
+            />
+
+            <TextField
+              fullWidth
+              label="About Page Image Path"
+              value={staticPages.about?.imagePath || ''}
+              onChange={(e) => handlePageContentChange('about', 'imagePath', e.target.value)}
+              margin="normal"
+              placeholder="/images/about.jpg"
+            />
+
+            <Button
+              variant="contained"
+              startIcon={<Save size={18} />}
+              onClick={() => handleSaveStaticPage('about')}
+              sx={{ mt: 2, mb: 4 }}
+            >
+              Save About Page
+            </Button>
+
+            <Divider sx={{ my: 3 }} />
+
+            {/* Terms Page */}
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
+              Terms & Conditions Page
+            </Typography>
+
+            <TextField
+              fullWidth
+              label="Terms Content"
+              value={staticPages.terms?.content || ''}
+              onChange={(e) => handlePageContentChange('terms', 'content', e.target.value)}
+              multiline
+              rows={6}
+              margin="normal"
+            />
+
+            <Button
+              variant="contained"
+              startIcon={<Save size={18} />}
+              onClick={() => handleSaveStaticPage('terms')}
+              sx={{ mt: 2, mb: 4 }}
+            >
+              Save Terms Page
+            </Button>
+
+            <Divider sx={{ my: 3 }} />
+
+            {/* Privacy Page */}
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
+              Privacy Policy Page
+            </Typography>
+
+            <TextField
+              fullWidth
+              label="Privacy Content"
+              value={staticPages.privacy?.content || ''}
+              onChange={(e) => handlePageContentChange('privacy', 'content', e.target.value)}
+              multiline
+              rows={6}
+              margin="normal"
+            />
+
+            <Button
+              variant="contained"
+              startIcon={<Save size={18} />}
+              onClick={() => handleSaveStaticPage('privacy')}
+              sx={{ mt: 2 }}
+            >
+              Save Privacy Page
+            </Button>
+          </CardContent>
+        </TabPanel>
+
+        {/* Tab 4: SEO */}
+        <TabPanel value={tabValue} index={3}>
+          <CardContent>
+            <form onSubmit={handleSaveSEO}>
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
+                SEO Settings
+              </Typography>
+
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Optimize your store for search engines. These settings will appear in search results and social media shares.
+              </Typography>
+
+              <TextField
+                fullWidth
+                label="SEO Title"
+                value={storeInfo.seoTitle || ''}
+                onChange={(e) => handleStoreInfoChange('seoTitle', e.target.value)}
+                margin="normal"
+                helperText={`${(storeInfo.seoTitle || '').length}/60 characters (recommended: 50-60)`}
+                inputProps={{ maxLength: 60 }}
+              />
+
+              <TextField
+                fullWidth
+                label="SEO Description"
+                value={storeInfo.seoDescription || ''}
+                onChange={(e) => handleStoreInfoChange('seoDescription', e.target.value)}
+                margin="normal"
+                multiline
+                rows={3}
+                helperText={`${(storeInfo.seoDescription || '').length}/160 characters (recommended: 150-160)`}
+                inputProps={{ maxLength: 160 }}
+              />
+
+              <TextField
+                fullWidth
+                label="SEO Keywords"
+                value={storeInfo.seoKeywords || ''}
+                onChange={(e) => handleStoreInfoChange('seoKeywords', e.target.value)}
+                margin="normal"
+                helperText="Comma-separated keywords (e.g., ecommerce, online store, shopping)"
+              />
+
+              <Button
+                type="submit"
+                variant="contained"
+                startIcon={<Save size={18} />}
+                sx={{ mt: 3 }}
+              >
+                Save SEO Settings
+              </Button>
+            </form>
+          </CardContent>
+        </TabPanel>
+
+        {/* Tab 5: Pricing */}
+        <TabPanel value={tabValue} index={4}>
+          <CardContent>
+            <form onSubmit={handleSaveStoreInfo}>
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
+                Pricing & Currency
+              </Typography>
+
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Configure currency, tax, and shipping costs. Tax and shipping will be added to cart total if set.
+              </Typography>
+
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Currency Symbol</InputLabel>
+                <Select
+                  value={storeInfo.currencySymbol || '₹'}
+                  onChange={(e) => handleStoreInfoChange('currencySymbol', e.target.value)}
+                  label="Currency Symbol"
+                >
+                  <MenuItem value="₹">₹ (Indian Rupee)</MenuItem>
+                  <MenuItem value="$">$ (US Dollar)</MenuItem>
+                  <MenuItem value="€">€ (Euro)</MenuItem>
+                  <MenuItem value="£">£ (British Pound)</MenuItem>
+                  <MenuItem value="¥">¥ (Japanese Yen)</MenuItem>
+                  <MenuItem value="د.إ">د.إ (UAE Dirham)</MenuItem>
+                  <MenuItem value="SR">SR (Saudi Riyal)</MenuItem>
+                </Select>
+              </FormControl>
+
+              <TextField
+                fullWidth
+                label="Tax Percentage (%)"
+                type="number"
+                value={storeInfo.taxPercentage || 0}
+                onChange={(e) => handleStoreInfoChange('taxPercentage', parseFloat(e.target.value) || 0)}
+                margin="normal"
+                inputProps={{ min: 0, max: 100, step: 0.1 }}
+                helperText="Tax percentage to be added to cart total (0 = no tax)"
+              />
+
+              <TextField
+                fullWidth
+                label="Shipping Cost"
+                type="number"
+                value={storeInfo.shippingCost || 0}
+                onChange={(e) => handleStoreInfoChange('shippingCost', parseFloat(e.target.value) || 0)}
+                margin="normal"
+                inputProps={{ min: 0, step: 0.01 }}
+                helperText="Flat shipping cost to be added to all orders (0 = free shipping)"
+              />
+
+              <Button
+                type="submit"
+                variant="contained"
+                startIcon={<Save size={18} />}
+                sx={{ mt: 3 }}
+              >
+                Save Pricing Settings
+              </Button>
+            </form>
+          </CardContent>
+        </TabPanel>
+      </Card>
+    </AdminLayout>
   );
 }
 

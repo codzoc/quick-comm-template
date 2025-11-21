@@ -58,16 +58,68 @@ function StoreFront() {
     pin: ''
   });
   const [formErrors, setFormErrors] = useState({});
+  const [rememberInfo, setRememberInfo] = useState(true);
+
+  // LocalStorage key for saved customer info
+  const STORAGE_KEY = 'qc_customer_info';
+
+  // Save customer info to localStorage
+  const saveCustomerInfo = (info) => {
+    try {
+      const encoded = btoa(JSON.stringify(info));
+      localStorage.setItem(STORAGE_KEY, encoded);
+    } catch (err) {
+      console.error('Error saving customer info:', err);
+    }
+  };
+
+  // Load customer info from localStorage
+  const loadSavedCustomerInfo = () => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const decoded = JSON.parse(atob(saved));
+        setCustomerInfo(decoded);
+        setRememberInfo(true);
+        return true;
+      }
+    } catch (err) {
+      console.error('Error loading customer info:', err);
+      localStorage.removeItem(STORAGE_KEY);
+    }
+    return false;
+  };
+
+  // Clear saved customer info
+  const clearSavedCustomerInfo = () => {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+      setRememberInfo(false);
+      setCustomerInfo({ name: '', phone: '', address: '', pin: '' });
+    } catch (err) {
+      console.error('Error clearing customer info:', err);
+    }
+  };
 
   // Load products and store info on mount
   useEffect(() => {
     loadData();
+    loadSavedCustomerInfo();
 
     // Listen for cart open event from header
     const handleOpenCart = () => openCart();
     window.addEventListener('openCart', handleOpenCart);
     return () => window.removeEventListener('openCart', handleOpenCart);
   }, [openCart]);
+
+  // Reset cart view when cart is opened
+  useEffect(() => {
+    if (isCartOpen) {
+      setShowCheckout(false);
+      setOrderSuccess(false);
+      setSubmitting(false);
+    }
+  }, [isCartOpen]);
 
   // Filter products based on search
   useEffect(() => {
@@ -103,13 +155,36 @@ function StoreFront() {
   };
 
   const handleAddToCart = (product) => {
-    addToCart(product);
-    openCart();
+    const result = addToCart(product);
+    if (!result.success) {
+      alert(result.error);
+    } else {
+      openCart();
+    }
   };
 
   const handleSearch = useCallback((query) => {
     setSearchQuery(query);
   }, []);
+
+  // Calculate cart subtotal, tax, shipping, and grand total
+  const getCartSubtotal = () => {
+    return getCartTotal();
+  };
+
+  const getCartTax = () => {
+    if (!storeInfo?.taxPercentage) return 0;
+    return (getCartSubtotal() * storeInfo.taxPercentage) / 100;
+  };
+
+  const getCartShipping = () => {
+    if (!storeInfo?.shippingCost) return 0;
+    return storeInfo.shippingCost;
+  };
+
+  const getCartGrandTotal = () => {
+    return getCartSubtotal() + getCartTax() + getCartShipping();
+  };
 
   const handleCheckout = () => {
     if (cartItems.length === 0) return;
@@ -161,7 +236,7 @@ function StoreFront() {
       const orderData = {
         items: cartItems,
         customer: customerInfo,
-        total: getCartTotal()
+        total: getCartGrandTotal()
       };
 
       const order = await createOrder(orderData);
@@ -173,7 +248,13 @@ function StoreFront() {
       })));
       setOrderSuccess(true);
       clearCart();
-      setCustomerInfo({ name: '', phone: '', address: '', pin: '' });
+
+      // Save or clear customer info based on checkbox
+      if (rememberInfo) {
+        saveCustomerInfo(customerInfo);
+      } else {
+        setCustomerInfo({ name: '', phone: '', address: '', pin: '' });
+      }
     } catch (err) {
       setError(err.message);
       setSubmitting(false);
@@ -249,6 +330,7 @@ function StoreFront() {
                       key={product.id}
                       product={product}
                       onAddToCart={handleAddToCart}
+                      currencySymbol={storeInfo?.currencySymbol || '₹'}
                     />
                   ))}
                 </div>
@@ -296,16 +378,35 @@ function StoreFront() {
                               item={item}
                               onUpdateQuantity={updateQuantity}
                               onRemove={removeFromCart}
+                              currencySymbol={storeInfo?.currencySymbol || '₹'}
                             />
                           ))}
                         </div>
 
                         <div className="cart-footer">
-                          <div className="cart-total">
-                            <span>Total:</span>
-                            <span className="cart-total-amount">
-                              ₹{getCartTotal()}
-                            </span>
+                          <div className="cart-total" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xs)', alignItems: 'flex-end' }}>
+                            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between' }}>
+                              <span style={{ color: 'var(--color-text-light)', fontSize: 'var(--font-size-sm)' }}>Subtotal:</span>
+                              <span style={{ fontSize: 'var(--font-size-sm)', textAlign: 'right' }}>{storeInfo?.currencySymbol || '₹'}{getCartSubtotal().toFixed(2)}</span>
+                            </div>
+                            {storeInfo?.taxPercentage > 0 && (
+                              <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between' }}>
+                                <span style={{ color: 'var(--color-text-light)', fontSize: 'var(--font-size-sm)' }}>Tax ({storeInfo.taxPercentage}%):</span>
+                                <span style={{ fontSize: 'var(--font-size-sm)', textAlign: 'right' }}>{storeInfo?.currencySymbol || '₹'}{getCartTax().toFixed(2)}</span>
+                              </div>
+                            )}
+                            {storeInfo?.shippingCost > 0 && (
+                              <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between' }}>
+                                <span style={{ color: 'var(--color-text-light)', fontSize: 'var(--font-size-sm)' }}>Shipping:</span>
+                                <span style={{ fontSize: 'var(--font-size-sm)', textAlign: 'right' }}>{storeInfo?.currencySymbol || '₹'}{getCartShipping().toFixed(2)}</span>
+                              </div>
+                            )}
+                            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', paddingTop: 'var(--spacing-sm)', borderTop: '1px solid var(--color-border)', marginTop: 'var(--spacing-xs)' }}>
+                              <span style={{ fontWeight: 'var(--font-weight-semibold)' }}>Total:</span>
+                              <span className="cart-total-amount" style={{ textAlign: 'right' }}>
+                                {storeInfo?.currencySymbol || '₹'}{getCartGrandTotal().toFixed(2)}
+                              </span>
+                            </div>
                           </div>
                           <div style={{ display: 'flex', gap: 'var(--spacing-sm)', flexDirection: 'column' }}>
                             <button
@@ -430,13 +531,56 @@ function StoreFront() {
 
                       <div className="checkout-summary">
                         <div className="summary-row">
-                          <span>Items ({getCartItemCount()}):</span>
-                          <span>₹{getCartTotal()}</span>
+                          <span>Subtotal ({getCartItemCount()} items):</span>
+                          <span>{storeInfo?.currencySymbol || '₹'}{getCartSubtotal().toFixed(2)}</span>
                         </div>
+                        {storeInfo?.taxPercentage > 0 && (
+                          <div className="summary-row">
+                            <span>Tax ({storeInfo.taxPercentage}%):</span>
+                            <span>{storeInfo?.currencySymbol || '₹'}{getCartTax().toFixed(2)}</span>
+                          </div>
+                        )}
+                        {storeInfo?.shippingCost > 0 && (
+                          <div className="summary-row">
+                            <span>Shipping:</span>
+                            <span>{storeInfo?.currencySymbol || '₹'}{getCartShipping().toFixed(2)}</span>
+                          </div>
+                        )}
                         <div className="summary-row summary-total">
                           <span>Total:</span>
-                          <span>₹{getCartTotal()}</span>
+                          <span>{storeInfo?.currencySymbol || '₹'}{getCartGrandTotal().toFixed(2)}</span>
                         </div>
+                      </div>
+
+                      {/* Remember Information Checkbox */}
+                      <div className="form-group" style={{ marginBottom: 'var(--spacing-md)' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)', cursor: 'pointer', fontSize: 'var(--font-size-sm)' }}>
+                          <input
+                            type="checkbox"
+                            checked={rememberInfo}
+                            onChange={(e) => setRememberInfo(e.target.checked)}
+                            style={{ cursor: 'pointer' }}
+                          />
+                          <span>Remember this information in my browser for future use</span>
+                        </label>
+                        {rememberInfo && (
+                          <button
+                            type="button"
+                            onClick={clearSavedCustomerInfo}
+                            style={{
+                              marginTop: 'var(--spacing-xs)',
+                              padding: 'var(--spacing-xs) var(--spacing-sm)',
+                              fontSize: 'var(--font-size-xs)',
+                              background: 'none',
+                              border: '1px solid var(--color-border)',
+                              borderRadius: 'var(--border-radius-sm)',
+                              color: 'var(--color-text-light)',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Clear saved information
+                          </button>
+                        )}
                       </div>
 
                       <button
