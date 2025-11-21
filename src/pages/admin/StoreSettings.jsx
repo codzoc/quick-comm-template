@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Box,
   Card,
@@ -34,12 +34,17 @@ function TabPanel({ children, value, index }) {
 }
 
 function AdminStoreSettings() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [success, setSuccess] = useState('');
-  const [tabValue, setTabValue] = useState(0);
+
+  // Initialize tab from URL params, default to 0
+  const initialTab = parseInt(searchParams.get('tab') || '0', 10);
+  const [tabValue, setTabValue] = useState(initialTab);
 
   const [storeInfo, setStoreInfo] = useState({
     storeName: '',
+    logoUrl: '/images/logo.png',
     phone: '',
     whatsapp: '',
     facebook: '',
@@ -47,7 +52,10 @@ function AdminStoreSettings() {
     youtube: '',
     seoTitle: '',
     seoDescription: '',
-    seoKeywords: ''
+    seoKeywords: '',
+    currencySymbol: '₹',
+    taxPercentage: 0,
+    shippingCost: 0
   });
 
   const [staticPages, setStaticPages] = useState({
@@ -86,6 +94,7 @@ function AdminStoreSettings() {
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
+    setSearchParams({ tab: newValue.toString() });
   };
 
   const showSuccess = (message) => {
@@ -183,6 +192,7 @@ function AdminStoreSettings() {
             <Tab label="Appearance" />
             <Tab label="Pages" />
             <Tab label="SEO" />
+            <Tab label="Pricing" />
           </Tabs>
         </Box>
 
@@ -201,6 +211,16 @@ function AdminStoreSettings() {
                 onChange={(e) => handleStoreInfoChange('storeName', e.target.value)}
                 margin="normal"
                 required
+              />
+
+              <TextField
+                fullWidth
+                label="Logo URL"
+                value={storeInfo.logoUrl || ''}
+                onChange={(e) => handleStoreInfoChange('logoUrl', e.target.value)}
+                margin="normal"
+                placeholder="/images/logo.png or https://example.com/logo.png"
+                helperText="Path to your logo (e.g., /images/logo.png) or full URL"
               />
 
               <Divider sx={{ my: 3 }} />
@@ -464,6 +484,69 @@ function AdminStoreSettings() {
                 sx={{ mt: 3 }}
               >
                 Save SEO Settings
+              </Button>
+            </form>
+          </CardContent>
+        </TabPanel>
+
+        {/* Tab 5: Pricing */}
+        <TabPanel value={tabValue} index={4}>
+          <CardContent>
+            <form onSubmit={handleSaveStoreInfo}>
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
+                Pricing & Currency
+              </Typography>
+
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Configure currency, tax, and shipping costs. Tax and shipping will be added to cart total if set.
+              </Typography>
+
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Currency Symbol</InputLabel>
+                <Select
+                  value={storeInfo.currencySymbol || '₹'}
+                  onChange={(e) => handleStoreInfoChange('currencySymbol', e.target.value)}
+                  label="Currency Symbol"
+                >
+                  <MenuItem value="₹">₹ (Indian Rupee)</MenuItem>
+                  <MenuItem value="$">$ (US Dollar)</MenuItem>
+                  <MenuItem value="€">€ (Euro)</MenuItem>
+                  <MenuItem value="£">£ (British Pound)</MenuItem>
+                  <MenuItem value="¥">¥ (Japanese Yen)</MenuItem>
+                  <MenuItem value="د.إ">د.إ (UAE Dirham)</MenuItem>
+                  <MenuItem value="SR">SR (Saudi Riyal)</MenuItem>
+                </Select>
+              </FormControl>
+
+              <TextField
+                fullWidth
+                label="Tax Percentage (%)"
+                type="number"
+                value={storeInfo.taxPercentage || 0}
+                onChange={(e) => handleStoreInfoChange('taxPercentage', parseFloat(e.target.value) || 0)}
+                margin="normal"
+                inputProps={{ min: 0, max: 100, step: 0.1 }}
+                helperText="Tax percentage to be added to cart total (0 = no tax)"
+              />
+
+              <TextField
+                fullWidth
+                label="Shipping Cost"
+                type="number"
+                value={storeInfo.shippingCost || 0}
+                onChange={(e) => handleStoreInfoChange('shippingCost', parseFloat(e.target.value) || 0)}
+                margin="normal"
+                inputProps={{ min: 0, step: 0.01 }}
+                helperText="Flat shipping cost to be added to all orders (0 = free shipping)"
+              />
+
+              <Button
+                type="submit"
+                variant="contained"
+                startIcon={<Save size={18} />}
+                sx={{ mt: 3 }}
+              >
+                Save Pricing Settings
               </Button>
             </form>
           </CardContent>

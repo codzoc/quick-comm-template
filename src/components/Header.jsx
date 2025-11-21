@@ -17,24 +17,28 @@ import './Header.css';
  */
 function Header({ cartItemCount = 0, onSearch, showSearch = true }) {
   const [storeName, setStoreName] = useState('Quick Commerce');
+  const [logoUrl, setLogoUrl] = useState(business.logoPath);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   useEffect(() => {
-    // Fetch store name from Firebase
-    const fetchStoreName = async () => {
+    // Fetch store info from Firebase
+    const fetchStoreInfo = async () => {
       try {
         const storeInfo = await getStoreInfo();
         if (storeInfo.storeName) {
           setStoreName(storeInfo.storeName);
         }
+        if (storeInfo.logoUrl) {
+          setLogoUrl(storeInfo.logoUrl);
+        }
       } catch (error) {
-        console.error('Error fetching store name:', error);
-        // Keep default name on error
+        console.error('Error fetching store info:', error);
+        // Keep default values on error
       }
     };
 
-    fetchStoreName();
+    fetchStoreInfo();
   }, []);
 
   const toggleMobileMenu = () => {
@@ -62,7 +66,7 @@ function Header({ cartItemCount = 0, onSearch, showSearch = true }) {
 
         {/* Logo */}
         <Link to="/" className="header-logo" onClick={() => setMobileMenuOpen(false)}>
-          <img src={business.logoPath} alt={storeName} />
+          <img src={logoUrl} alt={storeName} />
           <span className="header-store-name">{storeName}</span>
         </Link>
 
