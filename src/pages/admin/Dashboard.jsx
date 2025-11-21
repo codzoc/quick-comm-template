@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, Typography, Box } from '@mui/material';
-import { TrendingUp, ShoppingCart, Package, AlertTriangle } from 'lucide-react';
+import { TrendingUp, ShoppingCart, Package, AlertTriangle, Clock, CheckCircle } from 'lucide-react';
 import { onAuthChange } from '../../services/auth';
 import { getOrderStats } from '../../services/orders';
 import { getAllProducts } from '../../services/products';
@@ -10,7 +10,13 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import './AdminStyles.css';
 
 function AdminDashboard() {
-  const [stats, setStats] = useState({ totalOrders: 0, pendingOrders: 0, totalRevenue: 0 });
+  const [stats, setStats] = useState({
+    totalOrders: 0,
+    pendingOrders: 0,
+    processingOrders: 0,
+    completedOrders: 0,
+    totalRevenue: 0
+  });
   const [lowStockProducts, setLowStockProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -62,6 +68,18 @@ function AdminDashboard() {
       value: stats.pendingOrders,
       icon: Package,
       color: '#f59e0b'
+    },
+    {
+      title: 'Processing Orders',
+      value: stats.processingOrders,
+      icon: Clock,
+      color: '#3b82f6'
+    },
+    {
+      title: 'Completed Orders',
+      value: stats.completedOrders,
+      icon: CheckCircle,
+      color: '#10b981'
     },
     {
       title: 'Total Revenue',

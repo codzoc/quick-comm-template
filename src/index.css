@@ -132,3 +132,23 @@ img {
     padding: 0 var(--spacing-xl);
   }
 }
+
+/* Material-UI Component Overrides */
+/* Force MUI components to use theme font-family */
+.MuiTypography-root,
+.MuiTableCell-root,
+.MuiButton-root,
+.MuiTextField-root,
+.MuiInputBase-root,
+.MuiMenuItem-root,
+.MuiTab-root,
+.MuiChip-root,
+.MuiDialogTitle-root,
+.MuiDialogContent-root,
+.MuiDialogActions-root,
+.MuiFormLabel-root,
+.MuiSelect-root {
+  font-family: var(--font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif) !important;
+}

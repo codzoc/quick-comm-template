@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -10,6 +10,7 @@ import {
   X
 } from 'lucide-react';
 import { signOut } from '../services/auth';
+import { getStoreInfo } from '../services/storeInfo';
 import './AdminLayout.css';
 
 /**
@@ -21,7 +22,22 @@ import './AdminLayout.css';
  */
 function AdminLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [storeName, setStoreName] = useState('Admin Panel');
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const loadStoreInfo = async () => {
+      try {
+        const info = await getStoreInfo();
+        if (info?.storeName) {
+          setStoreName(info.storeName);
+        }
+      } catch (error) {
+        console.error('Error loading store info:', error);
+      }
+    };
+    loadStoreInfo();
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -74,7 +90,7 @@ function AdminLayout({ children }) {
         >
           {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
-        <h1 className="admin-mobile-title">Admin Panel</h1>
+        <h1 className="admin-mobile-title">{storeName}</h1>
       </header>
 
       {/* Sidebar Overlay (Mobile) */}
@@ -89,7 +105,7 @@ function AdminLayout({ children }) {
       {/* Sidebar */}
       <aside className={`admin-sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
         <div className="sidebar-header">
-          <h2 className="sidebar-title">Quick Commerce</h2>
+          <h2 className="sidebar-title">{storeName}</h2>
           <p className="sidebar-subtitle">Admin Panel</p>
         </div>
 
