@@ -57,13 +57,14 @@ jobs:
       - name: Build project
         run: npm run build
 
+      - name: Copy .firebaserc to dist
+        run: cp .firebaserc dist/.firebaserc
+
       - name: Upload build artifacts and config
         uses: actions/upload-artifact@v4
         with:
           name: build-output
-          path: |
-            dist/
-            .firebaserc
+          path: dist/
 
   deploy-preview:
     needs: build
@@ -78,7 +79,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-output
-          path: .
+          path: dist/
+
+      - name: Copy .firebaserc from dist to root
+        run: cp dist/.firebaserc .firebaserc
 
       - name: Debug - List files
         run: |
@@ -86,8 +90,8 @@ jobs:
           pwd
           echo "=== Files in current directory ==="
           ls -la
-          echo "=== All files recursively ==="
-          find . -type f | head -20
+          echo "=== .firebaserc contents ==="
+          cat .firebaserc
 
       - name: Extract project ID
         id: firebase-config
@@ -125,7 +129,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-output
-          path: .
+          path: dist/
+
+      - name: Copy .firebaserc from dist to root
+        run: cp dist/.firebaserc .firebaserc
 
       - name: Debug - List files
         run: |
@@ -133,8 +140,8 @@ jobs:
           pwd
           echo "=== Files in current directory ==="
           ls -la
-          echo "=== All files recursively ==="
-          find . -type f | head -20
+          echo "=== .firebaserc contents ==="
+          cat .firebaserc
 
       - name: Extract project ID
         id: firebase-config
