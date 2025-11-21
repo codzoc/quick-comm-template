@@ -76,13 +76,15 @@ jobs:
         run: |
           PROJECT_ID=$(cat .firebaserc | jq -r '.projects.default')
           echo "project_id=$PROJECT_ID" >> $GITHUB_OUTPUT
+          echo "Extracted project ID: $PROJECT_ID"
 
       - name: Deploy Firestore Rules and Indexes (Preview)
-        uses: w9jds/firebase-action@master
+        uses: w9jds/firebase-action@v14.2.0
         with:
-          args: deploy --only firestore --project ${{ steps.firebase-config.outputs.project_id }}
+          args: deploy --only firestore
         env:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          PROJECT_ID: ${{ steps.firebase-config.outputs.project_id }}
 
       - name: Deploy to Firebase Preview Channel
         uses: FirebaseExtended/action-hosting-deploy@v0
@@ -114,13 +116,15 @@ jobs:
         run: |
           PROJECT_ID=$(cat .firebaserc | jq -r '.projects.default')
           echo "project_id=$PROJECT_ID" >> $GITHUB_OUTPUT
+          echo "Extracted project ID: $PROJECT_ID"
 
       - name: Deploy Firestore Rules and Indexes
-        uses: w9jds/firebase-action@master
+        uses: w9jds/firebase-action@v14.2.0
         with:
-          args: deploy --only firestore --project ${{ steps.firebase-config.outputs.project_id }}
+          args: deploy --only firestore
         env:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          PROJECT_ID: ${{ steps.firebase-config.outputs.project_id }}
 
       - name: Deploy to Firebase Hosting (Production)
         uses: FirebaseExtended/action-hosting-deploy@v0
