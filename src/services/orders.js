@@ -24,7 +24,7 @@ const COLLECTION_NAME = 'orders';
 
 /**
  * Create new order
- * @param {Object} orderData - {items, customer: {name, phone, address, pin}}
+ * @param {Object} orderData - {items, customer: {name, phone, address, pin}, total, subtotal, tax, shipping}
  * @returns {Promise<Object>} Order with ID
  */
 export async function createOrder(orderData) {
@@ -72,6 +72,9 @@ export async function createOrder(orderData) {
         })),
         customer: orderData.customer,
         status: 'pending',
+        subtotal: orderData.subtotal || 0,
+        tax: orderData.tax || 0,
+        shipping: orderData.shipping || 0,
         total: orderData.total,
         createdAt: serverTimestamp()
       };

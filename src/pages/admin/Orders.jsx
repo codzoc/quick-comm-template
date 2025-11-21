@@ -126,9 +126,23 @@ function AdminOrders() {
       cancelled: 'Your order has been cancelled'
     };
 
+    const currencySymbol = storeInfo?.currencySymbol || '₹';
     const itemsList = order.items.map(item =>
-      `${item.quantity}x ${item.title} - ₹${item.subtotal}`
+      `${item.quantity}x ${item.title} - ${currencySymbol}${item.subtotal?.toFixed(2) || item.subtotal}`
     ).join('\n');
+
+    // Build breakdown if available
+    let breakdownText = '';
+    if (order.subtotal !== undefined) {
+      breakdownText = `\n*Order Breakdown:*\nSubtotal: ${currencySymbol}${order.subtotal.toFixed(2)}`;
+      if (order.tax > 0) {
+        breakdownText += `\nTax: ${currencySymbol}${order.tax.toFixed(2)}`;
+      }
+      if (order.shipping > 0) {
+        breakdownText += `\nShipping: ${currencySymbol}${order.shipping.toFixed(2)}`;
+      }
+      breakdownText += '\n';
+    }
 
     const message = `Hello ${order.customer.name},
 
@@ -139,8 +153,8 @@ Your order status has been updated!
 
 *Order Items:*
 ${itemsList}
-
-*Total Amount:* ₹${order.total}
+${breakdownText}
+*Total Amount:* ${currencySymbol}${order.total?.toFixed(2) || order.total}
 
 ${order.customer.address ? `*Delivery Address:*\n${order.customer.address}, ${order.customer.pin}` : ''}
 
@@ -227,7 +241,7 @@ Thank you for shopping with us!
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      ₹{order.total}
+                      {storeInfo?.currencySymbol || '₹'}{order.total?.toFixed(2) || '0.00'}
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -337,7 +351,7 @@ Thank you for shopping with us!
                       <strong>Total Amount:</strong>
                     </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600, mt: 0.5 }}>
-                      ₹{selectedOrder.total}
+                      {storeInfo?.currencySymbol || '₹'}{selectedOrder.total?.toFixed(2) || '0.00'}
                     </Typography>
                   </Grid>
                 </Grid>
@@ -428,16 +442,61 @@ Thank you for shopping with us!
                           </TableCell>
                           <TableCell align="right">
                             <Typography variant="body2">
-                              ₹{item.price}
+                              {storeInfo?.currencySymbol || '₹'}{item.price?.toFixed(2) || '0.00'}
                             </Typography>
                           </TableCell>
                           <TableCell align="right">
                             <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                              ₹{item.subtotal}
+                              {storeInfo?.currencySymbol || '₹'}{item.subtotal?.toFixed(2) || '0.00'}
                             </Typography>
                           </TableCell>
                         </TableRow>
                       ))}
+                      {/* Breakdown Section */}
+                      {selectedOrder.subtotal !== undefined && (
+                        <>
+                          <TableRow>
+                            <TableCell colSpan={4} align="right">
+                              <Typography variant="body2">
+                                Subtotal:
+                              </Typography>
+                            </TableCell>
+                            <TableCell align="right">
+                              <Typography variant="body2">
+                                {storeInfo?.currencySymbol || '₹'}{selectedOrder.subtotal?.toFixed(2) || '0.00'}
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                          {selectedOrder.tax > 0 && (
+                            <TableRow>
+                              <TableCell colSpan={4} align="right">
+                                <Typography variant="body2">
+                                  Tax:
+                                </Typography>
+                              </TableCell>
+                              <TableCell align="right">
+                                <Typography variant="body2">
+                                  {storeInfo?.currencySymbol || '₹'}{selectedOrder.tax?.toFixed(2) || '0.00'}
+                                </Typography>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                          {selectedOrder.shipping > 0 && (
+                            <TableRow>
+                              <TableCell colSpan={4} align="right">
+                                <Typography variant="body2">
+                                  Shipping:
+                                </Typography>
+                              </TableCell>
+                              <TableCell align="right">
+                                <Typography variant="body2">
+                                  {storeInfo?.currencySymbol || '₹'}{selectedOrder.shipping?.toFixed(2) || '0.00'}
+                                </Typography>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </>
+                      )}
                       <TableRow>
                         <TableCell colSpan={4} align="right">
                           <Typography variant="body1" sx={{ fontWeight: 600 }}>
@@ -446,7 +505,7 @@ Thank you for shopping with us!
                         </TableCell>
                         <TableCell align="right">
                           <Typography variant="body1" sx={{ fontWeight: 700, color: 'primary.main' }}>
-                            ₹{selectedOrder.total}
+                            {storeInfo?.currencySymbol || '₹'}{selectedOrder.total?.toFixed(2) || '0.00'}
                           </Typography>
                         </TableCell>
                       </TableRow>

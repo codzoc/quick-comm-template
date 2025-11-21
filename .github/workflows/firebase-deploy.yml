@@ -45,20 +45,36 @@ jobs:
           # Clean up temp file
           rm config.json
 
+      - name: Debug - Verify .firebaserc created
+        run: |
+          echo "=== .firebaserc contents ==="
+          cat .firebaserc
+          echo "=== .env file exists ==="
+          ls -la .env
+          echo "=== Current directory files ==="
+          ls -la
+
       - name: Build project
         run: npm run build
 
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: dist/
+      - name: Copy .firebaserc to dist
+        run: |
+          cp .firebaserc dist/.firebaserc
+          echo "=== Verifying .firebaserc copied to dist ==="
+          ls -la dist/.firebaserc
+          cat dist/.firebaserc
 
-      - name: Upload .firebaserc
+      - name: Debug - List dist contents before upload
+        run: |
+          echo "=== All files in dist (including hidden) ==="
+          ls -laR dist/
+
+      - name: Upload build artifacts and config
         uses: actions/upload-artifact@v4
         with:
-          name: firebaserc
-          path: .firebaserc
+          name: build-output
+          path: dist/
+          include-hidden-files: true
 
   deploy-preview:
     needs: build
@@ -69,30 +85,43 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Download build artifacts
+      - name: Download build artifacts and config
         uses: actions/download-artifact@v4
         with:
-          name: dist
+          name: build-output
           path: dist/
 
-      - name: Download .firebaserc
-        uses: actions/download-artifact@v4
-        with:
-          name: firebaserc
-          path: .
+      - name: Debug - Check downloaded artifact contents
+        run: |
+          echo "=== All files in dist (including hidden) ==="
+          ls -laR dist/
+          echo "=== Checking for .firebaserc ==="
+          find dist/ -name "*firebaserc*" || echo "No firebaserc found"
 
-      - name: Deploy Firestore Rules and Indexes (Preview)
-        uses: w9jds/firebase-action@master
-        with:
-          args: deploy --only firestore
-        env:
-          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Copy .firebaserc from dist to root
+        run: cp dist/.firebaserc .firebaserc
+
+      - name: Debug - List files
+        run: |
+          echo "=== Current directory ==="
+          pwd
+          echo "=== Files in current directory ==="
+          ls -la
+          echo "=== .firebaserc contents ==="
+          cat .firebaserc
 
       - name: Extract project ID
         id: firebase-config
         run: |
           PROJECT_ID=$(cat .firebaserc | jq -r '.projects.default')
           echo "project_id=$PROJECT_ID" >> $GITHUB_OUTPUT
+
+      - name: Deploy Firestore Rules and Indexes (Preview)
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only firestore --project ${{ steps.firebase-config.outputs.project_id }}
+        env:
+          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
       - name: Deploy to Firebase Preview Channel
         uses: FirebaseExtended/action-hosting-deploy@v0
@@ -113,30 +142,43 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Download build artifacts
+      - name: Download build artifacts and config
         uses: actions/download-artifact@v4
         with:
-          name: dist
+          name: build-output
           path: dist/
 
-      - name: Download .firebaserc
-        uses: actions/download-artifact@v4
-        with:
-          name: firebaserc
-          path: .
+      - name: Debug - Check downloaded artifact contents
+        run: |
+          echo "=== All files in dist (including hidden) ==="
+          ls -laR dist/
+          echo "=== Checking for .firebaserc ==="
+          find dist/ -name "*firebaserc*" || echo "No firebaserc found"
 
-      - name: Deploy Firestore Rules and Indexes
-        uses: w9jds/firebase-action@master
-        with:
-          args: deploy --only firestore
-        env:
-          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Copy .firebaserc from dist to root
+        run: cp dist/.firebaserc .firebaserc
+
+      - name: Debug - List files
+        run: |
+          echo "=== Current directory ==="
+          pwd
+          echo "=== Files in current directory ==="
+          ls -la
+          echo "=== .firebaserc contents ==="
+          cat .firebaserc
 
       - name: Extract project ID
         id: firebase-config
         run: |
           PROJECT_ID=$(cat .firebaserc | jq -r '.projects.default')
           echo "project_id=$PROJECT_ID" >> $GITHUB_OUTPUT
+
+      - name: Deploy Firestore Rules and Indexes
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only firestore --project ${{ steps.firebase-config.outputs.project_id }}
+        env:
+          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
       - name: Deploy to Firebase Hosting (Production)
         uses: FirebaseExtended/action-hosting-deploy@v0

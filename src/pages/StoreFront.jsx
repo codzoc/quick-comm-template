@@ -236,6 +236,9 @@ function StoreFront() {
       const orderData = {
         items: cartItems,
         customer: customerInfo,
+        subtotal: getCartSubtotal(),
+        tax: getCartTax(),
+        shipping: getCartShipping(),
         total: getCartGrandTotal()
       };
 
