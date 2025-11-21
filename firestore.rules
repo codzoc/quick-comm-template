@@ -51,7 +51,12 @@ service cloud.firestore {
         && request.resource.data.customer.phone is string
         && request.resource.data.total is number
         && request.resource.data.total >= 0
-        && request.resource.data.status == 'pending';
+        && request.resource.data.status == 'pending'
+        // Allow optional subtotal, tax, and shipping fields
+        && (!request.resource.data.keys().hasAny(['subtotal', 'tax', 'shipping']) ||
+            (request.resource.data.get('subtotal', 0) is number &&
+             request.resource.data.get('tax', 0) is number &&
+             request.resource.data.get('shipping', 0) is number));
 
       allow read: if isAdmin();
 
@@ -69,7 +74,7 @@ service cloud.firestore {
         && settingId in ['about', 'terms', 'privacy', 'theme'];
     }
 
-    // Store info collection (contact details, social media, SEO)
+    // Store info collection (contact details, social media, SEO, pricing, logo)
     // Public: read
     // Admin: read, write
     match /storeInfo/{infoId} {
@@ -77,7 +82,7 @@ service cloud.firestore {
 
       allow write: if isAdmin()
         && infoId == 'contact'
-        && request.resource.data.keys().hasAny(['storeName', 'phone', 'whatsapp', 'facebook', 'instagram', 'youtube', 'seoTitle', 'seoDescription', 'seoKeywords', 'updatedAt']);
+        && request.resource.data.keys().hasAny(['storeName', 'logoUrl', 'phone', 'whatsapp', 'facebook', 'instagram', 'youtube', 'seoTitle', 'seoDescription', 'seoKeywords', 'currencySymbol', 'taxPercentage', 'shippingCost', 'updatedAt']);
     }
   }
 }
