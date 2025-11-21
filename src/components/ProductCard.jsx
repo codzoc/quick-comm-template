@@ -9,8 +9,9 @@ import './ProductCard.css';
  * Props:
  * - product: {id, title, description, price, discountedPrice, imagePath, stock}
  * - onAddToCart: Callback function when "Add to Cart" is clicked
+ * - currencySymbol: Currency symbol to display (default: ₹)
  */
-function ProductCard({ product, onAddToCart }) {
+function ProductCard({ product, onAddToCart, currencySymbol = '₹' }) {
   const { title, description, price, discountedPrice, imagePath, stock } = product;
   const isOutOfStock = stock === 0;
   const hasDiscount = discountedPrice && discountedPrice < price;
@@ -52,11 +53,11 @@ function ProductCard({ product, onAddToCart }) {
         <div className="product-price-container">
           {hasDiscount ? (
             <>
-              <span className="product-price-discounted">₹{discountedPrice}</span>
-              <span className="product-price-original">₹{price}</span>
+              <span className="product-price-discounted">{currencySymbol}{discountedPrice}</span>
+              <span className="product-price-original">{currencySymbol}{price}</span>
             </>
           ) : (
-            <span className="product-price">₹{price}</span>
+            <span className="product-price">{currencySymbol}{price}</span>
           )}
         </div>
 

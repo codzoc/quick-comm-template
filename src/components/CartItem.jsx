@@ -10,8 +10,9 @@ import './CartItem.css';
  * - item: {product, quantity}
  * - onUpdateQuantity: Callback function(productId, newQuantity)
  * - onRemove: Callback function(productId)
+ * - currencySymbol: Currency symbol to display (default: ₹)
  */
-function CartItem({ item, onUpdateQuantity, onRemove }) {
+function CartItem({ item, onUpdateQuantity, onRemove, currencySymbol = '₹' }) {
   const { product, quantity } = item;
   const { id, title, imagePath, price, discountedPrice } = product;
   const finalPrice = discountedPrice || price;
@@ -19,13 +20,19 @@ function CartItem({ item, onUpdateQuantity, onRemove }) {
 
   const handleIncrease = () => {
     if (onUpdateQuantity) {
-      onUpdateQuantity(id, quantity + 1);
+      const result = onUpdateQuantity(id, quantity + 1);
+      if (result && !result.success) {
+        alert(result.error);
+      }
     }
   };
 
   const handleDecrease = () => {
     if (quantity > 1 && onUpdateQuantity) {
-      onUpdateQuantity(id, quantity - 1);
+      const result = onUpdateQuantity(id, quantity - 1);
+      if (result && !result.success) {
+        alert(result.error);
+      }
     }
   };
 
@@ -52,7 +59,7 @@ function CartItem({ item, onUpdateQuantity, onRemove }) {
       {/* Product Details */}
       <div className="cart-item-details">
         <h4 className="cart-item-title">{title}</h4>
-        <p className="cart-item-price">₹{finalPrice} each</p>
+        <p className="cart-item-price">{currencySymbol}{finalPrice} each</p>
 
         {/* Quantity Controls */}
         <div className="cart-item-quantity">
@@ -77,7 +84,7 @@ function CartItem({ item, onUpdateQuantity, onRemove }) {
 
       {/* Subtotal and Remove */}
       <div className="cart-item-actions">
-        <p className="cart-item-subtotal">₹{subtotal}</p>
+        <p className="cart-item-subtotal">{currencySymbol}{subtotal.toFixed(2)}</p>
         <button
           className="cart-item-remove"
           onClick={handleRemove}

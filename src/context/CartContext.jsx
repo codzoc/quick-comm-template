@@ -25,6 +25,8 @@ export function CartProvider({ children }) {
 
   // Add item to cart
   const addToCart = useCallback((product) => {
+    let result = { success: true, error: null };
+
     setCartItems((prevItems) => {
       // Check if product already exists in cart
       const existingItemIndex = prevItems.findIndex(
@@ -33,14 +35,37 @@ export function CartProvider({ children }) {
 
       if (existingItemIndex > -1) {
         // Increase quantity if already in cart
+        const currentQuantity = prevItems[existingItemIndex].quantity;
+        const newQuantity = currentQuantity + 1;
+
+        // Check stock availability
+        if (newQuantity > product.stock) {
+          result = {
+            success: false,
+            error: `Only ${product.stock} items available in stock`
+          };
+          return prevItems; // Don't update
+        }
+
         const updatedItems = [...prevItems];
-        updatedItems[existingItemIndex].quantity += 1;
+        updatedItems[existingItemIndex].quantity = newQuantity;
         return updatedItems;
       } else {
         // Add new item to cart
+        // Check if at least 1 item in stock
+        if (product.stock < 1) {
+          result = {
+            success: false,
+            error: 'This item is out of stock'
+          };
+          return prevItems; // Don't add
+        }
+
         return [...prevItems, { product, quantity: 1 }];
       }
     });
+
+    return result;
   }, []);
 
   // Remove item from cart
@@ -52,16 +77,29 @@ export function CartProvider({ children }) {
 
   // Update item quantity
   const updateQuantity = useCallback((productId, newQuantity) => {
-    if (newQuantity < 1) return;
+    if (newQuantity < 1) return { success: false, error: 'Quantity must be at least 1' };
+
+    let result = { success: true, error: null };
 
     setCartItems((prevItems) => {
-      const updatedItems = prevItems.map((item) =>
-        item.product.id === productId
-          ? { ...item, quantity: newQuantity }
-          : item
-      );
+      const updatedItems = prevItems.map((item) => {
+        if (item.product.id === productId) {
+          // Check stock availability
+          if (newQuantity > item.product.stock) {
+            result = {
+              success: false,
+              error: `Only ${item.product.stock} items available in stock`
+            };
+            return item; // Don't update
+          }
+          return { ...item, quantity: newQuantity };
+        }
+        return item;
+      });
       return updatedItems;
     });
+
+    return result;
   }, []);
 
   // Clear cart
