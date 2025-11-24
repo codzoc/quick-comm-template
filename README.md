@@ -19,6 +19,54 @@ A simple, browser-only React + Firebase e-commerce template designed for non-cod
 
 ---
 
+## 🔄 Receive Updates from the Template
+
+This template is actively maintained with bug fixes, new features, and improvements! You can easily pull the latest updates into your repo with **one click** from your browser:
+
+### How to Get Updates
+
+1. **Go to your repository** on GitHub
+2. Click on the **Actions** tab
+3. Select **"Update from template"** workflow from the left sidebar
+4. Click **"Run workflow"** → Select your branch (usually `main`) → Click **"Run workflow"**
+5. Wait 1-2 minutes for the workflow to complete
+6. A **Pull Request** will be automatically created with all the latest updates
+7. **Review the PR** and click **"Merge"** to apply the updates
+
+### What You Get
+
+- ✨ New features and enhancements
+- 🐛 Bug fixes and security patches
+- 📚 Documentation improvements
+- 🎨 UI/UX improvements
+- ⚡ Performance optimizations
+
+### Safety Features
+
+- **Safe & non-destructive**: Updates are proposed as a Pull Request (no automatic changes to your live site)
+- **Review before applying**: You can review all changes in the PR before merging
+- **Your customizations are preserved**: The workflow tries to preserve your store name, branding, and custom files
+- **Revertable**: You can always undo changes by reverting the merge
+
+### Optional: Automatic Weekly Updates
+
+By default, the workflow also runs **automatically every Monday** to check for updates. You can:
+- **Disable automatic updates**: Edit `.github/workflows/update-from-template.yml` and remove the `schedule:` section
+- **Enable auto-merge**: Add a secret `AUTO_MERGE_TEMPLATE_UPDATES` set to `true` in Settings → Secrets (⚠️ only if you're comfortable with automatic merges)
+
+### Handling Conflicts
+
+If you've customized files that the template also updated, you may see merge conflicts. Don't worry!
+
+1. GitHub will mark the files with conflicts in the PR
+2. Click **"Resolve conflicts"** in the PR
+3. Keep your changes or accept the template updates for each conflict
+4. Commit the resolution and merge
+
+**Pro tip**: Keep your customizations in dedicated files (like `src/config/business.js` for store info) to minimize conflicts.
+
+---
+
 ## Features
 
 ### Customer-Facing
