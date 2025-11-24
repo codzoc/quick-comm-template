@@ -67,6 +67,7 @@ export async function createOrder(orderData) {
           title: item.product.title,
           price: item.product.discountedPrice || item.product.price,
           quantity: item.quantity,
+          imagePath: item.product.imagePath,
           subtotal:
             (item.product.discountedPrice || item.product.price) * item.quantity
         })),
