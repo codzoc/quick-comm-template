@@ -146,73 +146,87 @@ jobs:
       - name: Create Pull Request
         if: steps.merge.outputs.has_changes == 'true'
         id: create-pr
-        uses: peter-evans/create-pull-request@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{ steps.create-branch.outputs.branch_name }}
-          title: "🔄 Update from template repository"
-          body: |
-            ## 📦 Template Update Available
+        run: |
+          PR_BODY=$(cat <<'EOF'
+          ## 📦 Template Update Available
 
-            This PR contains the latest updates from the [quick-comm-template](https://github.com/codzoc/quick-comm-template) repository.
+          This PR contains the latest updates from the [quick-comm-template](https://github.com/codzoc/quick-comm-template) repository.
 
-            ### 🔍 What's Included
+          ### 🔍 What's Included
 
-            This update brings you:
-            - ✨ New features and improvements
-            - 🐛 Bug fixes
-            - 📚 Documentation updates
-            - 🔧 Configuration enhancements
+          This update brings you:
+          - ✨ New features and improvements
+          - 🐛 Bug fixes
+          - 📚 Documentation updates
+          - 🔧 Configuration enhancements
 
-            ### 📋 Review Checklist
+          ### 📋 Review Checklist
 
-            Before merging, please review:
+          Before merging, please review:
 
-            - [ ] **Review all file changes** - Check the "Files changed" tab
-            - [ ] **Check for conflicts** - Resolve any merge conflicts if present
-            - [ ] **Test the changes** - Deploy to a preview environment if possible
-            - [ ] **Verify environment variables** - Check if new secrets are needed (see below)
-            - [ ] **Review custom modifications** - Ensure your customizations aren't overwritten
+          - [ ] **Review all file changes** - Check the "Files changed" tab
+          - [ ] **Check for conflicts** - Resolve any merge conflicts if present
+          - [ ] **Test the changes** - Deploy to a preview environment if possible
+          - [ ] **Verify environment variables** - Check if new secrets are needed (see below)
+          - [ ] **Review custom modifications** - Ensure your customizations aren't overwritten
 
-            ${{ steps.detect-env.outputs.env_changes }}
+          ${{ steps.detect-env.outputs.env_changes }}
 
-            ### 🚀 How to Merge
+          ### 🚀 How to Merge
 
-            1. **Review the changes** in the "Files changed" tab
-            2. **Test if possible** - If you have PR previews enabled, test the preview deployment
-            3. **Merge this PR** when you're satisfied with the changes
+          1. **Review the changes** in the "Files changed" tab
+          2. **Test if possible** - If you have PR previews enabled, test the preview deployment
+          3. **Merge this PR** when you're satisfied with the changes
 
-            ### 🛡️ Safety Notes
+          ### 🛡️ Safety Notes
 
-            - This PR was automatically generated and is **safe to review**
-            - **No secrets or credentials** are included in this PR
-            - You can always **revert** this merge if needed
-            - **User-specific files** (like `.env`, `.firebaserc`) should not be affected
+          - This PR was automatically generated and is **safe to review**
+          - **No secrets or credentials** are included in this PR
+          - You can always **revert** this merge if needed
+          - **User-specific files** (like `.env`, `.firebaserc`) should not be affected
 
-            ### ⚠️ Conflicts?
+          ### ⚠️ Conflicts?
 
-            If you see merge conflicts:
-            1. The template has changed files you've customized
-            2. You may need to manually resolve conflicts
-            3. Carefully review conflicting files to preserve your customizations
-            4. Consider keeping your custom changes and selectively applying template updates
+          If you see merge conflicts:
+          1. The template has changed files you've customized
+          2. You may need to manually resolve conflicts
+          3. Carefully review conflicting files to preserve your customizations
+          4. Consider keeping your custom changes and selectively applying template updates
 
-            ### 📝 Files That May Need Manual Review
+          ### 📝 Files That May Need Manual Review
 
-            If you've customized these files, check them carefully:
-            - `src/config/business.js` - Your store name and branding
-            - `src/config/theme.js` - Your custom colors and fonts
-            - `public/images/*` - Your logo and product images
-            - `README.md` - Any custom documentation
+          If you've customized these files, check them carefully:
+          - `src/config/business.js` - Your store name and branding
+          - `src/config/theme.js` - Your custom colors and fonts
+          - `public/images/*` - Your logo and product images
+          - `README.md` - Any custom documentation
 
-            ---
+          ---
 
-            🤖 This PR was automatically created by the **Update from template** workflow.
+          🤖 This PR was automatically created by the **Update from template** workflow.
 
-            💡 **Tip:** You can disable automatic weekly updates by removing the `schedule` section from `.github/workflows/update-from-template.yml`
-          labels: |
-            template-update
-            automated
+          💡 **Tip:** You can disable automatic weekly updates by removing the `schedule` section from `.github/workflows/update-from-template.yml`
+          EOF
+          )
+
+          # Create PR using GitHub CLI
+          PR_URL=$(gh pr create \
+            --base main \
+            --head ${{ steps.create-branch.outputs.branch_name }} \
+            --title "🔄 Update from template repository" \
+            --body "$PR_BODY" \
+            --label "template-update,automated")
+
+          # Extract PR number from URL
+          PR_NUMBER=$(echo "$PR_URL" | grep -oE '[0-9]+$')
+
+          # Save outputs for next steps
+          echo "pull-request-url=$PR_URL" >> $GITHUB_OUTPUT
+          echo "pull-request-number=$PR_NUMBER" >> $GITHUB_OUTPUT
+
+          echo "✅ Pull Request created: $PR_URL"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check auto-merge setting
         if: steps.merge.outputs.has_changes == 'true' && steps.create-pr.outputs.pull-request-number != ''
