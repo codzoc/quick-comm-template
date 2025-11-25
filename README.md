@@ -49,14 +49,46 @@ That's it! Your store is now running the latest version.
 
 ### How It Works
 
-The workflow:
+The workflow intelligently handles updates in two ways:
+
+**✅ If there are NO conflicts:**
 1. Fetches the latest changes from the template
 2. Automatically merges them into your `main` branch
-3. **Preserves your workflow files** (`.github/workflows/`) for security
+3. Preserves your workflow files (`.github/workflows/`) for security
 4. Pushes the updates - **your site deploys automatically!**
-5. If there are conflicts, it will notify you (see below)
 
-**Note:** Workflow files in `.github/workflows/` are **not** automatically updated for security reasons. If the template has critical workflow updates, you'll need to apply them manually.
+**⚠️ If there ARE conflicts:**
+1. Creates a Pull Request with the updates
+2. Shows exactly which files have conflicts
+3. You resolve conflicts in GitHub's web editor (no terminal needed!)
+4. Merge the PR when done
+
+**Either way, you're covered!** 🎉
+
+### What If There Are Conflicts?
+
+Don't worry - this is easy to fix in your browser!
+
+When conflicts occur, the workflow automatically creates a PR. Then you:
+
+1. **Open the Pull Request** (you'll get a notification)
+2. Click the **"Resolve conflicts"** button
+3. **Edit each file** - GitHub shows you exactly what's conflicting:
+   ```
+   <<<<<<< Your current code
+   Your code here
+   =======
+   Template's new code
+   >>>>>>> Template code
+   ```
+4. **Keep what you want** - delete the conflict markers and unwanted code
+5. Click **"Mark as resolved"** for each file
+6. Click **"Commit merge"**
+7. **Merge the PR** - done!
+
+**No terminal, no git commands, all in your browser!** 🎉
+
+**Note:** Workflow files in `.github/workflows/` are **not** automatically updated for security reasons.
 
 ### Disable Automatic Updates
 
@@ -67,17 +99,6 @@ Prefer manual control?
 3. Commit the change
 
 Now updates only happen when you manually trigger the workflow.
-
-### What If There Are Conflicts?
-
-If you've customized files that the template also updated, automatic merge may fail. The workflow will notify you with instructions to resolve conflicts manually:
-
-1. Clone your repository locally
-2. Add the template as upstream: `git remote add upstream https://github.com/codzoc/quick-comm-template.git`
-3. Fetch updates: `git fetch upstream main`
-4. Merge: `git merge upstream/main`
-5. Resolve conflicts in your editor
-6. Commit and push: `git push origin main`
 
 **Pro tip**: Keep your customizations in dedicated files (like `src/config/business.js` for store info) to minimize conflicts.
 
