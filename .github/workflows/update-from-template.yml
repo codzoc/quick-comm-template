@@ -17,7 +17,6 @@ permissions:
   contents: write
   pull-requests: write
   issues: write  # Required for gh CLI to create PRs
-  metadata: read  # Required for accessing repository metadata
 
 jobs:
   update-from-template:
