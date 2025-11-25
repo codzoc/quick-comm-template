@@ -61,8 +61,8 @@ jobs:
         id: auto-merge
         continue-on-error: true
         run: |
-          # Try to merge upstream changes
-          if git merge upstream/main --no-edit -m "chore: update from template repository
+          # Try to merge upstream changes (allow unrelated histories for repos created before workflow existed)
+          if git merge upstream/main --allow-unrelated-histories --no-edit -m "chore: update from template repository
 
           Updates from codzoc/quick-comm-template
 
@@ -73,7 +73,7 @@ jobs:
             echo "✅ Successfully merged upstream changes"
           else
             # Merge failed due to conflicts
-            git merge --abort
+            git merge --abort 2>/dev/null || true
             echo "merge_success=false" >> $GITHUB_OUTPUT
             echo "⚠️ Automatic merge failed due to conflicts"
           fi
@@ -113,7 +113,7 @@ jobs:
         if: steps.check-updates.outputs.has_updates == 'true' && steps.auto-merge.outputs.merge_success == 'false'
         run: |
           # Attempt merge again (will fail, but creates conflict markers)
-          git merge upstream/main --no-edit -m "chore: update from template repository
+          git merge upstream/main --allow-unrelated-histories --no-edit -m "chore: update from template repository
 
           Updates from codzoc/quick-comm-template
 
