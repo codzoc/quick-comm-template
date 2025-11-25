@@ -15,7 +15,6 @@ on:
 # Minimal permissions for safety
 permissions:
   contents: write
-  workflows: write  # Required to update workflow files in .github/workflows/
 
 jobs:
   update-from-template:
@@ -77,6 +76,16 @@ jobs:
             echo "merge_success=false" >> $GITHUB_OUTPUT
             echo "⚠️ Automatic merge failed due to conflicts"
           fi
+
+      - name: Preserve workflow files
+        if: steps.check-updates.outputs.has_updates == 'true' && steps.auto-merge.outputs.merge_success == 'true'
+        run: |
+          # Restore workflow files from HEAD to prevent GITHUB_TOKEN permission issues
+          # GitHub doesn't allow GITHUB_TOKEN to modify workflow files for security
+          git checkout HEAD -- .github/workflows/ || true
+
+          echo "✅ Preserved existing workflow files (not updated from template)"
+          echo "ℹ️ Workflow updates must be applied manually for security reasons"
 
       - name: Push updates to main
         if: steps.check-updates.outputs.has_updates == 'true' && steps.auto-merge.outputs.merge_success == 'true'
