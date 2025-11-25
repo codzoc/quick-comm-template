@@ -237,16 +237,19 @@ jobs:
           EOF
           )
 
-          # Create PR using GitHub CLI
+          # Create PR using GitHub CLI (without labels since they may not exist)
           PR_URL=$(gh pr create \
             --base main \
             --head ${{ steps.conflict-branch.outputs.branch_name }} \
             --title "⚠️ Update from template (conflicts need resolution)" \
-            --body "$PR_BODY" \
-            --label "template-update,conflicts")
+            --body "$PR_BODY")
 
           echo "pull-request-url=$PR_URL" >> $GITHUB_OUTPUT
           echo "✅ Pull Request created: $PR_URL"
+
+          # Try to add labels if they exist (won't fail if they don't)
+          gh pr edit "$PR_URL" --add-label "template-update" 2>/dev/null || echo "Label 'template-update' not found, skipping"
+          gh pr edit "$PR_URL" --add-label "conflicts" 2>/dev/null || echo "Label 'conflicts' not found, skipping"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
