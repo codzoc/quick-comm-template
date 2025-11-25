@@ -21,17 +21,23 @@ A simple, browser-only React + Firebase e-commerce template designed for non-cod
 
 ## 🔄 Receive Updates from the Template
 
-This template is actively maintained with bug fixes, new features, and improvements! You can easily pull the latest updates into your repo with **one click** from your browser:
+This template is actively maintained with bug fixes, new features, and improvements! Your store **automatically updates** every week, or you can trigger updates manually with one click.
 
-### How to Get Updates
+### Automatic Updates (Default)
+
+Your store automatically checks for updates **every Monday at 9 AM UTC** and applies them to your `main` branch. No action needed!
+
+### Manual Updates (On-Demand)
+
+Want to update immediately? Here's how:
 
 1. **Go to your repository** on GitHub
 2. Click on the **Actions** tab
 3. Select **"Update from template"** workflow from the left sidebar
-4. Click **"Run workflow"** → Select your branch (usually `main`) → Click **"Run workflow"**
-5. Wait 1-2 minutes for the workflow to complete
-6. A **Pull Request** will be automatically created with all the latest updates
-7. **Review the PR** and click **"Merge"** to apply the updates
+4. Click **"Run workflow"** → Click **"Run workflow"** button
+5. Wait 1-2 minutes - **your main branch is updated automatically!**
+
+That's it! Your store is now running the latest version.
 
 ### What You Get
 
@@ -41,27 +47,34 @@ This template is actively maintained with bug fixes, new features, and improveme
 - 🎨 UI/UX improvements
 - ⚡ Performance optimizations
 
-### Safety Features
+### How It Works
 
-- **Safe & non-destructive**: Updates are proposed as a Pull Request (no automatic changes to your live site)
-- **Review before applying**: You can review all changes in the PR before merging
-- **Your customizations are preserved**: The workflow tries to preserve your store name, branding, and custom files
-- **Revertable**: You can always undo changes by reverting the merge
+The workflow:
+1. Fetches the latest changes from the template
+2. Automatically merges them into your `main` branch
+3. Pushes the updates - **your site deploys automatically!**
+4. If there are conflicts, it will notify you (see below)
 
-### Optional: Automatic Weekly Updates
+### Disable Automatic Updates
 
-By default, the workflow also runs **automatically every Monday** to check for updates. You can:
-- **Disable automatic updates**: Edit `.github/workflows/update-from-template.yml` and remove the `schedule:` section
-- **Enable auto-merge**: Add a secret `AUTO_MERGE_TEMPLATE_UPDATES` set to `true` in Settings → Secrets (⚠️ only if you're comfortable with automatic merges)
+Prefer manual control?
 
-### Handling Conflicts
+1. Edit `.github/workflows/update-from-template.yml`
+2. Remove or comment out the `schedule:` section (lines 12-13)
+3. Commit the change
 
-If you've customized files that the template also updated, you may see merge conflicts. Don't worry!
+Now updates only happen when you manually trigger the workflow.
 
-1. GitHub will mark the files with conflicts in the PR
-2. Click **"Resolve conflicts"** in the PR
-3. Keep your changes or accept the template updates for each conflict
-4. Commit the resolution and merge
+### What If There Are Conflicts?
+
+If you've customized files that the template also updated, automatic merge may fail. The workflow will notify you with instructions to resolve conflicts manually:
+
+1. Clone your repository locally
+2. Add the template as upstream: `git remote add upstream https://github.com/codzoc/quick-comm-template.git`
+3. Fetch updates: `git fetch upstream main`
+4. Merge: `git merge upstream/main`
+5. Resolve conflicts in your editor
+6. Commit and push: `git push origin main`
 
 **Pro tip**: Keep your customizations in dedicated files (like `src/config/business.js` for store info) to minimize conflicts.
 
