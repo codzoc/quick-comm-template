@@ -23,6 +23,18 @@ A simple, browser-only React + Firebase e-commerce template designed for non-cod
 
 This template is actively maintained with bug fixes, new features, and improvements! Your store **automatically updates** every week, or you can trigger updates manually with one click.
 
+### One-Time Setup (Required for PR Creation)
+
+For the workflow to create Pull Requests when conflicts occur, you need to enable one setting:
+
+1. Go to your repository **Settings** tab
+2. Click **Actions** → **General** in the left sidebar
+3. Scroll down to **"Workflow permissions"**
+4. Check the box: ☑️ **Allow GitHub Actions to create and approve pull requests**
+5. Click **Save**
+
+**Why?** GitHub blocks Actions from creating PRs by default for security. This one-time setting allows the update workflow to create PRs when conflicts need manual resolution.
+
 ### Automatic Updates (Default)
 
 Your store automatically checks for updates **every Monday at 9 AM UTC** and applies them to your `main` branch. No action needed!
