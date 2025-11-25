@@ -163,43 +163,46 @@ jobs:
         if: steps.check-updates.outputs.has_updates == 'true' && steps.auto-merge.outputs.merge_success == 'false'
         id: create-pr
         run: |
-          PR_BODY=$(cat <<'EOF'
-          ## ⚠️ Template Update - Conflicts Need Resolution
+          # Escape environment variables for JSON
+          CONFLICTED_FILES_ESCAPED=$(echo "${{ env.conflicted_files }}" | jq -Rs .)
+
+          # Create PR body
+          PR_BODY="## ⚠️ Template Update - Conflicts Need Resolution
 
           This PR contains updates from the [quick-comm-template](https://github.com/codzoc/quick-comm-template) repository, but **automatic merge failed due to conflicts**.
 
           ### 🔍 What Happened
 
-          The workflow tried to automatically merge the latest template changes into your `main` branch, but some files have conflicts that need your attention.
+          The workflow tried to automatically merge the latest template changes into your \`main\` branch, but some files have conflicts that need your attention.
 
           ### 📋 Files with Conflicts
 
           The following files have merge conflicts:
 
-          ```
+          \`\`\`
           ${{ env.conflicted_files }}
-          ```
+          \`\`\`
 
           ### ✅ How to Resolve Conflicts
 
           **Option 1: Resolve in GitHub (Easiest)**
 
-          1. Click the **"Resolve conflicts"** button above
+          1. Click the **\"Resolve conflicts\"** button above
           2. GitHub will show you each conflicting file
           3. Edit the files to keep the changes you want
-          4. Remove the conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`)
-          5. Click **"Mark as resolved"** for each file
-          6. Click **"Commit merge"**
+          4. Remove the conflict markers (\`<<<<<<<\`, \`=======\`, \`>>>>>>>\`)
+          5. Click **\"Mark as resolved\"** for each file
+          6. Click **\"Commit merge\"**
           7. Merge this PR
 
           **Option 2: Resolve Locally**
 
-          1. Clone your repository: `git clone <your-repo-url>`
-          2. Checkout this branch: `git checkout ${{ steps.conflict-branch.outputs.branch_name }}`
+          1. Clone your repository: \`git clone <your-repo-url>\`
+          2. Checkout this branch: \`git checkout ${{ steps.conflict-branch.outputs.branch_name }}\`
           3. Resolve conflicts in your editor
-          4. Stage changes: `git add .`
-          5. Commit: `git commit -m "Resolve merge conflicts"`
-          6. Push: `git push origin ${{ steps.conflict-branch.outputs.branch_name }}`
+          4. Stage changes: \`git add .\`
+          5. Commit: \`git commit -m \"Resolve merge conflicts\"\`
+          6. Push: \`git push origin ${{ steps.conflict-branch.outputs.branch_name }}\`
           7. Merge this PR
 
           ### 🎯 What's Being Updated
@@ -214,13 +217,13 @@ jobs:
 
           In conflicted files, you'll see markers like this:
 
-          ```
+          \`\`\`
           <<<<<<< HEAD
           Your current code
           =======
           Template's new code
           >>>>>>> upstream/main
-          ```
+          \`\`\`
 
           - Keep the code you want (yours, template's, or a combination)
           - Delete the conflict markers
@@ -228,31 +231,38 @@ jobs:
 
           ### 🛡️ Safety Notes
 
-          - **Workflow files** (`.github/workflows/`) are **preserved** - not updated
+          - **Workflow files** (\`.github/workflows/\`) are **preserved** - not updated
           - You can always close this PR if you don't want the updates
-          - Your customizations in `src/config/business.js`, `src/config/theme.js`, etc. should be kept
+          - Your customizations in \`src/config/business.js\`, \`src/config/theme.js\`, etc. should be kept
 
           ---
 
-          🤖 This PR was automatically created by the **Update from template** workflow.
-          EOF
-          )
+          🤖 This PR was automatically created by the **Update from template** workflow."
 
-          # Create PR using GitHub CLI (without labels since they may not exist)
-          PR_URL=$(gh pr create \
-            --base main \
-            --head ${{ steps.conflict-branch.outputs.branch_name }} \
-            --title "⚠️ Update from template (conflicts need resolution)" \
-            --body "$PR_BODY")
+          # Escape PR body for JSON
+          PR_BODY_JSON=$(echo "$PR_BODY" | jq -Rs .)
 
-          echo "pull-request-url=$PR_URL" >> $GITHUB_OUTPUT
-          echo "✅ Pull Request created: $PR_URL"
+          # Create PR using GitHub REST API
+          RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/${{ github.repository }}/pulls \
+            -d "{\"title\":\"⚠️ Update from template (conflicts need resolution)\",\"head\":\"${{ steps.conflict-branch.outputs.branch_name }}\",\"base\":\"main\",\"body\":$PR_BODY_JSON}")
 
-          # Try to add labels if they exist (won't fail if they don't)
-          gh pr edit "$PR_URL" --add-label "template-update" 2>/dev/null || echo "Label 'template-update' not found, skipping"
-          gh pr edit "$PR_URL" --add-label "conflicts" 2>/dev/null || echo "Label 'conflicts' not found, skipping"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Extract PR URL and number
+          PR_URL=$(echo "$RESPONSE" | jq -r .html_url)
+          PR_NUMBER=$(echo "$RESPONSE" | jq -r .number)
+
+          if [ "$PR_URL" != "null" ] && [ "$PR_URL" != "" ]; then
+            echo "pull-request-url=$PR_URL" >> $GITHUB_OUTPUT
+            echo "pull-request-number=$PR_NUMBER" >> $GITHUB_OUTPUT
+            echo "✅ Pull Request created: $PR_URL"
+          else
+            echo "❌ Failed to create PR"
+            echo "$RESPONSE" | jq .
+            exit 1
+          fi
 
       - name: Workflow summary
         if: always()
