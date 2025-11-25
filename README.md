@@ -66,8 +66,7 @@ The workflow intelligently handles updates in two ways:
 **✅ If there are NO conflicts:**
 1. Fetches the latest changes from the template
 2. Automatically merges them into your `main` branch
-3. Preserves your workflow files (`.github/workflows/`) for security
-4. Pushes the updates - **your site deploys automatically!**
+3. Pushes the updates - **your site deploys automatically!**
 
 **⚠️ If there ARE conflicts:**
 1. Creates a Pull Request with the updates
@@ -99,8 +98,6 @@ When conflicts occur, the workflow automatically creates a PR. Then you:
 7. **Merge the PR** - done!
 
 **No terminal, no git commands, all in your browser!** 🎉
-
-**Note:** Workflow files in `.github/workflows/` are **not** automatically updated for security reasons.
 
 ### Disable Automatic Updates
 

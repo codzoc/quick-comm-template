@@ -79,16 +79,6 @@ jobs:
             echo "⚠️ Automatic merge failed due to conflicts"
           fi
 
-      - name: Preserve workflow files (for direct push)
-        if: steps.check-updates.outputs.has_updates == 'true' && steps.auto-merge.outputs.merge_success == 'true'
-        run: |
-          # Restore workflow files from HEAD to prevent GITHUB_TOKEN permission issues
-          # GitHub doesn't allow GITHUB_TOKEN to modify workflow files for security
-          git checkout HEAD -- .github/workflows/ || true
-
-          echo "✅ Preserved existing workflow files (not updated from template)"
-          echo "ℹ️ Workflow updates must be applied manually for security reasons"
-
       - name: Push updates to main
         if: steps.check-updates.outputs.has_updates == 'true' && steps.auto-merge.outputs.merge_success == 'true'
         run: |
@@ -129,13 +119,6 @@ jobs:
 
           echo "⚠️ Files with conflicts:"
           echo "$CONFLICTED_FILES"
-
-      - name: Preserve workflow files (for PR)
-        if: steps.check-updates.outputs.has_updates == 'true' && steps.auto-merge.outputs.merge_success == 'false'
-        run: |
-          # Restore workflow files from HEAD to prevent GITHUB_TOKEN permission issues
-          git checkout HEAD -- .github/workflows/ || true
-          echo "✅ Preserved existing workflow files"
 
       - name: Commit conflict markers
         if: steps.check-updates.outputs.has_updates == 'true' && steps.auto-merge.outputs.merge_success == 'false'
@@ -231,7 +214,6 @@ jobs:
 
           ### 🛡️ Safety Notes
 
-          - **Workflow files** (\`.github/workflows/\`) are **preserved** - not updated
           - You can always close this PR if you don't want the updates
           - Your customizations in \`src/config/business.js\`, \`src/config/theme.js\`, etc. should be kept
 
