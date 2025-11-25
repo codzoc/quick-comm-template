@@ -52,8 +52,11 @@ That's it! Your store is now running the latest version.
 The workflow:
 1. Fetches the latest changes from the template
 2. Automatically merges them into your `main` branch
-3. Pushes the updates - **your site deploys automatically!**
-4. If there are conflicts, it will notify you (see below)
+3. **Preserves your workflow files** (`.github/workflows/`) for security
+4. Pushes the updates - **your site deploys automatically!**
+5. If there are conflicts, it will notify you (see below)
+
+**Note:** Workflow files in `.github/workflows/` are **not** automatically updated for security reasons. If the template has critical workflow updates, you'll need to apply them manually.
 
 ### Disable Automatic Updates
 
