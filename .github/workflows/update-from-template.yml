@@ -1,13 +1,13 @@
 name: Update from template
 
-# This workflow allows you to pull updates from the original template repository
-# into your private repo with a single click from the GitHub Actions tab.
+# This workflow automatically updates your repository with the latest changes
+# from the original template. It runs weekly or can be triggered manually.
 
 on:
   # Manual trigger from Actions tab - click "Run workflow"
   workflow_dispatch:
 
-  # Optional: Run weekly on Mondays at 9 AM UTC
+  # Automatic weekly updates every Monday at 9 AM UTC
   # Comment out the schedule section if you prefer manual-only updates
   schedule:
     - cron: '0 9 * * 1'
@@ -15,7 +15,6 @@ on:
 # Minimal permissions for safety
 permissions:
   contents: write
-  pull-requests: write
   workflows: write  # Required to update workflow files in .github/workflows/
 
 jobs:
@@ -26,7 +25,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Full history needed for proper merging
+          ref: main
+          fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configure Git
@@ -40,244 +40,92 @@ jobs:
           git remote add upstream https://github.com/codzoc/quick-comm-template.git || true
 
           # Fetch the latest changes from upstream
-          git fetch upstream main --depth=1
+          git fetch upstream main
 
           echo "✅ Fetched latest updates from template repository"
 
-      - name: Create update branch
-        id: create-branch
+      - name: Check for updates
+        id: check-updates
         run: |
-          # Create a timestamped branch name
-          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-          BRANCH_NAME="update-from-template-${TIMESTAMP}"
+          # Check if there are differences between local main and upstream main
+          if git diff --quiet main upstream/main; then
+            echo "has_updates=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ No updates available - your repo is already up to date!"
+          else
+            echo "has_updates=true" >> $GITHUB_OUTPUT
+            echo "✅ Updates available from template"
+          fi
 
-          # Create and checkout the new branch
-          git checkout -b "${BRANCH_NAME}"
-
-          # Save branch name for later steps
-          echo "branch_name=${BRANCH_NAME}" >> $GITHUB_OUTPUT
-          echo "📝 Created branch: ${BRANCH_NAME}"
-
-      - name: Merge upstream changes
-        id: merge
+      - name: Attempt automatic merge
+        if: steps.check-updates.outputs.has_updates == 'true'
+        id: auto-merge
         continue-on-error: true
         run: |
-          # Try to checkout files from upstream/main
-          # This overwrites tracked files with upstream versions
-          git checkout upstream/main -- . || echo "Some files may have conflicts"
-
-          # Optional: Restore user-specific files that should not be overwritten
-          # Uncomment and modify the lines below to preserve specific files:
-          # git checkout HEAD -- .env 2>/dev/null || true
-          # git checkout HEAD -- .firebaserc 2>/dev/null || true
-          # git checkout HEAD -- public/images/logo.png 2>/dev/null || true
-
-          # Check if there are any changes
-          if git diff --cached --quiet && git diff --quiet; then
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-            echo "ℹ️ No changes detected - your repo is already up to date!"
-          else
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-            echo "✅ Changes detected and staged"
-          fi
-
-      - name: Detect new environment variables
-        id: detect-env
-        if: steps.merge.outputs.has_changes == 'true'
-        run: |
-          # Detect new or changed environment variables
-          ENV_CHANGES=""
-
-          # Check if .env.example exists and has changes
-          if git diff --cached --name-only | grep -q "\.env"; then
-            echo "📋 Detected changes in environment files"
-
-            # Extract environment variable names from .env.example if it exists
-            if [ -f ".env.example" ]; then
-              echo "Environment variables in updated .env.example:"
-              grep -E "^[A-Z_]+=" .env.example | cut -d= -f1 | sort || true
-
-              ENV_CHANGES=$(cat <<'EOF'
-
-          ⚠️ **Environment Variables Update Detected**
-
-          The template has updated environment configuration files. Please review `.env.example` for new or changed variables.
-
-          **Action Required:**
-          1. Check the changes in `.env.example`
-          2. Update your GitHub Secrets if new variables are required
-          3. Update your local `.env` file if developing locally
-
-          Common variables to check:
-          - `VITE_FIREBASE_*` - Firebase configuration
-          - `FIREBASE_*` - Firebase deployment settings
-          - Any new feature flags or API keys
-          EOF
-          )
-            fi
-          fi
-
-          # Save for PR body (escape newlines for GitHub Actions)
-          {
-            echo 'env_changes<<EOF'
-            echo "$ENV_CHANGES"
-            echo EOF
-          } >> $GITHUB_OUTPUT
-
-      - name: Commit changes
-        if: steps.merge.outputs.has_changes == 'true'
-        run: |
-          git add .
-          git commit -m "chore: update from template repository
+          # Try to merge upstream changes
+          if git merge upstream/main --no-edit -m "chore: update from template repository
 
           Updates from codzoc/quick-comm-template
 
           This automated update brings the latest improvements, bug fixes, and features from the original template.
 
-          🤖 Generated by Update from template workflow"
-
-          echo "✅ Changes committed"
-
-      - name: Push branch
-        if: steps.merge.outputs.has_changes == 'true'
-        run: |
-          git push origin ${{ steps.create-branch.outputs.branch_name }}
-          echo "✅ Branch pushed to origin"
-
-      - name: Create Pull Request
-        if: steps.merge.outputs.has_changes == 'true'
-        id: create-pr
-        run: |
-          PR_BODY=$(cat <<'EOF'
-          ## 📦 Template Update Available
-
-          This PR contains the latest updates from the [quick-comm-template](https://github.com/codzoc/quick-comm-template) repository.
-
-          ### 🔍 What's Included
-
-          This update brings you:
-          - ✨ New features and improvements
-          - 🐛 Bug fixes
-          - 📚 Documentation updates
-          - 🔧 Configuration enhancements
-
-          ### 📋 Review Checklist
-
-          Before merging, please review:
-
-          - [ ] **Review all file changes** - Check the "Files changed" tab
-          - [ ] **Check for conflicts** - Resolve any merge conflicts if present
-          - [ ] **Test the changes** - Deploy to a preview environment if possible
-          - [ ] **Verify environment variables** - Check if new secrets are needed (see below)
-          - [ ] **Review custom modifications** - Ensure your customizations aren't overwritten
-
-          ${{ steps.detect-env.outputs.env_changes }}
-
-          ### 🚀 How to Merge
-
-          1. **Review the changes** in the "Files changed" tab
-          2. **Test if possible** - If you have PR previews enabled, test the preview deployment
-          3. **Merge this PR** when you're satisfied with the changes
-
-          ### 🛡️ Safety Notes
-
-          - This PR was automatically generated and is **safe to review**
-          - **No secrets or credentials** are included in this PR
-          - You can always **revert** this merge if needed
-          - **User-specific files** (like `.env`, `.firebaserc`) should not be affected
-
-          ### ⚠️ Conflicts?
-
-          If you see merge conflicts:
-          1. The template has changed files you've customized
-          2. You may need to manually resolve conflicts
-          3. Carefully review conflicting files to preserve your customizations
-          4. Consider keeping your custom changes and selectively applying template updates
-
-          ### 📝 Files That May Need Manual Review
-
-          If you've customized these files, check them carefully:
-          - `src/config/business.js` - Your store name and branding
-          - `src/config/theme.js` - Your custom colors and fonts
-          - `public/images/*` - Your logo and product images
-          - `README.md` - Any custom documentation
-
-          ---
-
-          🤖 This PR was automatically created by the **Update from template** workflow.
-
-          💡 **Tip:** You can disable automatic weekly updates by removing the `schedule` section from `.github/workflows/update-from-template.yml`
-          EOF
-          )
-
-          # Create PR using GitHub CLI
-          PR_URL=$(gh pr create \
-            --base main \
-            --head ${{ steps.create-branch.outputs.branch_name }} \
-            --title "🔄 Update from template repository" \
-            --body "$PR_BODY" \
-            --label "template-update,automated")
-
-          # Extract PR number from URL
-          PR_NUMBER=$(echo "$PR_URL" | grep -oE '[0-9]+$')
-
-          # Save outputs for next steps
-          echo "pull-request-url=$PR_URL" >> $GITHUB_OUTPUT
-          echo "pull-request-number=$PR_NUMBER" >> $GITHUB_OUTPUT
-
-          echo "✅ Pull Request created: $PR_URL"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Check auto-merge setting
-        if: steps.merge.outputs.has_changes == 'true' && steps.create-pr.outputs.pull-request-number != ''
-        id: check-automerge
-        run: |
-          # Check if AUTO_MERGE_TEMPLATE_UPDATES secret exists and is set to 'true'
-          if [ "${{ secrets.AUTO_MERGE_TEMPLATE_UPDATES }}" = "true" ]; then
-            echo "enabled=true" >> $GITHUB_OUTPUT
-            echo "✅ Auto-merge is enabled"
+          🤖 Generated by Update from template workflow"; then
+            echo "merge_success=true" >> $GITHUB_OUTPUT
+            echo "✅ Successfully merged upstream changes"
           else
-            echo "enabled=false" >> $GITHUB_OUTPUT
-            echo "ℹ️ Auto-merge is disabled (set AUTO_MERGE_TEMPLATE_UPDATES secret to 'true' to enable)"
+            # Merge failed due to conflicts
+            git merge --abort
+            echo "merge_success=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Automatic merge failed due to conflicts"
           fi
 
-      - name: Enable auto-merge on PR
-        if: |
-          steps.merge.outputs.has_changes == 'true' &&
-          steps.create-pr.outputs.pull-request-number != '' &&
-          steps.check-automerge.outputs.enabled == 'true'
-        continue-on-error: true
+      - name: Push updates to main
+        if: steps.check-updates.outputs.has_updates == 'true' && steps.auto-merge.outputs.merge_success == 'true'
         run: |
-          # Enable auto-merge for the PR (requires repo to have auto-merge enabled)
-          gh pr merge ${{ steps.create-pr.outputs.pull-request-number }} --auto --squash || \
-          echo "⚠️ Could not enable auto-merge. You may need to enable auto-merge in repo settings or merge manually."
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          git push origin main
+          echo "✅ Successfully pushed updates to main branch"
+
+      - name: Notify about conflicts
+        if: steps.check-updates.outputs.has_updates == 'true' && steps.auto-merge.outputs.merge_success == 'false'
+        run: |
+          echo "⚠️ Unable to automatically update due to conflicts"
+          echo ""
+          echo "Manual intervention required:"
+          echo "1. Clone your repository locally"
+          echo "2. Run: git fetch upstream main"
+          echo "3. Run: git merge upstream/main"
+          echo "4. Resolve conflicts manually"
+          echo "5. Commit and push to main"
+          exit 1
 
       - name: Workflow summary
         if: always()
         run: |
-          if [ "${{ steps.merge.outputs.has_changes }}" = "false" ]; then
+          if [ "${{ steps.check-updates.outputs.has_updates }}" = "false" ]; then
             echo "### ✅ Already Up to Date" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "Your repository is already up to date with the template!" >> $GITHUB_STEP_SUMMARY
-          elif [ "${{ steps.create-pr.outputs.pull-request-number }}" != "" ]; then
-            echo "### 🎉 Pull Request Created" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ steps.auto-merge.outputs.merge_success }}" = "true" ]; then
+            echo "### 🎉 Successfully Updated!" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "A pull request has been created with updates from the template." >> $GITHUB_STEP_SUMMARY
+            echo "Your main branch has been automatically updated with the latest changes from the template." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**PR #${{ steps.create-pr.outputs.pull-request-number }}**: ${{ steps.create-pr.outputs.pull-request-url }}" >> $GITHUB_STEP_SUMMARY
+            echo "**What was updated:**" >> $GITHUB_STEP_SUMMARY
+            echo "- ✨ New features and improvements" >> $GITHUB_STEP_SUMMARY
+            echo "- 🐛 Bug fixes" >> $GITHUB_STEP_SUMMARY
+            echo "- 📚 Documentation updates" >> $GITHUB_STEP_SUMMARY
+            echo "- 🔧 Configuration enhancements" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "👉 [Review and merge the PR](${{ steps.create-pr.outputs.pull-request-url }})" >> $GITHUB_STEP_SUMMARY
-
-            if [ "${{ steps.check-automerge.outputs.enabled }}" = "true" ]; then
-              echo "" >> $GITHUB_STEP_SUMMARY
-              echo "🤖 Auto-merge is enabled - PR will merge automatically if checks pass" >> $GITHUB_STEP_SUMMARY
-            fi
+            echo "Your store is now running the latest version! 🚀" >> $GITHUB_STEP_SUMMARY
           else
-            echo "### ⚠️ Update Available But PR Failed" >> $GITHUB_STEP_SUMMARY
+            echo "### ⚠️ Manual Update Required" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Changes were detected but the PR could not be created." >> $GITHUB_STEP_SUMMARY
-            echo "Please check the workflow logs for details." >> $GITHUB_STEP_SUMMARY
+            echo "Automatic update failed due to merge conflicts." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**To update manually:**" >> $GITHUB_STEP_SUMMARY
+            echo "1. Clone your repository locally" >> $GITHUB_STEP_SUMMARY
+            echo "2. Run: \`git remote add upstream https://github.com/codzoc/quick-comm-template.git\`" >> $GITHUB_STEP_SUMMARY
+            echo "3. Run: \`git fetch upstream main\`" >> $GITHUB_STEP_SUMMARY
+            echo "4. Run: \`git merge upstream/main\`" >> $GITHUB_STEP_SUMMARY
+            echo "5. Resolve conflicts in the files listed" >> $GITHUB_STEP_SUMMARY
+            echo "6. Commit and push to main" >> $GITHUB_STEP_SUMMARY
           fi
