@@ -1,6 +1,9 @@
 name: Firebase Deploy
 
 on:
+  # Manual trigger from Actions tab - click "Run workflow"
+  workflow_dispatch:
+  
   pull_request:
     branches:
       - main
