@@ -6,14 +6,18 @@ import AdminDashboard from './pages/admin/Dashboard';
 import AdminProducts from './pages/admin/Products';
 import AdminOrders from './pages/admin/Orders';
 import AdminStoreSettings from './pages/admin/StoreSettings';
+import AdminCustomers from './pages/admin/Customers';
+import AdminAdmins from './pages/admin/Admins';
 import StaticPage from './pages/StaticPage';
 import CustomerAuth from './pages/CustomerAuth';
 import CustomerAccount from './pages/CustomerAccount';
 import SEO from './components/SEO';
+import { AdminProtectedRoute, CustomerProtectedRoute } from './components/ProtectedRoute';
 
 /**
  * Main App Component
  * Handles routing for public storefront and admin panel
+ * Uses role-based protected routes to distinguish admin and customer sessions
  */
 function App() {
   return (
@@ -26,14 +30,44 @@ function App() {
         {/* Customer Routes */}
         <Route path="/login" element={<CustomerAuth />} />
         <Route path="/signup" element={<CustomerAuth />} />
-        <Route path="/account" element={<CustomerAccount />} />
+        <Route path="/account" element={
+          <CustomerProtectedRoute>
+            <CustomerAccount />
+          </CustomerProtectedRoute>
+        } />
 
         {/* Admin Routes */}
         <Route path="/admin" element={<AdminLogin />} />
-        <Route path="/admin/dashboard" element={<AdminDashboard />} />
-        <Route path="/admin/products" element={<AdminProducts />} />
-        <Route path="/admin/orders" element={<AdminOrders />} />
-        <Route path="/admin/settings" element={<AdminStoreSettings />} />
+        <Route path="/admin/dashboard" element={
+          <AdminProtectedRoute>
+            <AdminDashboard />
+          </AdminProtectedRoute>
+        } />
+        <Route path="/admin/products" element={
+          <AdminProtectedRoute>
+            <AdminProducts />
+          </AdminProtectedRoute>
+        } />
+        <Route path="/admin/orders" element={
+          <AdminProtectedRoute>
+            <AdminOrders />
+          </AdminProtectedRoute>
+        } />
+        <Route path="/admin/customers" element={
+          <AdminProtectedRoute>
+            <AdminCustomers />
+          </AdminProtectedRoute>
+        } />
+        <Route path="/admin/admins" element={
+          <AdminProtectedRoute>
+            <AdminAdmins />
+          </AdminProtectedRoute>
+        } />
+        <Route path="/admin/settings" element={
+          <AdminProtectedRoute>
+            <AdminStoreSettings />
+          </AdminProtectedRoute>
+        } />
 
         {/* Static Pages */}
         <Route path="/about" element={<StaticPage pageType="about" />} />

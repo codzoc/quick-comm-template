@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
     Box,
     Card,
@@ -9,15 +8,11 @@ import {
     FormControlLabel,
     Switch,
     TextField,
-    Button,
-    Divider
+    Button
 } from '@mui/material';
 import { Save, CreditCard } from 'lucide-react';
-import { onAuthChange } from '../../services/auth';
 import { getPaymentSettings, updatePaymentSettings } from '../../services/payment';
-import AdminLayout from '../../components/AdminLayout';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import './AdminStyles.css';
 
 function PaymentSettings() {
     const [loading, setLoading] = useState(true);
@@ -28,15 +23,10 @@ function PaymentSettings() {
         cod: { enabled: true, label: '', description: '' },
         stripe: { enabled: false, publishableKey: '', secretKey: '' }
     });
-    const navigate = useNavigate();
 
     useEffect(() => {
-        const unsubscribe = onAuthChange((user) => {
-            if (!user) navigate('/admin');
-            else loadSettings();
-        });
-        return () => unsubscribe();
-    }, [navigate]);
+        loadSettings();
+    }, []);
 
     const loadSettings = async () => {
         try {
@@ -77,18 +67,21 @@ function PaymentSettings() {
         }
     };
 
+    // Check if COD is the only enabled gateway
+    const isCODOnlyOption = !settings.stripe?.enabled; // Add other gateways here in future
+
     if (loading) {
-        return (
-            <AdminLayout>
-                <LoadingSpinner size="large" message="Loading payment settings..." />
-            </AdminLayout>
-        );
+        return <LoadingSpinner size="large" message="Loading payment settings..." />;
     }
 
     return (
-        <AdminLayout>
-            <Typography variant="h4" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
-                Payment Settings
+        <Box>
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
+                Payment Gateways
+            </Typography>
+
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Configure payment methods available to customers at checkout.
             </Typography>
 
             {success && <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess('')}>{success}</Alert>}
@@ -111,10 +104,22 @@ function PaymentSettings() {
                                     checked={settings.cod?.enabled || false}
                                     onChange={(e) => handleChange('cod', 'enabled', e.target.checked)}
                                     color="success"
+                                    disabled={isCODOnlyOption} // Disable if it's the only option
                                 />
                             }
-                            label={settings.cod?.enabled ? "Enabled" : "Disabled"}
-                            sx={{ mb: 2 }}
+                            label={
+                                <Box>
+                                    <Typography variant="body1">
+                                        {settings.cod?.enabled ? "Enabled" : "Disabled"}
+                                    </Typography>
+                                    {isCODOnlyOption && (
+                                        <Typography variant="caption" color="text.secondary">
+                                            Cannot disable because no other payment method is enabled.
+                                        </Typography>
+                                    )}
+                                </Box>
+                            }
+                            sx={{ mb: 2, alignItems: 'flex-start' }}
                         />
 
                         {settings.cod?.enabled && (
@@ -168,7 +173,7 @@ function PaymentSettings() {
                     {saving ? 'Saving...' : 'Save Payment Settings'}
                 </Button>
             </form>
-        </AdminLayout>
+        </Box>
     );
 }
 

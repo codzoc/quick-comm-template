@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
 const PAYMENT_SETTINGS_DOC = 'payment_settings';
@@ -11,7 +11,7 @@ export const getPaymentSettings = async () => {
         if (docSnap.exists()) {
             return docSnap.data();
         } else {
-            // Default settings
+            // Return default settings without writing (guests don't have write permission)
             const defaultSettings = {
                 cod: {
                     enabled: true,
@@ -25,7 +25,6 @@ export const getPaymentSettings = async () => {
                     secretKey: '' // Note: Secret keys should ideally be backend-only
                 }
             };
-            await setDoc(docRef, defaultSettings);
             return defaultSettings;
         }
     } catch (error) {

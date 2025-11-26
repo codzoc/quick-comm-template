@@ -50,15 +50,27 @@ const CustomerAccount = () => {
 
         try {
             const customerData = await getCustomerData(user.uid);
-            setCustomer(customerData);
-            setProfileForm({
-                name: customerData.name || '',
-                phone: customerData.phone || ''
-            });
 
-            // Load addresses and orders
-            await loadAddresses(user.uid);
-            await loadOrders(user.uid);
+            if (!customerData) {
+                // If auth exists but no firestore data, initialize empty form and force edit
+                setCustomer({ email: user.email, uid: user.uid });
+                setProfileForm({
+                    name: user.displayName || '',
+                    phone: ''
+                });
+                setEditingProfile(true);
+                setError('Please complete your profile to continue.');
+            } else {
+                setCustomer(customerData);
+                setProfileForm({
+                    name: customerData.name || '',
+                    phone: customerData.phone || ''
+                });
+
+                // Load addresses and orders only if profile exists
+                await loadAddresses(user.uid);
+                await loadOrders(user.uid);
+            }
         } catch (err) {
             setError('Failed to load account data');
         } finally {

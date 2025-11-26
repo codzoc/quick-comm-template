@@ -4,8 +4,9 @@ import { useCart } from '../context/CartContext';
 import { getAllProducts } from '../services/products';
 import { createOrder } from '../services/orders';
 import { getStoreInfo } from '../services/storeInfo';
-import { getCurrentCustomer } from '../services/customerAuth';
-import { getDefaultAddress } from '../services/addresses';
+import { getPaymentSettings } from '../services/payment';
+import { getCurrentCustomer, signUpCustomer } from '../services/customerAuth';
+import { getDefaultAddress, addAddress } from '../services/addresses';
 import { ShoppingBag } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -35,6 +36,7 @@ function StoreFront() {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [storeInfo, setStoreInfo] = useState(null);
+  const [paymentSettings, setPaymentSettings] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
 
   // Cart and Checkout State
@@ -56,63 +58,30 @@ function StoreFront() {
   const [orderId, setOrderId] = useState('');
   const [orderItems, setOrderItems] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('cod');
 
   // Customer Form State
   const [customerInfo, setCustomerInfo] = useState({
     name: '',
     phone: '',
+    email: '',
     address: '',
     pin: ''
   });
   const [formErrors, setFormErrors] = useState({});
-  const [rememberInfo, setRememberInfo] = useState(true);
 
-  // LocalStorage key for saved customer info
-  const STORAGE_KEY = 'qc_customer_info';
-
-  // Save customer info to localStorage
-  const saveCustomerInfo = (info) => {
-    try {
-      const encoded = btoa(JSON.stringify(info));
-      localStorage.setItem(STORAGE_KEY, encoded);
-    } catch (err) {
-      console.error('Error saving customer info:', err);
-    }
-  };
-
-  // Load customer info from localStorage
-  const loadSavedCustomerInfo = () => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const decoded = JSON.parse(atob(saved));
-        setCustomerInfo(decoded);
-        setRememberInfo(true);
-        return true;
-      }
-    } catch (err) {
-      console.error('Error loading customer info:', err);
-      localStorage.removeItem(STORAGE_KEY);
-    }
-    return false;
-  };
-
-  // Clear saved customer info
-  const clearSavedCustomerInfo = () => {
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-      setRememberInfo(false);
-      setCustomerInfo({ name: '', phone: '', address: '', pin: '' });
-    } catch (err) {
-      console.error('Error clearing customer info:', err);
-    }
-  };
+  // Account creation state for guests
+  const [createAccount, setCreateAccount] = useState(false);
+  const [registrationData, setRegistrationData] = useState({
+    password: '',
+    confirmPassword: ''
+  });
+  const [registrationErrors, setRegistrationErrors] = useState({});
 
   // Load products and store info on mount
   useEffect(() => {
     loadData();
     checkCustomerAuth();
-    loadSavedCustomerInfo();
 
     // Listen for cart open event from header
     const handleOpenCart = () => openCart();
@@ -126,12 +95,14 @@ function StoreFront() {
     setCurrentUser(user);
 
     if (user) {
+      setCreateAccount(true); // Default to saving address for logged-in users
       try {
         const defaultAddr = await getDefaultAddress(user.uid);
         if (defaultAddr) {
           setCustomerInfo({
             name: defaultAddr.name,
             phone: defaultAddr.phone,
+            email: user.email || '',
             address: defaultAddr.address,
             pin: defaultAddr.pin
           });
@@ -139,6 +110,8 @@ function StoreFront() {
       } catch (err) {
         console.error('Error loading default address:', err);
       }
+    } else {
+      setCreateAccount(false); // Default to unchecked for guests
     }
   };
 
@@ -169,13 +142,21 @@ function StoreFront() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [productsData, storeData] = await Promise.all([
+      const [productsData, storeData, paymentData] = await Promise.all([
         getAllProducts(),
-        getStoreInfo()
+        getStoreInfo(),
+        getPaymentSettings()
       ]);
       setProducts(productsData);
       setFilteredProducts(productsData);
       setStoreInfo(storeData);
+      setPaymentSettings(paymentData);
+
+      // Set default payment method if needed
+      if (paymentData?.cod?.enabled && !paymentData?.stripe?.enabled) {
+        setSelectedPaymentMethod('cod');
+      }
+
       setError(null);
     } catch (err) {
       setError(err.message);
@@ -239,6 +220,13 @@ function StoreFront() {
       errors.phone = 'Please enter a valid 10-digit phone number';
     }
 
+    // Email is optional for guests unless creating account, but validate format if provided
+    if (customerInfo.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerInfo.email)) {
+      errors.email = 'Please enter a valid email address';
+    } else if (createAccount && !customerInfo.email.trim()) {
+      errors.email = 'Email is required for account creation';
+    }
+
     if (!customerInfo.address.trim()) {
       errors.address = 'Address is required';
     }
@@ -247,6 +235,19 @@ function StoreFront() {
       errors.pin = 'PIN code is required';
     } else if (!/^\d{6}$/.test(customerInfo.pin)) {
       errors.pin = 'Please enter a valid 6-digit PIN code';
+    }
+
+    // Registration validation
+    if (createAccount && !currentUser) {
+      if (!registrationData.password) {
+        errors.password = 'Password is required';
+      } else if (registrationData.password.length < 6) {
+        errors.password = 'Password must be at least 6 characters';
+      }
+
+      if (registrationData.password !== registrationData.confirmPassword) {
+        errors.confirmPassword = 'Passwords do not match';
+      }
     }
 
     setFormErrors(errors);
@@ -263,14 +264,52 @@ function StoreFront() {
     setSubmitting(true);
 
     try {
+      let finalCustomerId = currentUser?.uid || null;
+
+      // Handle Account Creation for Guests
+      if (createAccount && !currentUser) {
+        try {
+          const newCustomer = await signUpCustomer(
+            customerInfo.email,
+            registrationData.password,
+            customerInfo.name,
+            customerInfo.phone
+          );
+          finalCustomerId = newCustomer.uid;
+
+          // Save the address for the new customer
+          await addAddress(finalCustomerId, {
+            name: customerInfo.name,
+            phone: customerInfo.phone,
+            address: customerInfo.address,
+            pin: customerInfo.pin,
+            isDefault: true
+          });
+        } catch (authErr) {
+          throw new Error(`Account creation failed: ${authErr.message}`);
+        }
+      }
+      // Handle Address Saving for Logged-in Users
+      else if (currentUser && createAccount) { // createAccount state reused for "Save this address" checkbox
+        await addAddress(currentUser.uid, {
+          name: customerInfo.name,
+          phone: customerInfo.phone,
+          address: customerInfo.address,
+          pin: customerInfo.pin,
+          isDefault: true
+        });
+      }
+
       const orderData = {
         items: cartItems,
         customer: customerInfo,
-        customerId: currentUser?.uid || null, // Link to customer account if logged in
+        customerId: finalCustomerId,
         subtotal: getCartSubtotal(),
         tax: getCartTax(),
         shipping: getCartShipping(),
-        total: getCartGrandTotal()
+        total: getCartGrandTotal(),
+        paymentMethod: selectedPaymentMethod,
+        paymentStatus: 'pending'
       };
 
       const order = await createOrder(orderData);
@@ -283,12 +322,11 @@ function StoreFront() {
       setOrderSuccess(true);
       clearCart();
 
-      // Save or clear customer info based on checkbox
-      if (rememberInfo) {
-        saveCustomerInfo(customerInfo);
-      } else {
-        setCustomerInfo({ name: '', phone: '', address: '', pin: '' });
-      }
+      // Clear form
+      setCustomerInfo({ name: '', phone: '', email: '', address: '', pin: '' });
+      setCreateAccount(false);
+      setRegistrationData({ password: '', confirmPassword: '' });
+
     } catch (err) {
       setError(err.message);
       setSubmitting(false);
@@ -560,6 +598,36 @@ function StoreFront() {
                         )}
                       </div>
 
+                      {!currentUser && (
+                        <div className="form-group">
+                          <label htmlFor="email">
+                            Email {createAccount ? '*' : '(Optional)'}
+                          </label>
+                          <input
+                            type="email"
+                            id="email"
+                            value={customerInfo.email}
+                            onChange={(e) =>
+                              setCustomerInfo({
+                                ...customerInfo,
+                                email: e.target.value
+                              })
+                            }
+                            placeholder="your@email.com"
+                            className={formErrors.email ? 'error' : ''}
+                            required={createAccount}
+                          />
+                          {formErrors.email && (
+                            <span className="error-text">{formErrors.email}</span>
+                          )}
+                          {!createAccount && (
+                            <small style={{ display: 'block', marginTop: 'var(--spacing-xs)', color: 'var(--color-text-light)', fontSize: 'var(--font-size-xs)' }}>
+                              If you have an account, we'll link this order to it
+                            </small>
+                          )}
+                        </div>
+                      )}
+
                       <div className="form-group">
                         <label htmlFor="address">Delivery Address *</label>
                         <textarea
@@ -602,6 +670,64 @@ function StoreFront() {
                         )}
                       </div>
 
+                      {/* Account Creation / Save Address Checkbox */}
+                      <div className="form-group" style={{ marginBottom: 'var(--spacing-md)' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)', cursor: 'pointer', fontSize: 'var(--font-size-sm)' }}>
+                          <input
+                            type="checkbox"
+                            checked={createAccount}
+                            onChange={(e) => setCreateAccount(e.target.checked)}
+                            style={{ cursor: 'pointer' }}
+                          />
+                          <span>
+                            {currentUser
+                              ? 'Save this address for future orders'
+                              : 'Create an account and save address'}
+                          </span>
+                        </label>
+                      </div>
+
+                      {/* Registration Fields for Guests */}
+                      {!currentUser && createAccount && (
+                        <>
+                          <div className="form-group">
+                            <label htmlFor="password">Password *</label>
+                            <input
+                              type="password"
+                              id="password"
+                              value={registrationData.password}
+                              onChange={(e) => setRegistrationData({
+                                ...registrationData,
+                                password: e.target.value
+                              })}
+                              className={formErrors.password ? 'error' : ''}
+                              placeholder="Min. 6 characters"
+                            />
+                            {formErrors.password && (
+                              <span className="error-text">{formErrors.password}</span>
+                            )}
+                          </div>
+
+                          <div className="form-group">
+                            <label htmlFor="confirmPassword">Confirm Password *</label>
+                            <input
+                              type="password"
+                              id="confirmPassword"
+                              value={registrationData.confirmPassword}
+                              onChange={(e) => setRegistrationData({
+                                ...registrationData,
+                                confirmPassword: e.target.value
+                              })}
+                              className={formErrors.confirmPassword ? 'error' : ''}
+                              placeholder="Re-enter password"
+                            />
+                            {formErrors.confirmPassword && (
+                              <span className="error-text">{formErrors.confirmPassword}</span>
+                            )}
+                          </div>
+                        </>
+                      )}
+
                       <div className="checkout-summary">
                         <div className="summary-row">
                           <span>Subtotal ({getCartItemCount()} items):</span>
@@ -625,34 +751,68 @@ function StoreFront() {
                         </div>
                       </div>
 
-                      {/* Remember Information Checkbox */}
-                      <div className="form-group" style={{ marginBottom: 'var(--spacing-md)' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)', cursor: 'pointer', fontSize: 'var(--font-size-sm)' }}>
-                          <input
-                            type="checkbox"
-                            checked={rememberInfo}
-                            onChange={(e) => setRememberInfo(e.target.checked)}
-                            style={{ cursor: 'pointer' }}
-                          />
-                          <span>Remember this information in my browser for future use</span>
-                        </label>
-                        {rememberInfo && (
-                          <button
-                            type="button"
-                            onClick={clearSavedCustomerInfo}
-                            style={{
-                              marginTop: 'var(--spacing-xs)',
-                              padding: 'var(--spacing-xs) var(--spacing-sm)',
-                              fontSize: 'var(--font-size-xs)',
-                              background: 'none',
-                              border: '1px solid var(--color-border)',
-                              borderRadius: 'var(--border-radius-sm)',
-                              color: 'var(--color-text-light)',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            Clear saved information
-                          </button>
+                      {/* Payment Method Section */}
+                      <div className="form-group" style={{ marginTop: 'var(--spacing-lg)' }}>
+                        <h3 style={{ fontSize: 'var(--font-size-md)', marginBottom: 'var(--spacing-sm)' }}>Payment Method</h3>
+
+                        {paymentSettings?.cod?.enabled && (
+                          <label style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 'var(--spacing-sm)',
+                            padding: 'var(--spacing-sm)',
+                            border: '1px solid var(--color-border)',
+                            borderRadius: 'var(--border-radius-sm)',
+                            marginBottom: 'var(--spacing-sm)',
+                            cursor: 'pointer',
+                            backgroundColor: selectedPaymentMethod === 'cod' ? 'var(--color-surface)' : 'transparent'
+                          }}>
+                            <input
+                              type="radio"
+                              name="paymentMethod"
+                              value="cod"
+                              checked={selectedPaymentMethod === 'cod'}
+                              onChange={(e) => setSelectedPaymentMethod(e.target.value)}
+                            />
+                            <div>
+                              <span style={{ fontWeight: 'var(--font-weight-medium)', display: 'block' }}>
+                                {paymentSettings.cod.label || 'Cash on Delivery'}
+                              </span>
+                              <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-light)' }}>
+                                {paymentSettings.cod.description || 'Pay with cash upon delivery'}
+                              </span>
+                            </div>
+                          </label>
+                        )}
+
+                        {paymentSettings?.stripe?.enabled && (
+                          <label style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 'var(--spacing-sm)',
+                            padding: 'var(--spacing-sm)',
+                            border: '1px solid var(--color-border)',
+                            borderRadius: 'var(--border-radius-sm)',
+                            marginBottom: 'var(--spacing-sm)',
+                            cursor: 'pointer',
+                            backgroundColor: selectedPaymentMethod === 'stripe' ? 'var(--color-surface)' : 'transparent'
+                          }}>
+                            <input
+                              type="radio"
+                              name="paymentMethod"
+                              value="stripe"
+                              checked={selectedPaymentMethod === 'stripe'}
+                              onChange={(e) => setSelectedPaymentMethod(e.target.value)}
+                            />
+                            <div>
+                              <span style={{ fontWeight: 'var(--font-weight-medium)', display: 'block' }}>
+                                Credit/Debit Card
+                              </span>
+                              <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-light)' }}>
+                                Secure online payment
+                              </span>
+                            </div>
+                          </label>
                         )}
                       </div>
 
@@ -660,13 +820,14 @@ function StoreFront() {
                         type="submit"
                         className="btn-primary btn-place-order"
                         disabled={submitting}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                       >
                         {submitting ? (
                           'Placing Order...'
                         ) : (
                           <>
-                            <ShoppingBag size={18} style={{ marginRight: '8px' }} />
-                            Place Order
+                            <ShoppingBag size={18} />
+                            <span>Place Order</span>
                           </>
                         )}
                       </button>

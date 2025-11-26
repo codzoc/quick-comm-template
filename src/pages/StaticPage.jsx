@@ -4,6 +4,7 @@ import { getStaticPageContent } from '../services/settings';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import LoadingSpinner from '../components/LoadingSpinner';
+import 'react-quill/dist/quill.snow.css';
 import './StaticPage.css';
 
 /**
@@ -166,24 +167,7 @@ We may update this privacy policy from time to time. Changes will be posted on t
       <main className="static-page">
         <div className="static-page-container">
           <h1 className="static-page-title">{getTitles()}</h1>
-          <div className="static-page-content">
-            {content.split('\n').map((line, index) => {
-              // Simple markdown-like rendering
-              if (line.startsWith('# ')) {
-                return <h2 key={index}>{line.substring(2)}</h2>;
-              } else if (line.startsWith('## ')) {
-                return <h3 key={index}>{line.substring(3)}</h3>;
-              } else if (line.startsWith('- ')) {
-                return <li key={index}>{line.substring(2)}</li>;
-              } else if (line.trim() === '') {
-                return <br key={index} />;
-              } else if (line.startsWith('*') && line.endsWith('*')) {
-                return <p key={index} style={{ fontStyle: 'italic', color: 'var(--color-text-light)' }}>{line.substring(1, line.length - 1)}</p>;
-              } else {
-                return <p key={index}>{line}</p>;
-              }
-            })}
-          </div>
+          <div className="static-page-content ql-editor" dangerouslySetInnerHTML={{ __html: content }} />
         </div>
       </main>
       <Footer />

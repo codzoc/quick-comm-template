@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, Typography, Box } from '@mui/material';
+import { Card, CardContent, Typography, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
 import { TrendingUp, ShoppingCart, Package, AlertTriangle, Clock, CheckCircle } from 'lucide-react';
 import { onAuthChange } from '../../services/auth';
 import { getOrderStats } from '../../services/orders';
@@ -127,22 +127,24 @@ function AdminDashboard() {
               </Typography>
             </Box>
             <Box sx={{ overflowX: 'auto' }}>
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th>Product</th>
-                    <th>Stock</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lowStockProducts.map((product) => (
-                    <tr key={product.id}>
-                      <td>{product.title}</td>
-                      <td style={{ color: 'var(--color-error)', fontWeight: 'bold' }}>{product.stock}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <TableContainer>
+                <Table>
+                  <TableHead sx={{ backgroundColor: 'var(--color-surface)' }}>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 600 }}>Product</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Stock</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {lowStockProducts.map((product) => (
+                      <TableRow key={product.id} hover>
+                        <TableCell sx={{ fontWeight: 500 }}>{product.title}</TableCell>
+                        <TableCell sx={{ color: 'var(--color-error)', fontWeight: 'bold' }}>{product.stock}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
             </Box>
           </CardContent>
         </Card>

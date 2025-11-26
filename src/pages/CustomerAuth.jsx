@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { signUpCustomer, loginCustomer } from '../services/customerAuth';
+import { signUpCustomer, loginCustomer, resetCustomerPassword } from '../services/customerAuth';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -19,6 +19,12 @@ const CustomerAuth = () => {
         name: '',
         phone: ''
     });
+
+    const [showResetModal, setShowResetModal] = useState(false);
+    const [resetEmail, setResetEmail] = useState('');
+    const [resetSuccess, setResetSuccess] = useState(false);
+    const [resetError, setResetError] = useState('');
+    const [resetLoading, setResetLoading] = useState(false);
 
     const handleChange = (e) => {
         setFormData({
@@ -76,6 +82,30 @@ const CustomerAuth = () => {
             name: '',
             phone: ''
         });
+    };
+
+    const handleResetPassword = async (e) => {
+        e.preventDefault();
+        setResetError('');
+        setResetSuccess(false);
+        setResetLoading(true);
+
+        try {
+            await resetCustomerPassword(resetEmail);
+            setResetSuccess(true);
+            setResetEmail('');
+        } catch (err) {
+            setResetError(err.message);
+        } finally {
+            setResetLoading(false);
+        }
+    };
+
+    const closeResetModal = () => {
+        setShowResetModal(false);
+        setResetEmail('');
+        setResetError('');
+        setResetSuccess(false);
     };
 
     return (
@@ -166,12 +196,31 @@ const CustomerAuth = () => {
                                 disabled={loading}
                             >
                                 {loading ? (
-                                    <LoadingSpinner size="small" />
+                                    <LoadingSpinner size="small" inline />
                                 ) : (
                                     isLogin ? 'Login' : 'Sign Up'
                                 )}
                             </button>
                         </form>
+
+                        {isLogin && (
+                            <div style={{ textAlign: 'center', marginTop: 'var(--spacing-sm)' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowResetModal(true)}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: 'var(--color-primary)',
+                                        cursor: 'pointer',
+                                        fontSize: 'var(--font-size-sm)',
+                                        textDecoration: 'underline'
+                                    }}
+                                >
+                                    Forgot Password?
+                                </button>
+                            </div>
+                        )}
 
                         <div className="auth-toggle">
                             <p>
@@ -201,6 +250,93 @@ const CustomerAuth = () => {
                 </div>
             </div>
             <Footer />
+
+            {/* Password Reset Modal */}
+            {showResetModal && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 1000
+                    }}
+                    onClick={closeResetModal}
+                >
+                    <div
+                        style={{
+                            backgroundColor: 'white',
+                            padding: 'var(--spacing-xl)',
+                            borderRadius: 'var(--border-radius-lg)',
+                            maxWidth: '400px',
+                            width: '90%',
+                            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h2 style={{ marginBottom: 'var(--spacing-md)', color: 'var(--color-text)' }}>Reset Password</h2>
+
+                        {resetSuccess ? (
+                            <div>
+                                <p style={{ color: 'var(--color-success)', marginBottom: 'var(--spacing-md)' }}>
+                                    Password reset email sent! Check your inbox.
+                                </p>
+                                <button
+                                    onClick={closeResetModal}
+                                    className="auth-submit-btn"
+                                    style={{ width: '100%' }}
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        ) : (
+                            <form onSubmit={handleResetPassword}>
+                                {resetError && (
+                                    <div className="auth-error">
+                                        {resetError}
+                                    </div>
+                                )}
+
+                                <div className="form-group">
+                                    <label htmlFor="reset-email">Email Address</label>
+                                    <input
+                                        type="email"
+                                        id="reset-email"
+                                        value={resetEmail}
+                                        onChange={(e) => setResetEmail(e.target.value)}
+                                        required
+                                        placeholder="Enter your email"
+                                    />
+                                </div>
+
+                                <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
+                                    <button
+                                        type="submit"
+                                        className="auth-submit-btn"
+                                        disabled={resetLoading}
+                                        style={{ flex: 1 }}
+                                    >
+                                        {resetLoading ? 'Sending...' : 'Send Reset Link'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={closeResetModal}
+                                        className="auth-guest-btn"
+                                        style={{ flex: 1 }}
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </form>
+                        )}
+                    </div>
+                </div>
+            )}
         </>
     );
 };

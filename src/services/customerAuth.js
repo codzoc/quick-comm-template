@@ -3,7 +3,8 @@ import {
     signInWithEmailAndPassword,
     signOut as firebaseSignOut,
     onAuthStateChanged,
-    updateProfile
+    updateProfile,
+    sendPasswordResetEmail
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
@@ -23,6 +24,12 @@ import { auth, db } from '../config/firebase';
  */
 export async function signUpCustomer(email, password, name, phone) {
     try {
+        // Check if user is an admin - can't sign up as customer
+        const adminStatus = await isUserAdmin(email);
+        if (adminStatus) {
+            throw new Error('This email is registered as an admin account.');
+        }
+
         // Create Firebase Auth user
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
@@ -41,6 +48,9 @@ export async function signUpCustomer(email, password, name, phone) {
 
         await setDoc(doc(db, 'customers', user.uid), customerData);
 
+        // Store session type
+        localStorage.setItem('userType', 'customer');
+
         return {
             uid: user.uid,
             email: user.email,
@@ -49,7 +59,25 @@ export async function signUpCustomer(email, password, name, phone) {
         };
     } catch (error) {
         console.error('Sign up error:', error);
+        if (error.message.includes('admin account')) {
+            throw error;
+        }
         throw new Error(getAuthErrorMessage(error.code));
+    }
+}
+
+/**
+ * Check if a user is an admin (to prevent admins from logging in as customers)
+ * @param {string} email
+ * @returns {Promise<boolean>}
+ */
+async function isUserAdmin(email) {
+    try {
+        const adminDoc = await getDoc(doc(db, 'admins', email));
+        return adminDoc.exists() && adminDoc.data().role === 'admin';
+    } catch (error) {
+        console.error('Error checking admin status:', error);
+        return false;
     }
 }
 
@@ -63,6 +91,16 @@ export async function loginCustomer(email, password) {
     try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
+
+        // Check if user is an admin - admins should use admin login
+        const adminStatus = await isUserAdmin(email);
+        if (adminStatus) {
+            await firebaseSignOut(auth);
+            throw new Error('This is an admin account. Please use the admin login at /admin');
+        }
+
+        // Store session type
+        localStorage.setItem('userType', 'customer');
 
         // Fetch customer data from Firestore
         const customerDoc = await getDoc(doc(db, 'customers', user.uid));
@@ -84,6 +122,9 @@ export async function loginCustomer(email, password) {
         };
     } catch (error) {
         console.error('Login error:', error);
+        if (error.message.includes('admin account')) {
+            throw error;
+        }
         throw new Error(getAuthErrorMessage(error.code));
     }
 }
@@ -95,10 +136,20 @@ export async function loginCustomer(email, password) {
 export async function logoutCustomer() {
     try {
         await firebaseSignOut(auth);
+        // Clear session type
+        localStorage.removeItem('userType');
     } catch (error) {
         console.error('Logout error:', error);
         throw new Error('Failed to logout. Please try again.');
     }
+}
+
+/**
+ * Get current session type
+ * @returns {string|null} 'customer' or null
+ */
+export function getSessionType() {
+    return localStorage.getItem('userType');
 }
 
 /**
@@ -158,6 +209,20 @@ export async function updateCustomerProfile(customerId, updates) {
 }
 
 /**
+ * Send password reset email
+ * @param {string} email
+ * @returns {Promise<void>}
+ */
+export async function resetCustomerPassword(email) {
+    try {
+        await sendPasswordResetEmail(auth, email);
+    } catch (error) {
+        console.error('Password reset error:', error);
+        throw new Error(getAuthErrorMessage(error.code));
+    }
+}
+
+/**
  * Subscribe to customer auth state changes
  * @param {Function} callback
  * @returns {Function} Unsubscribe function
@@ -194,5 +259,6 @@ export default {
     getCurrentCustomer,
     getCustomerData,
     updateCustomerProfile,
-    onCustomerAuthChange
+    onCustomerAuthChange,
+    resetCustomerPassword
 };

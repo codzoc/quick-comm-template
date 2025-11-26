@@ -17,6 +17,8 @@ import {
   Divider
 } from '@mui/material';
 import { Save } from 'lucide-react';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import { onAuthChange } from '../../services/auth';
 import { getStoreInfo, updateStoreInfo, getAllStaticPages, updateStaticPage } from '../../services/storeInfo';
 import { getCurrentTemplate, updateThemeTemplate } from '../../services/theme';
@@ -24,6 +26,7 @@ import { getThemeTemplateOptions } from '../../config/themeTemplates';
 import AdminLayout from '../../components/AdminLayout';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ThemeCustomizer from '../../components/ThemeCustomizer';
+import PaymentSettings from './PaymentSettings';
 import './AdminStyles.css';
 
 function TabPanel({ children, value, index }) {
@@ -195,6 +198,7 @@ function AdminStoreSettings() {
             <Tab label="Pages" />
             <Tab label="SEO" />
             <Tab label="Pricing" />
+            <Tab label="Payment" />
           </Tabs>
         </Box>
 
@@ -376,15 +380,17 @@ function AdminStoreSettings() {
               About Page
             </Typography>
 
-            <TextField
-              fullWidth
-              label="About Page Content"
-              value={staticPages.about?.content || ''}
-              onChange={(e) => handlePageContentChange('about', 'content', e.target.value)}
-              multiline
-              rows={6}
-              margin="normal"
-            />
+            <div style={{ marginBottom: '16px' }}>
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                About Page Content
+              </Typography>
+              <ReactQuill
+                theme="snow"
+                value={staticPages.about?.content || ''}
+                onChange={(value) => handlePageContentChange('about', 'content', value)}
+                style={{ height: '300px', marginBottom: '50px' }}
+              />
+            </div>
 
             <TextField
               fullWidth
@@ -411,15 +417,17 @@ function AdminStoreSettings() {
               Terms & Conditions Page
             </Typography>
 
-            <TextField
-              fullWidth
-              label="Terms Content"
-              value={staticPages.terms?.content || ''}
-              onChange={(e) => handlePageContentChange('terms', 'content', e.target.value)}
-              multiline
-              rows={6}
-              margin="normal"
-            />
+            <div style={{ marginBottom: '16px' }}>
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                Terms Content
+              </Typography>
+              <ReactQuill
+                theme="snow"
+                value={staticPages.terms?.content || ''}
+                onChange={(value) => handlePageContentChange('terms', 'content', value)}
+                style={{ height: '300px', marginBottom: '50px' }}
+              />
+            </div>
 
             <Button
               variant="contained"
@@ -437,15 +445,17 @@ function AdminStoreSettings() {
               Privacy Policy Page
             </Typography>
 
-            <TextField
-              fullWidth
-              label="Privacy Content"
-              value={staticPages.privacy?.content || ''}
-              onChange={(e) => handlePageContentChange('privacy', 'content', e.target.value)}
-              multiline
-              rows={6}
-              margin="normal"
-            />
+            <div style={{ marginBottom: '16px' }}>
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                Privacy Content
+              </Typography>
+              <ReactQuill
+                theme="snow"
+                value={staticPages.privacy?.content || ''}
+                onChange={(value) => handlePageContentChange('privacy', 'content', value)}
+                style={{ height: '300px', marginBottom: '50px' }}
+              />
+            </div>
 
             <Button
               variant="contained"
@@ -573,6 +583,13 @@ function AdminStoreSettings() {
                 Save Pricing Settings
               </Button>
             </form>
+          </CardContent>
+        </TabPanel>
+
+        {/* Tab 6: Payment */}
+        <TabPanel value={tabValue} index={5}>
+          <CardContent>
+            <PaymentSettings />
           </CardContent>
         </TabPanel>
       </Card>

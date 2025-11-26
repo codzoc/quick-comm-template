@@ -58,6 +58,20 @@ export async function createOrder(orderData) {
 
       // All reads complete - now we can do writes
 
+      // Check if email is provided and find matching customer
+      let linkedCustomerId = orderData.customerId || null;
+
+      if (!linkedCustomerId && orderData.customer.email) {
+        // Query customers collection for matching email
+        const customersRef = collection(db, 'customers');
+        const emailQuery = query(customersRef, where('email', '==', orderData.customer.email));
+        const emailSnapshot = await getDocs(emailQuery);
+
+        if (!emailSnapshot.empty) {
+          linkedCustomerId = emailSnapshot.docs[0].id;
+        }
+      }
+
       // Create order
       const ordersRef = collection(db, COLLECTION_NAME);
       const newOrder = {
@@ -72,7 +86,7 @@ export async function createOrder(orderData) {
             (item.product.discountedPrice || item.product.price) * item.quantity
         })),
         customer: orderData.customer,
-        customerId: orderData.customerId || null, // Link to customer account if logged in
+        customerId: linkedCustomerId, // Link to customer account if found
         status: 'pending',
         subtotal: orderData.subtotal || 0,
         tax: orderData.tax || 0,

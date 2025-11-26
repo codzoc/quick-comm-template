@@ -9,9 +9,9 @@ import './LoadingSpinner.css';
  * - size: 'small', 'medium', 'large' (default: 'medium')
  * - message: Optional loading message to display
  */
-function LoadingSpinner({ size = 'medium', message }) {
+function LoadingSpinner({ size = 'medium', message, inline = false }) {
   return (
-    <div className="loading-spinner-container">
+    <div className={`loading-spinner-container ${inline ? 'inline' : ''}`}>
       <div className={`loading-spinner loading-spinner-${size}`}>
         <div className="spinner"></div>
       </div>

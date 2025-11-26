@@ -7,6 +7,13 @@
   padding: var(--spacing-lg);
 }
 
+.loading-spinner-container.inline {
+  padding: 0;
+  gap: var(--spacing-xs);
+  display: inline-flex;
+  flex-direction: row;
+}
+
 .loading-spinner {
   display: inline-block;
 }

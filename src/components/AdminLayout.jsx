@@ -7,7 +7,8 @@ import {
   Settings,
   LogOut,
   Menu,
-  X
+  X,
+  Users
 } from 'lucide-react';
 import { signOut } from '../services/auth';
 import { getStoreInfo } from '../services/storeInfo';
@@ -71,6 +72,16 @@ function AdminLayout({ children }) {
       to: '/admin/orders',
       icon: ShoppingBag,
       label: 'Orders'
+    },
+    {
+      to: '/admin/customers',
+      icon: Users,
+      label: 'Customers'
+    },
+    {
+      to: '/admin/admins',
+      icon: Users,
+      label: 'Admins'
     },
     {
       to: '/admin/settings',

@@ -106,6 +106,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Store settings collection (payment settings, etc)
+    match /store_settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // Store info collection (contact details, social media, SEO, pricing, logo)
     // Public: read
     // Admin: read, write

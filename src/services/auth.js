@@ -1,9 +1,11 @@
 import {
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  sendPasswordResetEmail
 } from 'firebase/auth';
-import { auth } from '../config/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../config/firebase';
 
 /**
  * Authentication Service
@@ -11,7 +13,22 @@ import { auth } from '../config/firebase';
  */
 
 /**
- * Sign in with email and password
+ * Check if a user is an admin
+ * @param {string} email
+ * @returns {Promise<boolean>}
+ */
+export async function isAdmin(email) {
+  try {
+    const adminDoc = await getDoc(doc(db, 'admins', email));
+    return adminDoc.exists() && adminDoc.data().role === 'admin';
+  } catch (error) {
+    console.error('Error checking admin status:', error);
+    return false;
+  }
+}
+
+/**
+ * Sign in with email and password (Admin only)
  * @param {string} email
  * @param {string} password
  * @returns {Promise<UserCredential>}
@@ -19,9 +36,24 @@ import { auth } from '../config/firebase';
 export async function signIn(email, password) {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
+
+    // Verify user is an admin
+    const adminStatus = await isAdmin(email);
+    if (!adminStatus) {
+      await firebaseSignOut(auth);
+      throw new Error('Access denied. This account is not authorized as an admin.');
+    }
+
+    // Store session type
+    localStorage.setItem('userType', 'admin');
+    localStorage.setItem('adminEmail', email);
+
     return userCredential;
   } catch (error) {
     console.error('Sign in error:', error);
+    if (error.message.includes('Access denied')) {
+      throw error;
+    }
     throw new Error(getAuthErrorMessage(error.code));
   }
 }
@@ -33,10 +65,21 @@ export async function signIn(email, password) {
 export async function signOut() {
   try {
     await firebaseSignOut(auth);
+    // Clear session type
+    localStorage.removeItem('userType');
+    localStorage.removeItem('adminEmail');
   } catch (error) {
     console.error('Sign out error:', error);
     throw new Error('Failed to sign out. Please try again.');
   }
+}
+
+/**
+ * Get current session type
+ * @returns {string|null} 'admin' or null
+ */
+export function getSessionType() {
+  return localStorage.getItem('userType');
 }
 
 /**
@@ -54,6 +97,20 @@ export function getCurrentUser() {
  */
 export function onAuthChange(callback) {
   return onAuthStateChanged(auth, callback);
+}
+
+/**
+ * Send password reset email
+ * @param {string} email
+ * @returns {Promise<void>}
+ */
+export async function resetPassword(email) {
+  try {
+    await sendPasswordResetEmail(auth, email);
+  } catch (error) {
+    console.error('Password reset error:', error);
+    throw new Error(getAuthErrorMessage(error.code));
+  }
 }
 
 /**
@@ -79,5 +136,8 @@ export default {
   signIn,
   signOut,
   getCurrentUser,
-  onAuthChange
+  onAuthChange,
+  resetPassword,
+  isAdmin,
+  getSessionType
 };
