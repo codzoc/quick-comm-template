@@ -9,7 +9,7 @@ A simple, browser-only React + Firebase e-commerce template designed for non-cod
 1. **Create your repo**: Click "Use this template" → Create private repository
 2. **Set up Firebase**: Create Firebase project, enable Firestore, Authentication, and Hosting
 3. **Add secrets**: Copy 2 JSON configs to GitHub Secrets (use [JSON validator](https://jsonformatter.curiousconcept.com/))
-4. **Create admin user**: Add your email/password in Firebase Console
+4. **Create admin user**: Add your email/password in Firebase Console + Firestore admins collection
 5. **Deploy**: Run GitHub Actions workflow → Your store is live!
 
 **Helpful Tools:**
@@ -116,40 +116,61 @@ Now updates only happen when you manually trigger the workflow.
 ## Features
 
 ### Customer-Facing
-- Product catalog with search functionality
-- Shopping cart with real-time stock validation
+- **Product catalog** with real-time search functionality
+- **Shopping cart** with real-time stock validation
+- **Customer accounts** with login/signup
+  - Save multiple delivery addresses
+  - View order history with status tracking
+  - Update profile information
+  - Secure authentication with email/password
+- **Guest checkout** option (checkout without creating account)
+- **Optional account creation** during checkout
 - Mobile-responsive design with professional layout
 - Order placement with customer info collection
-- "Remember me" functionality for customer information
 - WhatsApp integration for order tracking
 - Out-of-stock badges and inventory tracking
 - Discount pricing support with percentage badges
-- Dynamic currency symbol support (₹, $, €, £, ¥, etc.)
+- Dynamic currency symbol support (₹, $, €, £, ¥, د.إ, SR)
 - Decimal formatting for all prices
 - Responsive cart modal with column-based layout
+- Static pages: About Us, Terms & Conditions, Privacy Policy
 
 ### Admin Panel
-- Secure admin authentication
-- Product management (CRUD operations)
-- Order management with status tracking (Pending, Processing, Completed, Cancelled)
+- **Secure admin authentication** with role-based access control
+- **Admin accounts management**: Add/remove admin users by email
+- **Customer management**: View all customer accounts and order history
+- **Product management** (CRUD operations)
+- **Order management** with status tracking (Pending, Processing, Completed, Cancelled)
 - Enhanced dashboard with order statistics and low stock alerts
-- Store settings with tabbed interface:
-  - **General**: Store name, logo URL, contact info, social media
+- **Store settings** with tabbed interface:
+  - **General**: Store name, logo, store icon, contact info, social media
   - **Appearance**: Theme templates (Professional, Vibrant, Minimal, Elegant, Modern)
-  - **Pages**: About Us, Terms & Conditions, Privacy Policy
+  - **Pages**: WYSIWYG editor for About, Terms, Privacy pages
   - **SEO**: Meta title, description, keywords
   - **Pricing**: Currency symbol, tax percentage, shipping cost
+  - **Payment**: Configure payment methods (COD, Stripe coming soon)
 - Settings tab persistence via URL parameters
-- Logo URL configuration (local paths or external URLs)
+- Logo and icon URL configuration (local paths or external URLs)
+
+### Security & Authentication
+- **Role-based access control**: Separate admin and customer sessions
+- **Protected routes**: Unauthorized users redirected to appropriate login
+- **Secure authentication**: Firebase Auth with email/password
+- **Session management**: LocalStorage-based session tracking
+- **Admin verification**: Firestore-based admin role verification
+- **Customer data protection**: Customers can only access their own data
 
 ### Developer-Friendly
 - 100% browser-based setup
 - Google Fonts integration (just specify font name)
 - PR preview deployments for testing
 - Multiple theme templates to choose from
+- WYSIWYG editor (ReactQuill) for static pages
 - Mobile-first, responsive design
 - Firebase hosting included
 - Automatic CI/CD via GitHub Actions
+- React Router for navigation
+- Material-UI components for admin panel
 
 ## Browser-Only Setup Guide
 
@@ -271,11 +292,38 @@ You only need **2 secrets** for the entire setup:
 
 ## Step 4: Create First Admin User
 
+**Important**: This template uses role-based authentication to separate admin and customer sessions. You need to create both a Firebase Auth user AND add them to the admins collection.
+
+### Part A: Create Admin in Firebase Authentication
+
 1. Go to Firebase Console > Authentication > Users
 2. Click "Add user"
 3. Enter email and password for your admin account
 4. Click "Add user"
-5. Save these credentials securely - you'll use them to login to `/admin`
+5. **Copy the email address you just created** (you'll need it in Part B)
+
+### Part B: Add Admin to Admins Collection
+
+1. Go to Firebase Console > Firestore Database
+2. Click "Start collection"
+3. Collection ID: `admins`
+4. Document ID: Enter the **exact email address** from Part A (e.g., `admin@yourstore.com`)
+5. Add field:
+   - Field: `role`
+   - Type: `string`
+   - Value: `admin`
+6. Add field:
+   - Field: `email`
+   - Type: `string`
+   - Value: Same email address
+7. Click "Save"
+
+**Why both steps?**
+- Firebase Authentication handles login credentials
+- The `admins` collection determines who can access the admin panel
+- This separation ensures customers can't accidentally access admin features
+
+**Save your admin credentials securely** - you'll use them to login at `https://YOUR-PROJECT-ID.web.app/admin`
 
 ---
 
@@ -314,6 +362,7 @@ You can customize your store in two ways:
 **General Tab**:
 - Store name
 - **Logo URL**: Enter `/images/logo.png` for local images or paste a direct URL (e.g., from imgbb.com)
+- **Store Icon**: Square icon for favicon and header (e.g., `/images/icon.png`)
 - Phone and WhatsApp numbers
 - Social media links (Facebook, Instagram, YouTube)
 
@@ -325,6 +374,16 @@ You can customize your store in two ways:
   - Elegant (Dark & Sophisticated)
   - Modern (Teal & Fresh)
 
+**Pages Tab**:
+- Use the **WYSIWYG editor** to format content with:
+  - Bold, italic, underline text
+  - Headings (H1, H2, H3)
+  - Bulleted and numbered lists
+  - Links
+  - Text colors
+- Edit About Us, Terms & Conditions, Privacy Policy
+- Add optional images for pages
+
 **SEO Tab**:
 - SEO Title (50-60 characters)
 - SEO Description (150-160 characters)
@@ -335,10 +394,9 @@ You can customize your store in two ways:
 - Tax percentage (%)
 - Shipping cost (flat rate)
 
-**Pages Tab**:
-- About Us content and image
-- Terms & Conditions
-- Privacy Policy
+**Payment Tab**:
+- Configure Cash on Delivery (COD)
+- Enable/disable payment methods
 
 ### Option B: Through Code (Advanced)
 
@@ -346,8 +404,8 @@ You can customize your store in two ways:
 1. Compress your logo using [tinyjpg.com](https://tinyjpg.com/)
 2. Go to `public/images/` folder in GitHub
 3. Click "Add file" > "Upload files"
-4. Upload your logo as `logo.png`
-5. Or use Admin Panel > Settings > General > Logo URL to set it
+4. Upload your logo as `logo.png` and icon as `icon.png`
+5. Or use Admin Panel > Settings > General > Logo/Icon URL to set them
 
 **Customize Theme Manually**:
 1. Edit `src/config/theme.js` in GitHub:
@@ -387,10 +445,22 @@ After merging to `main`, GitHub Actions will deploy to production:
 
 - **Storefront**: `https://YOUR-PROJECT-ID.web.app`
 - **Admin Panel**: `https://YOUR-PROJECT-ID.web.app/admin`
+- **Customer Login**: `https://YOUR-PROJECT-ID.web.app/login`
+- **Customer Account**: `https://YOUR-PROJECT-ID.web.app/account`
 
 ---
 
 ## Managing Your Store
+
+### Admin Panel Access
+
+**Login at**: `https://YOUR-PROJECT-ID.web.app/admin`
+
+**Important Security Notes**:
+- Admin login is separate from customer login
+- Only users added to the `admins` collection can access admin panel
+- Attempting to login with a customer account will show an error
+- Admin accounts cannot checkout as customers (different login pages)
 
 ### Dashboard
 
@@ -402,6 +472,33 @@ After merging to `main`, GitHub Actions will deploy to production:
    - Completed Orders
    - Total Revenue (excludes cancelled orders)
    - Low Stock Alerts (products with less than 5 items)
+
+### Managing Admin Accounts
+
+1. Go to admin panel > "Admins" tab
+2. **Add New Admin**:
+   - Click "Add Admin"
+   - Enter the email address
+   - Click "Add Admin"
+   - **Important**: The user must already have a Firebase Auth account (created in Firebase Console > Authentication)
+3. **Revoke Admin Access**:
+   - Click "Revoke" next to any admin
+   - Confirm the action
+   - User can still login as customer but loses admin access
+4. **Search Admins**: Use search bar to filter by email
+
+**Note**: You can only add admins who have already created Firebase Auth accounts. The email must match exactly.
+
+### Managing Customers
+
+1. Go to admin panel > "Customers" tab
+2. View all registered customer accounts
+3. See customer information:
+   - Name, email, phone
+   - Number of orders placed
+   - Account creation date
+4. Search customers by name or email
+5. Click on a customer to view their complete order history
 
 ### Adding Products
 
@@ -446,27 +543,47 @@ After merging to `main`, GitHub Actions will deploy to production:
 1. Go to admin panel > "Settings" tab
 2. **General Tab**:
    - Store name (appears in header and page title)
-   - Logo URL (supports `/images/` paths or full URLs)
+   - **Logo URL**: Full logo image with store name (e.g., `/images/logo.png`)
+   - **Store Icon**: Square icon/logo for favicon and header (e.g., `/images/icon.png`)
    - Contact information (phone, WhatsApp)
-   - Social media links
+   - Social media links (Facebook, Instagram, YouTube)
 3. **Appearance Tab**:
-   - Select theme template
-   - Click "Apply" and page will refresh with new theme
+   - Select theme template (Professional, Vibrant, Minimal, Elegant, Modern)
+   - Click "Apply Theme Template" and page will refresh with new theme
 4. **Pages Tab**:
+   - **WYSIWYG Editor** for rich text formatting
    - Customize About Us, Terms, Privacy Policy pages
    - Add images for pages (optional)
+   - Supports: bold, italic, headings, lists, links, colors
 5. **SEO Tab**:
-   - Set meta tags for better search engine visibility
+   - SEO Title (50-60 characters recommended)
+   - SEO Description (150-160 characters recommended)
+   - SEO Keywords (comma-separated)
 6. **Pricing Tab**:
-   - Select currency symbol (appears throughout the site)
+   - Select currency symbol (₹, $, €, £, ¥, د.إ, SR)
    - Set tax percentage (automatically calculated in cart)
    - Set flat shipping cost (added to all orders)
+7. **Payment Tab**:
+   - Configure Cash on Delivery (COD)
+   - More payment gateways coming soon
 
 **Note**: Settings tabs remember your last position via URL parameters
 
 ---
 
 ## Customer Shopping Experience
+
+### Customer Accounts
+- **Login/Signup**: Customers can create accounts with email/password at `/login`
+- **Account Dashboard** at `/account`:
+  - **My Addresses**: Save multiple delivery addresses
+  - **My Orders**: View complete order history with status
+  - **My Profile**: Update name and phone number
+- **Saved Addresses**: One-click checkout with saved addresses
+- **Set Default Address**: Mark frequently used address as default
+- **Guest Checkout**: Option to checkout without creating account
+- **Create Account During Checkout**: Optional checkbox to create account while placing order
+- **Secure Authentication**: Role-based access ensures customers can't access admin panel
 
 ### Cart Features
 - **Real-time stock validation**: Cart prevents adding more items than available in stock
@@ -477,12 +594,16 @@ After merging to `main`, GitHub Actions will deploy to production:
 - **Live calculations**: Subtotal, tax, and shipping calculated in real-time
 
 ### Checkout Features
-- **Customer information form**: Name, phone, address, PIN code
-- **Form validation**: Ensures all required fields are filled
-- **"Remember me" checkbox**: Saves customer info in browser (checked by default)
-- **Clear saved info**: Customers can clear their saved information
+- **Flexible Checkout Options**:
+  - Checkout as guest
+  - Login to use saved addresses
+  - Create account during checkout (optional)
+- **Customer information form**: Name, phone, email, address, PIN code
+- **Email required** when creating account
+- **Form validation**: Ensures all required fields are filled correctly
 - **Order summary**: Shows itemized breakdown with tax and shipping
-- **WhatsApp integration**: After order placement, customers can message you directly
+- **Payment method selection**: Choose from configured payment options
+- **WhatsApp integration**: After order placement, customers can message you with Order ID
 
 ### Product Browsing
 - **Search functionality**: Real-time search across product titles and descriptions
@@ -583,10 +704,30 @@ This means you need to add the "Firebase Rules Admin" role specifically:
 - Check that `firestore.rules` and `firestore.indexes.json` files exist in the repository
 
 ### Admin Login Not Working
-- Verify you created an admin user in Firebase Console
+
+**Error: "Access denied. This account is not authorized as an admin"**
+- This means the email exists in Firebase Auth but NOT in the `admins` collection
+- Solution: Add the email to Firestore `admins` collection (see Step 4, Part B)
+
+**Error: "This is an admin account. Please use the admin login at /admin"**
+- This means you're trying to login as customer with an admin account
+- Solution: Go to `/admin` to login with admin credentials
+
+**Other issues:**
+- Verify you created BOTH Firebase Auth user AND added to `admins` collection
+- Check that the email in `admins` collection matches Firebase Auth exactly
+- Check that the document ID in `admins` collection is the email address
+- Ensure the `role` field is set to `admin` (string type)
 - Check that Authentication is enabled in Firebase
 - Make sure the initial deployment completed successfully
 - Clear browser cache and try again
+
+### Customer Can't Create Account
+
+**Error: "This email is registered as an admin account"**
+- Admin emails cannot be used to create customer accounts
+- This is intentional for security - admin and customer sessions are separate
+- Use a different email for customer account
 
 ### Products Not Showing
 - Verify Firestore rules were deployed (check GitHub Actions logs)
@@ -683,6 +824,10 @@ quick-comm-template/
 │   └── images/              # Store all images here
 ├── src/
 │   ├── components/          # Reusable UI components
+│   │   ├── Header.jsx       # Site header
+│   │   ├── Footer.jsx       # Site footer
+│   │   ├── ProductCard.jsx  # Product display
+│   │   └── ProtectedRoute.jsx # Route guards
 │   ├── config/             # Configuration files
 │   │   ├── business.js     # Store name, logo
 │   │   ├── firebase.js     # Firebase setup
@@ -690,11 +835,29 @@ quick-comm-template/
 │   ├── context/            # React context (cart state)
 │   ├── pages/
 │   │   ├── StoreFront.jsx  # Main customer page ⭐
+│   │   ├── CustomerAuth.jsx # Customer login/signup
+│   │   ├── CustomerAccount.jsx # Customer account page
+│   │   ├── StaticPage.jsx  # About/Terms/Privacy pages
 │   │   └── admin/          # Admin panel pages
+│   │       ├── Login.jsx   # Admin login
+│   │       ├── Dashboard.jsx # Admin dashboard
+│   │       ├── Products.jsx # Product management
+│   │       ├── Orders.jsx  # Order management
+│   │       ├── Customers.jsx # Customer management
+│   │       ├── Admins.jsx  # Admin management
+│   │       ├── StoreSettings.jsx # Store settings
+│   │       └── PaymentSettings.jsx # Payment config
 │   ├── services/           # Firebase operations
+│   │   ├── auth.js         # Admin authentication
+│   │   ├── customerAuth.js # Customer authentication
+│   │   ├── products.js     # Product CRUD
+│   │   ├── orders.js       # Order management
+│   │   ├── adminAccounts.js # Admin/customer management
+│   │   └── storeInfo.js    # Store settings
 │   └── utils/              # Helper functions
 ├── .github/workflows/      # CI/CD automation
-└── firestore.rules         # Database security
+├── firestore.rules         # Database security rules
+└── firestore.indexes.json  # Database indexes
 ```
 
 ---
@@ -707,6 +870,21 @@ quick-comm-template/
 - [Managing Orders](https://youtube.com/@build.with.justin)
 
 ### Common Questions
+
+**Q: What's the difference between admin and customer login?**
+A: This template uses role-based authentication:
+- **Admin login** (`/admin`): For store owners/managers to manage products, orders, settings
+- **Customer login** (`/login`): For shoppers to save addresses and view order history
+- These are completely separate - admin accounts can't checkout as customers and vice versa
+
+**Q: How do I add more admin users?**
+A: Two options:
+1. **Via Admin Panel** (Recommended): Go to Admin Panel > Admins tab > Add Admin
+2. **Via Firestore Console**: Add document to `admins` collection with email as document ID
+- **Important**: The email must already exist in Firebase Authentication
+
+**Q: Can customers place orders without creating an account?**
+A: Yes! Guest checkout is available. Customers can optionally create an account during checkout to save their information.
 
 **Q: Can I use my own domain?**
 A: Yes! Configure custom domain in Firebase Hosting settings
@@ -733,7 +911,9 @@ A: Yes! Go to Admin Panel > Settings > Pricing tab and select your currency. It 
 A: Professional, Vibrant, Minimal, Elegant, and Modern. Change in Admin Panel > Settings > Appearance.
 
 **Q: Can customers save their information?**
-A: Yes! The "Remember this information" checkbox (checked by default) saves customer details in their browser.
+A: Yes! Customers have two options:
+1. **Create an account**: Save multiple addresses, view order history, and checkout faster
+2. **Guest checkout**: Quick checkout without creating an account (can optionally create account during checkout)
 
 **Q: Can I add more features?**
 A: Yes! Edit the code directly in GitHub or ask AI to help customize
