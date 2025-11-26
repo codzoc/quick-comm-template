@@ -7,6 +7,8 @@ import AdminProducts from './pages/admin/Products';
 import AdminOrders from './pages/admin/Orders';
 import AdminStoreSettings from './pages/admin/StoreSettings';
 import StaticPage from './pages/StaticPage';
+import CustomerAuth from './pages/CustomerAuth';
+import CustomerAccount from './pages/CustomerAccount';
 import SEO from './components/SEO';
 
 /**
@@ -20,6 +22,11 @@ function App() {
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<StoreFront />} />
+
+        {/* Customer Routes */}
+        <Route path="/login" element={<CustomerAuth />} />
+        <Route path="/signup" element={<CustomerAuth />} />
+        <Route path="/account" element={<CustomerAccount />} />
 
         {/* Admin Routes */}
         <Route path="/admin" element={<AdminLogin />} />

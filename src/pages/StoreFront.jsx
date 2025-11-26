@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { getAllProducts } from '../services/products';
 import { createOrder } from '../services/orders';
 import { getStoreInfo } from '../services/storeInfo';
+import { getCurrentCustomer } from '../services/customerAuth';
+import { getDefaultAddress } from '../services/addresses';
+import { ShoppingBag } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import ProductCard from '../components/ProductCard';
@@ -22,6 +26,8 @@ import './StoreFront.css';
  * This file is designed to be easily editable by AI
  */
 function StoreFront() {
+  const navigate = useNavigate();
+
   // State Management
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
@@ -29,6 +35,7 @@ function StoreFront() {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [storeInfo, setStoreInfo] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
 
   // Cart and Checkout State
   const {
@@ -104,6 +111,7 @@ function StoreFront() {
   // Load products and store info on mount
   useEffect(() => {
     loadData();
+    checkCustomerAuth();
     loadSavedCustomerInfo();
 
     // Listen for cart open event from header
@@ -111,6 +119,28 @@ function StoreFront() {
     window.addEventListener('openCart', handleOpenCart);
     return () => window.removeEventListener('openCart', handleOpenCart);
   }, [openCart]);
+
+  // Check if customer is logged in and load default address
+  const checkCustomerAuth = async () => {
+    const user = getCurrentCustomer();
+    setCurrentUser(user);
+
+    if (user) {
+      try {
+        const defaultAddr = await getDefaultAddress(user.uid);
+        if (defaultAddr) {
+          setCustomerInfo({
+            name: defaultAddr.name,
+            phone: defaultAddr.phone,
+            address: defaultAddr.address,
+            pin: defaultAddr.pin
+          });
+        }
+      } catch (err) {
+        console.error('Error loading default address:', err);
+      }
+    }
+  };
 
   // Reset cart view when cart is opened
   useEffect(() => {
@@ -236,6 +266,7 @@ function StoreFront() {
       const orderData = {
         items: cartItems,
         customer: customerInfo,
+        customerId: currentUser?.uid || null, // Link to customer account if logged in
         subtotal: getCartSubtotal(),
         tax: getCartTax(),
         shipping: getCartShipping(),
@@ -450,6 +481,45 @@ function StoreFront() {
                       </button>
                     </div>
 
+                    {/* Login Button for Guest Users */}
+                    {!currentUser && (
+                      <div style={{
+                        padding: 'var(--spacing-md)',
+                        backgroundColor: 'var(--color-surface)',
+                        borderRadius: 'var(--border-radius-md)',
+                        marginBottom: 'var(--spacing-md)',
+                        textAlign: 'center',
+                        border: '1px solid var(--color-border)'
+                      }}>
+                        <p style={{
+                          margin: '0 0 var(--spacing-sm)',
+                          color: 'var(--color-text-light)',
+                          fontSize: 'var(--font-size-sm)'
+                        }}>
+                          Have an account? Login to use saved addresses
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => navigate('/login', { state: { from: '/' } })}
+                          style={{
+                            padding: 'var(--spacing-sm) var(--spacing-lg)',
+                            backgroundColor: 'var(--color-primary)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: 'var(--border-radius-full)',
+                            cursor: 'pointer',
+                            fontSize: 'var(--font-size-sm)',
+                            fontWeight: 'var(--font-weight-medium)',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseOver={(e) => e.target.style.backgroundColor = 'var(--color-primary-hover)'}
+                          onMouseOut={(e) => e.target.style.backgroundColor = 'var(--color-primary)'}
+                        >
+                          Login to Account
+                        </button>
+                      </div>
+                    )}
+
                     <form onSubmit={handlePlaceOrder} className="checkout-form">
                       <div className="form-group">
                         <label htmlFor="name">Full Name *</label>
@@ -591,7 +661,14 @@ function StoreFront() {
                         className="btn-primary btn-place-order"
                         disabled={submitting}
                       >
-                        {submitting ? 'Placing Order...' : 'Place Order'}
+                        {submitting ? (
+                          'Placing Order...'
+                        ) : (
+                          <>
+                            <ShoppingBag size={18} style={{ marginRight: '8px' }} />
+                            Place Order
+                          </>
+                        )}
                       </button>
                     </form>
                   </div>

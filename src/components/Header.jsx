@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Menu, X, ShoppingCart, Search } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Menu, X, ShoppingCart, Search, User } from 'lucide-react';
 import { business } from '../config/business';
 import { getStoreInfo } from '../services/storeInfo';
+import { getCurrentCustomer } from '../services/customerAuth';
 import SearchBar from './SearchBar';
 import './Header.css';
 
@@ -16,10 +17,13 @@ import './Header.css';
  * - showSearch: Boolean to show/hide search bar (default: true)
  */
 function Header({ cartItemCount = 0, onSearch, showSearch = true }) {
+  const navigate = useNavigate();
   const [storeName, setStoreName] = useState('Quick Commerce');
   const [logoUrl, setLogoUrl] = useState(business.logoPath);
+  const [storeIcon, setStoreIcon] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
     // Fetch store info from Firebase
@@ -32,6 +36,9 @@ function Header({ cartItemCount = 0, onSearch, showSearch = true }) {
         if (storeInfo.logoUrl) {
           setLogoUrl(storeInfo.logoUrl);
         }
+        if (storeInfo.storeIcon) {
+          setStoreIcon(storeInfo.storeIcon);
+        }
       } catch (error) {
         console.error('Error fetching store info:', error);
         // Keep default values on error
@@ -39,6 +46,10 @@ function Header({ cartItemCount = 0, onSearch, showSearch = true }) {
     };
 
     fetchStoreInfo();
+
+    // Check if user is logged in
+    const user = getCurrentCustomer();
+    setCurrentUser(user);
   }, []);
 
   const toggleMobileMenu = () => {
@@ -49,6 +60,14 @@ function Header({ cartItemCount = 0, onSearch, showSearch = true }) {
   const toggleMobileSearch = () => {
     setMobileSearchOpen(!mobileSearchOpen);
     setMobileMenuOpen(false);
+  };
+
+  const handleUserClick = () => {
+    if (currentUser) {
+      navigate('/account');
+    } else {
+      navigate('/login');
+    }
   };
 
   return (
@@ -64,10 +83,24 @@ function Header({ cartItemCount = 0, onSearch, showSearch = true }) {
           {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
 
-        {/* Logo */}
+        {/* Logo - Show logo image if available, otherwise show icon + text */}
         <Link to="/" className="header-logo" onClick={() => setMobileMenuOpen(false)}>
-          <img src={logoUrl} alt={storeName} />
-          <span className="header-store-name">{storeName}</span>
+          {logoUrl && logoUrl !== '/images/logo.png' ? (
+            // Show logo image only
+            <img src={logoUrl} alt={storeName} />
+          ) : (
+            // Show icon + text
+            <>
+              {storeIcon && (
+                <img
+                  src={storeIcon}
+                  alt="Store icon"
+                  style={{ width: '32px', height: '32px', objectFit: 'contain' }}
+                />
+              )}
+              <span className="header-store-name">{storeName}</span>
+            </>
+          )}
         </Link>
 
         {/* Search Bar (Desktop) */}
@@ -90,6 +123,17 @@ function Header({ cartItemCount = 0, onSearch, showSearch = true }) {
               <Search size={20} />
             </button>
           )}
+
+          {/* User/Account Button */}
+          <button
+            type="button"
+            className="header-user-btn"
+            onClick={handleUserClick}
+            aria-label={currentUser ? "Go to account" : "Login"}
+          >
+            <User size={20} className="user-icon" />
+            <span className="user-text">{currentUser ? 'Account' : 'Login'}</span>
+          </button>
 
           {/* Cart Icon */}
           <button

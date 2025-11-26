@@ -49,7 +49,8 @@
   color: var(--color-text);
   font-weight: var(--font-weight-semibold);
   font-size: var(--font-size-base);
-  flex-shrink: 0;
+  flex-shrink: 1;
+  min-width: 0;
   transition: opacity 0.2s;
 }
 
@@ -61,10 +62,16 @@
   height: 32px;
   width: auto;
   object-fit: contain;
+  flex-shrink: 0;
 }
 
 .header-store-name {
-  display: none;
+  display: inline;
+  /* Always show on mobile */
+  font-size: var(--font-size-base);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Search - Desktop */
@@ -86,6 +93,7 @@
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -117,6 +125,36 @@
 
 .header-search-icon:hover {
   background-color: var(--color-surface);
+}
+
+/* User/Account Button */
+.header-user-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  background: none;
+  border: none;
+  color: var(--color-text);
+  cursor: pointer;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius-full);
+  transition: all 0.2s;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  min-height: 40px;
+}
+
+.header-user-btn:hover {
+  background-color: var(--color-surface);
+  color: var(--color-primary);
+}
+
+.user-icon {
+  flex-shrink: 0;
+}
+
+.user-text {
+  display: none;
 }
 
 /* Cart Button */
@@ -243,6 +281,10 @@
 
   .header-search-mobile {
     display: none;
+  }
+
+  .user-text {
+    display: inline;
   }
 
   .header-container {

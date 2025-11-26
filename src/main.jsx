@@ -3,7 +3,9 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { CartProvider } from './context/CartContext';
 import { getTheme } from './services/theme';
+import { getStoreInfo } from './services/storeInfo';
 import { initializeFont } from './utils/googleFonts';
+import FaviconLoader from './components/FaviconLoader';
 import './index.css';
 import './theme.css';
 
@@ -55,25 +57,32 @@ function applyThemeVariables(theme) {
  */
 async function initializeTheme() {
   try {
-    // Fetch theme from Firebase
-    const theme = await getTheme();
+    // Fetch theme and store info from Firebase
+    const [theme, storeInfo] = await Promise.all([
+      getTheme(),
+      getStoreInfo()
+    ]);
 
     // Initialize Google Font from theme configuration
     initializeFont(theme);
 
     // Apply theme CSS variables
     applyThemeVariables(theme);
+
+    return storeInfo;
   } catch (error) {
     console.error('Error initializing theme:', error);
     // Theme service will return default theme on error
+    return {};
   }
 }
 
 // Initialize theme and render app
-initializeTheme().then(() => {
+initializeTheme().then((storeInfo) => {
   ReactDOM.createRoot(document.getElementById('root')).render(
     <React.StrictMode>
       <CartProvider>
+        <FaviconLoader iconUrl={storeInfo?.storeIcon} />
         <App />
       </CartProvider>
     </React.StrictMode>

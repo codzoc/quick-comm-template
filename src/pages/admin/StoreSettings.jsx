@@ -23,6 +23,7 @@ import { getCurrentTemplate, updateThemeTemplate } from '../../services/theme';
 import { getThemeTemplateOptions } from '../../config/themeTemplates';
 import AdminLayout from '../../components/AdminLayout';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import ThemeCustomizer from '../../components/ThemeCustomizer';
 import './AdminStyles.css';
 
 function TabPanel({ children, value, index }) {
@@ -45,6 +46,7 @@ function AdminStoreSettings() {
   const [storeInfo, setStoreInfo] = useState({
     storeName: '',
     logoUrl: '/images/logo.png',
+    storeIcon: '',
     phone: '',
     whatsapp: '',
     facebook: '',
@@ -220,7 +222,17 @@ function AdminStoreSettings() {
                 onChange={(e) => handleStoreInfoChange('logoUrl', e.target.value)}
                 margin="normal"
                 placeholder="/images/logo.png or https://example.com/logo.png"
-                helperText="Path to your logo (e.g., /images/logo.png) or full URL"
+                helperText="Full logo image with store name designed in it"
+              />
+
+              <TextField
+                fullWidth
+                label="Store Icon URL"
+                value={storeInfo.storeIcon || ''}
+                onChange={(e) => handleStoreInfoChange('storeIcon', e.target.value)}
+                margin="normal"
+                placeholder="/images/icon.png or https://example.com/icon.png"
+                helperText="Square icon/logo for favicon and header (shown with store name when no logo image)"
               />
 
               <Divider sx={{ my: 3 }} />
@@ -334,13 +346,25 @@ function AdminStoreSettings() {
               </Alert>
             )}
 
-            <Button
-              variant="contained"
-              startIcon={<Save size={18} />}
-              onClick={handleSaveTheme}
-            >
-              Apply Theme Template
-            </Button>
+            {selectedTemplate !== 'custom' && (
+              <Button
+                variant="contained"
+                startIcon={<Save size={18} />}
+                onClick={handleSaveTheme}
+              >
+                Apply Theme Template
+              </Button>
+            )}
+
+            {/* Show Theme Customizer for Custom theme */}
+            {selectedTemplate === 'custom' && (
+              <ThemeCustomizer
+                onSave={() => {
+                  showSuccess('Custom theme saved! Refreshing page...');
+                  setTimeout(() => window.location.reload(), 1500);
+                }}
+              />
+            )}
           </CardContent>
         </TabPanel>
 

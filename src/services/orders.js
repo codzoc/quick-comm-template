@@ -24,7 +24,7 @@ const COLLECTION_NAME = 'orders';
 
 /**
  * Create new order
- * @param {Object} orderData - {items, customer: {name, phone, address, pin}, total, subtotal, tax, shipping}
+ * @param {Object} orderData - {items, customer: {name, phone, address, pin}, total, subtotal, tax, shipping, customerId (optional)}
  * @returns {Promise<Object>} Order with ID
  */
 export async function createOrder(orderData) {
@@ -72,6 +72,7 @@ export async function createOrder(orderData) {
             (item.product.discountedPrice || item.product.price) * item.quantity
         })),
         customer: orderData.customer,
+        customerId: orderData.customerId || null, // Link to customer account if logged in
         status: 'pending',
         subtotal: orderData.subtotal || 0,
         tax: orderData.tax || 0,
@@ -243,10 +244,43 @@ export async function getOrderStats() {
   }
 }
 
+/**
+ * Get orders for a specific customer
+ * @param {string} customerId
+ * @returns {Promise<Array>}
+ */
+export async function getCustomerOrders(customerId) {
+  try {
+    const ordersRef = collection(db, COLLECTION_NAME);
+    const q = query(
+      ordersRef,
+      where('customerId', '==', customerId),
+      orderBy('createdAt', 'desc')
+    );
+
+    const snapshot = await getDocs(q);
+    const orders = [];
+
+    snapshot.forEach((doc) => {
+      orders.push({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate()
+      });
+    });
+
+    return orders;
+  } catch (error) {
+    console.error('Error fetching customer orders:', error);
+    throw new Error('Failed to load your orders. Please try again.');
+  }
+}
+
 export default {
   createOrder,
   getAllOrders,
   getOrderById,
   updateOrderStatus,
-  getOrderStats
+  getOrderStats,
+  getCustomerOrders
 };
