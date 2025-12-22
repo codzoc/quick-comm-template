@@ -148,7 +148,7 @@ Now updates only happen when you manually trigger the workflow.
   - **Pages**: WYSIWYG editor for About, Terms, Privacy pages
   - **SEO**: Meta title, description, keywords
   - **Pricing**: Currency symbol, tax percentage, shipping cost
-  - **Payment**: Configure payment methods (COD, Stripe coming soon)
+  - **Payment**: Configure payment methods (COD, Stripe, Razorpay) and email notifications
 - Settings tab persistence via URL parameters
 - Logo and icon URL configuration (local paths or external URLs)
 
@@ -565,7 +565,9 @@ After merging to `main`, GitHub Actions will deploy to production:
    - Set flat shipping cost (added to all orders)
 7. **Payment Tab**:
    - Configure Cash on Delivery (COD)
-   - More payment gateways coming soon
+   - Set up Stripe for credit/debit card payments
+   - Set up Razorpay for UPI/cards/netbanking
+   - Configure Gmail SMTP for email notifications
 
 **Note**: Settings tabs remember your last position via URL parameters
 
@@ -598,11 +600,12 @@ After merging to `main`, GitHub Actions will deploy to production:
   - Checkout as guest
   - Login to use saved addresses
   - Create account during checkout (optional)
-- **Customer information form**: Name, phone, email, address, PIN code
-- **Email required** when creating account
+- **Customer information form**: Name, phone, email (required), address, PIN code
+- **Email required**: All orders require email for confirmation and updates
 - **Form validation**: Ensures all required fields are filled correctly
 - **Order summary**: Shows itemized breakdown with tax and shipping
-- **Payment method selection**: Choose from configured payment options
+- **Payment method selection**: Choose from COD, Stripe, or Razorpay
+- **Email notifications**: Automatic order and payment confirmation emails
 - **WhatsApp integration**: After order placement, customers can message you with Order ID
 
 ### Product Browsing
@@ -796,23 +799,340 @@ If you need to change database security rules:
 
 ---
 
-## Advanced Customization
+## Payment Gateway Integration
 
-### Add More Payment Methods
-Currently supports cash on delivery. To add payment gateways:
-1. Integrate Razorpay/Stripe in `src/pages/StoreFront.jsx`
-2. Add payment gateway credentials to secrets
-3. Update order creation logic
+This template supports multiple payment gateways: **Cash on Delivery (COD)**, **Stripe**, and **Razorpay**. All payment methods can be configured through the admin panel.
 
-### Add Email Notifications
-1. Use a service like EmailJS or SendGrid
-2. Add email sending in order creation function
-3. Configure email templates
+### Supported Payment Methods
 
-### Enable Local Storage for Cart
-Currently, cart is in-memory only. To persist:
-1. Modify `src/context/CartContext.jsx`
-2. Add localStorage save/load logic
+1. **Cash on Delivery (COD)** - Default, no setup required
+2. **Stripe** - Credit/Debit cards, international payments
+3. **Razorpay** - UPI, Cards, Netbanking, Wallets (India-focused)
+
+### Email Notifications
+
+All orders automatically send email confirmations to customers. Email is now **required** during checkout.
+
+---
+
+### Setting Up Payment Gateways
+
+#### Step 1: Configure Email Notifications (Required)
+
+Email notifications are sent for order confirmations and payment confirmations using Gmail SMTP.
+
+1. **Create a Gmail App Password**:
+   - Go to your Google Account: [myaccount.google.com](https://myaccount.google.com)
+   - Navigate to **Security** → **2-Step Verification** (enable if not already)
+   - Scroll down to **App passwords**
+   - Click **Select app** → Choose **Mail**
+   - Click **Select device** → Choose **Other** → Enter "Store Notifications"
+   - Click **Generate**
+   - **Copy the 16-character password** (you'll need this in the admin panel)
+
+2. **Configure in Admin Panel**:
+   - Go to Admin Panel → **Settings** → **Payment** tab
+   - Scroll to **Email Configuration** section
+   - Enter your **Store Name** (appears in email sender)
+   - Enter your **Gmail Address**
+   - Paste the **App Password** (16 characters, no spaces)
+   - Click **Save All Settings**
+
+**Important**: Regular Gmail passwords won't work - you MUST use an App Password!
+
+---
+
+#### Step 2: Configure Cash on Delivery (COD)
+
+COD is enabled by default and requires no additional setup.
+
+1. Go to Admin Panel → **Settings** → **Payment** tab
+2. Under **Cash on Delivery (COD)**:
+   - Toggle to enable/disable
+   - Set **Display Label** (e.g., "Cash on Delivery")
+   - Set **Description** (e.g., "Pay with cash upon delivery")
+3. Click **Save All Settings**
+
+**Note**: At least one payment method must be enabled. You cannot disable COD if no other payment method is active.
+
+---
+
+#### Step 3: Configure Stripe (Optional)
+
+Stripe enables credit/debit card payments globally.
+
+##### A. Get Stripe API Keys
+
+1. Create a Stripe account at [stripe.com](https://stripe.com)
+2. Go to **Developers** → **API keys**
+3. Copy your **Publishable key** (starts with `pk_test_` or `pk_live_`)
+4. Copy your **Secret key** (starts with `sk_test_` or `sk_live_`)
+5. Keep these keys handy for the admin panel
+
+##### B. Configure in Admin Panel
+
+1. Go to Admin Panel → **Settings** → **Payment** tab
+2. Under **Stripe**:
+   - Toggle **Enabled** to ON
+   - Paste **Publishable Key**
+   - Paste **Secret Key**
+   - Leave **Webhook Secret** empty for now (we'll add it after deploying functions)
+3. Click **Save All Settings**
+
+##### C. Deploy Firebase Functions
+
+After saving Stripe settings, deploy your Firebase Functions:
+
+1. Go to your GitHub repository
+2. Click **Actions** tab
+3. Click **Firebase Deploy** workflow
+4. Click **Run workflow** → **Run workflow**
+5. Wait for deployment to complete (3-5 minutes)
+
+##### D. Set Up Stripe Webhook
+
+1. After functions are deployed, get your webhook URL:
+   - Format: `https://[REGION]-[PROJECT-ID].cloudfunctions.net/stripeWebhook`
+   - Example: `https://us-central1-my-store.cloudfunctions.net/stripeWebhook`
+   - Find your region and project ID in Firebase Console
+
+2. Add webhook in Stripe Dashboard:
+   - Go to **Developers** → **Webhooks**
+   - Click **Add endpoint**
+   - Paste your webhook URL
+   - Select events to listen for:
+     - `checkout.session.completed`
+     - `payment_intent.payment_failed`
+   - Click **Add endpoint**
+
+3. Copy the **Webhook signing secret** (starts with `whsec_`)
+
+4. Update admin panel:
+   - Go to Admin Panel → **Settings** → **Payment** tab
+   - Under Stripe, paste the **Webhook Secret**
+   - Click **Save All Settings**
+
+**Done!** Stripe is now active on your checkout page.
+
+---
+
+#### Step 4: Configure Razorpay (Optional)
+
+Razorpay is ideal for Indian businesses, supporting UPI, cards, netbanking, and wallets.
+
+##### A. Get Razorpay API Keys
+
+1. Create a Razorpay account at [razorpay.com](https://razorpay.com)
+2. Go to **Settings** → **API Keys**
+3. Generate keys if not already created
+4. Copy your **Key ID** (starts with `rzp_test_` or `rzp_live_`)
+5. Copy your **Key Secret**
+6. Keep these keys handy for the admin panel
+
+##### B. Configure in Admin Panel
+
+1. Go to Admin Panel → **Settings** → **Payment** tab
+2. Under **Razorpay**:
+   - Toggle **Enabled** to ON
+   - Paste **Key ID**
+   - Paste **Key Secret**
+   - Leave **Webhook Secret** empty for now
+3. Click **Save All Settings**
+
+##### C. Deploy Firebase Functions
+
+If you haven't already deployed functions for Stripe:
+
+1. Go to your GitHub repository
+2. Click **Actions** tab
+3. Click **Firebase Deploy** workflow
+4. Click **Run workflow** → **Run workflow**
+5. Wait for deployment to complete (3-5 minutes)
+
+##### D. Set Up Razorpay Webhook
+
+1. After functions are deployed, get your webhook URL:
+   - Format: `https://[REGION]-[PROJECT-ID].cloudfunctions.net/razorpayWebhook`
+   - Example: `https://us-central1-my-store.cloudfunctions.net/razorpayWebhook`
+
+2. Add webhook in Razorpay Dashboard:
+   - Go to **Settings** → **Webhooks**
+   - Click **Create Webhook**
+   - Paste your webhook URL
+   - Select events:
+     - `payment.captured`
+     - `payment.failed`
+   - Enter a **Secret** (create a random string, e.g., `my_webhook_secret_123`)
+   - Click **Create Webhook**
+
+3. Copy the **Secret** you just created
+
+4. Update admin panel:
+   - Go to Admin Panel → **Settings** → **Payment** tab
+   - Under Razorpay, paste the **Webhook Secret**
+   - Click **Save All Settings**
+
+**Done!** Razorpay is now active on your checkout page.
+
+---
+
+### How Payment Flows Work
+
+#### Cash on Delivery (COD)
+1. Customer selects COD at checkout
+2. Order is created with status "Pending"
+3. Customer receives order confirmation email
+4. Admin fulfills order and updates status
+
+#### Stripe
+1. Customer selects "Credit/Debit Card (Stripe)" at checkout
+2. Customer is redirected to Stripe Checkout page
+3. Customer enters card details and completes payment
+4. Stripe webhook notifies your system
+5. Order status updates to "Completed"
+6. Customer receives payment confirmation email
+
+#### Razorpay
+1. Customer selects "UPI / Cards / Netbanking (Razorpay)" at checkout
+2. Razorpay popup opens with payment options
+3. Customer completes payment (UPI, card, netbanking, wallet)
+4. Razorpay webhook notifies your system
+5. Order status updates to "Completed"
+6. Customer receives payment confirmation email
+
+---
+
+### Testing Payment Gateways
+
+#### Test Stripe Payments
+
+Use Stripe's test card numbers:
+- **Success**: `4242 4242 4242 4242`
+- **Decline**: `4000 0000 0000 0002`
+- Use any future expiry date and any CVC
+
+#### Test Razorpay Payments
+
+In test mode, Razorpay provides test payment options:
+- Use test UPI IDs
+- Use test card numbers provided in Razorpay dashboard
+- All test payments will be marked as successful
+
+**Important**: Always test in test mode before going live!
+
+---
+
+### Going Live with Payments
+
+#### Stripe
+1. Complete Stripe account verification
+2. Switch from test keys to live keys in admin panel
+3. Update webhook to use live mode
+4. Test with a real card (small amount)
+
+#### Razorpay
+1. Complete KYC verification in Razorpay
+2. Switch from test keys to live keys in admin panel
+3. Update webhook secret if changed
+4. Test with a real payment (small amount)
+
+---
+
+### Troubleshooting Payment Issues
+
+#### Emails Not Sending
+- Verify Gmail App Password is correct (16 characters, no spaces)
+- Check that 2-Step Verification is enabled on your Google Account
+- Try generating a new App Password
+- Check Firebase Functions logs for errors
+
+#### Stripe Payments Failing
+- Verify publishable and secret keys are correct
+- Check webhook secret matches Stripe dashboard
+- Ensure webhook URL is correct (check Firebase Functions URL)
+- Check Stripe dashboard for error logs
+- Verify Firebase Functions are deployed successfully
+
+#### Razorpay Payments Failing
+- Verify Key ID and Key Secret are correct
+- Check webhook secret matches Razorpay dashboard
+- Ensure webhook URL is correct
+- Check Razorpay dashboard for error logs
+- Verify Firebase Functions are deployed successfully
+
+#### Order Status Not Updating
+- Check Firebase Functions logs in Firebase Console
+- Verify webhook secrets are correct
+- Ensure webhooks are active in payment gateway dashboards
+- Check that webhook URLs are accessible (not blocked by firewall)
+
+---
+
+### Email Templates
+
+Email templates are automatically included in the Firebase Functions. They include:
+
+1. **Order Confirmation Email**:
+   - Sent when any order is placed
+   - Includes order ID, items, total, payment method
+   - Sent to customer's email address
+
+2. **Payment Confirmation Email**:
+   - Sent when online payment is successful
+   - Includes transaction ID, amount, payment method
+   - Sent after Stripe/Razorpay payment completes
+
+**Customizing Email Templates**:
+- Email templates are in `functions/templates/`
+- Edit `orderConfirmation.html` for order emails
+- Edit `paymentConfirmation.html` for payment emails
+- Commit changes and redeploy functions
+
+---
+
+### Firebase Functions Deployment
+
+Payment processing requires Firebase Cloud Functions. The deployment is automatic via GitHub Actions:
+
+**What Gets Deployed**:
+- Stripe webhook handler (`stripeWebhook`)
+- Razorpay webhook handler (`razorpayWebhook`)
+- Order confirmation email trigger (`onOrderCreated`)
+
+**Deployment Steps**:
+1. Functions are automatically deployed when you push to `main` branch
+2. Or manually trigger via GitHub Actions → Firebase Deploy workflow
+3. Functions appear in Firebase Console → Functions tab
+
+**Monitoring Functions**:
+- View logs in Firebase Console → Functions → Logs
+- Check for errors or webhook processing issues
+- Monitor email sending status
+
+---
+
+### Security Best Practices
+
+1. **Never commit API keys** to your repository
+   - All keys are stored in Firestore via admin panel
+   - Secret keys are stored securely in Firebase
+
+2. **Use webhook secrets**
+   - Always configure webhook secrets
+   - This prevents unauthorized webhook calls
+
+3. **Test in test mode first**
+   - Use test API keys during development
+   - Switch to live keys only after thorough testing
+
+4. **Monitor transactions**
+   - Regularly check payment gateway dashboards
+   - Review Firebase Functions logs
+   - Monitor order statuses in admin panel
+
+5. **Keep functions updated**
+   - Functions deploy automatically with your code
+   - Review deployment logs for any errors
 
 ---
 
@@ -852,9 +1172,24 @@ quick-comm-template/
 │   │   ├── customerAuth.js # Customer authentication
 │   │   ├── products.js     # Product CRUD
 │   │   ├── orders.js       # Order management
+│   │   ├── payment.js      # Payment settings
+│   │   ├── email.js        # Email settings
+│   │   ├── paymentGateway.js # Stripe/Razorpay integration
 │   │   ├── adminAccounts.js # Admin/customer management
 │   │   └── storeInfo.js    # Store settings
 │   └── utils/              # Helper functions
+├── functions/              # Firebase Cloud Functions
+│   ├── index.js            # Functions entry point
+│   ├── package.json        # Functions dependencies
+│   ├── handlers/           # Webhook handlers
+│   │   ├── stripeWebhook.js # Stripe payment processing
+│   │   ├── razorpayWebhook.js # Razorpay payment processing
+│   │   └── orderConfirmation.js # Order email trigger
+│   ├── services/
+│   │   └── emailService.js # Email sending service
+│   └── templates/          # Email templates
+│       ├── orderConfirmation.html
+│       └── paymentConfirmation.html
 ├── .github/workflows/      # CI/CD automation
 ├── firestore.rules         # Database security rules
 └── firestore.indexes.json  # Database indexes

@@ -92,6 +92,11 @@ export async function createOrder(orderData) {
         tax: orderData.tax || 0,
         shipping: orderData.shipping || 0,
         total: orderData.total,
+        paymentMethod: orderData.paymentMethod || 'cod',
+        paymentStatus: orderData.paymentStatus || 'pending',
+        paymentGateway: orderData.paymentGateway || orderData.paymentMethod || 'cod',
+        transactionId: orderData.transactionId || null,
+        paymentDetails: orderData.paymentDetails || {},
         createdAt: serverTimestamp()
       };
 

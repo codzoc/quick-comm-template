@@ -7,6 +7,7 @@ import { getStoreInfo } from '../services/storeInfo';
 import { getPaymentSettings } from '../services/payment';
 import { getCurrentCustomer, signUpCustomer } from '../services/customerAuth';
 import { getDefaultAddress, addAddress } from '../services/addresses';
+import { initiateRazorpayPayment } from '../services/paymentGateway';
 import { ShoppingBag } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -220,11 +221,11 @@ function StoreFront() {
       errors.phone = 'Please enter a valid 10-digit phone number';
     }
 
-    // Email is optional for guests unless creating account, but validate format if provided
-    if (customerInfo.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerInfo.email)) {
+    // Email is now required for all orders (for email notifications)
+    if (!customerInfo.email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerInfo.email)) {
       errors.email = 'Please enter a valid email address';
-    } else if (createAccount && !customerInfo.email.trim()) {
-      errors.email = 'Email is required for account creation';
     }
 
     if (!customerInfo.address.trim()) {
@@ -290,7 +291,7 @@ function StoreFront() {
         }
       }
       // Handle Address Saving for Logged-in Users
-      else if (currentUser && createAccount) { // createAccount state reused for "Save this address" checkbox
+      else if (currentUser && createAccount) {
         await addAddress(currentUser.uid, {
           name: customerInfo.name,
           phone: customerInfo.phone,
@@ -309,23 +310,70 @@ function StoreFront() {
         shipping: getCartShipping(),
         total: getCartGrandTotal(),
         paymentMethod: selectedPaymentMethod,
-        paymentStatus: 'pending'
+        paymentGateway: selectedPaymentMethod,
+        paymentStatus: selectedPaymentMethod === 'cod' ? 'pending' : 'processing'
       };
 
-      const order = await createOrder(orderData);
-      setOrderId(order.orderId);
-      setOrderItems(cartItems.map(item => ({
-        title: item.product.title,
-        quantity: item.quantity,
-        price: item.product.discountedPrice || item.product.price
-      })));
-      setOrderSuccess(true);
-      clearCart();
+      // Handle different payment methods
+      if (selectedPaymentMethod === 'cod') {
+        // COD - Create order directly
+        const order = await createOrder(orderData);
+        setOrderId(order.orderId);
+        setOrderItems(cartItems.map(item => ({
+          title: item.product.title,
+          quantity: item.quantity,
+          price: item.product.discountedPrice || item.product.price
+        })));
+        setOrderSuccess(true);
+        clearCart();
 
-      // Clear form
-      setCustomerInfo({ name: '', phone: '', email: '', address: '', pin: '' });
-      setCreateAccount(false);
-      setRegistrationData({ password: '', confirmPassword: '' });
+        // Clear form
+        setCustomerInfo({ name: '', phone: '', email: '', address: '', pin: '' });
+        setCreateAccount(false);
+        setRegistrationData({ password: '', confirmPassword: '' });
+      } else if (selectedPaymentMethod === 'razorpay') {
+        // Razorpay - Create order first, then initiate payment
+        const order = await createOrder(orderData);
+
+        try {
+          await initiateRazorpayPayment({
+            keyId: paymentSettings.razorpay.keyId,
+            orderId: order.id,
+            amount: getCartGrandTotal(),
+            currency: 'INR',
+            customerEmail: customerInfo.email,
+            customerName: customerInfo.name,
+            customerPhone: customerInfo.phone,
+            onSuccess: (response) => {
+              // Payment successful - show success message
+              setOrderId(order.orderId);
+              setOrderItems(cartItems.map(item => ({
+                title: item.product.title,
+                quantity: item.quantity,
+                price: item.product.discountedPrice || item.product.price
+              })));
+              setOrderSuccess(true);
+              clearCart();
+              setCustomerInfo({ name: '', phone: '', email: '', address: '', pin: '' });
+              setCreateAccount(false);
+              setRegistrationData({ password: '', confirmPassword: '' });
+              setSubmitting(false);
+            },
+            onFailure: (error) => {
+              setError('Payment failed: ' + error.message);
+              setSubmitting(false);
+            }
+          });
+        } catch (paymentErr) {
+          setError('Payment initialization failed: ' + paymentErr.message);
+          setSubmitting(false);
+        }
+      } else if (selectedPaymentMethod === 'stripe') {
+        // Stripe - Create order and redirect to Stripe Checkout
+        // Note: This requires a backend endpoint to create Stripe Checkout session
+        setError('Stripe integration requires backend setup. Please use COD or Razorpay for now.');
+        setSubmitting(false);
+      }
 
     } catch (err) {
       setError(err.message);
@@ -598,35 +646,30 @@ function StoreFront() {
                         )}
                       </div>
 
-                      {!currentUser && (
-                        <div className="form-group">
-                          <label htmlFor="email">
-                            Email {createAccount ? '*' : '(Optional)'}
-                          </label>
-                          <input
-                            type="email"
-                            id="email"
-                            value={customerInfo.email}
-                            onChange={(e) =>
-                              setCustomerInfo({
-                                ...customerInfo,
-                                email: e.target.value
-                              })
-                            }
-                            placeholder="your@email.com"
-                            className={formErrors.email ? 'error' : ''}
-                            required={createAccount}
-                          />
-                          {formErrors.email && (
-                            <span className="error-text">{formErrors.email}</span>
-                          )}
-                          {!createAccount && (
-                            <small style={{ display: 'block', marginTop: 'var(--spacing-xs)', color: 'var(--color-text-light)', fontSize: 'var(--font-size-xs)' }}>
-                              If you have an account, we'll link this order to it
-                            </small>
-                          )}
-                        </div>
-                      )}
+                      <div className="form-group">
+                        <label htmlFor="email">Email *</label>
+                        <input
+                          type="email"
+                          id="email"
+                          value={customerInfo.email}
+                          onChange={(e) =>
+                            setCustomerInfo({
+                              ...customerInfo,
+                              email: e.target.value
+                            })
+                          }
+                          placeholder="your@email.com"
+                          className={formErrors.email ? 'error' : ''}
+                          required
+                          disabled={currentUser}
+                        />
+                        {formErrors.email && (
+                          <span className="error-text">{formErrors.email}</span>
+                        )}
+                        <small style={{ display: 'block', marginTop: 'var(--spacing-xs)', color: 'var(--color-text-light)', fontSize: 'var(--font-size-xs)' }}>
+                          Required for order confirmation and updates
+                        </small>
+                      </div>
 
                       <div className="form-group">
                         <label htmlFor="address">Delivery Address *</label>
@@ -806,10 +849,40 @@ function StoreFront() {
                             />
                             <div>
                               <span style={{ fontWeight: 'var(--font-weight-medium)', display: 'block' }}>
-                                Credit/Debit Card
+                                Credit/Debit Card (Stripe)
                               </span>
                               <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-light)' }}>
-                                Secure online payment
+                                Secure online payment via Stripe
+                              </span>
+                            </div>
+                          </label>
+                        )}
+
+                        {paymentSettings?.razorpay?.enabled && (
+                          <label style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 'var(--spacing-sm)',
+                            padding: 'var(--spacing-sm)',
+                            border: '1px solid var(--color-border)',
+                            borderRadius: 'var(--border-radius-sm)',
+                            marginBottom: 'var(--spacing-sm)',
+                            cursor: 'pointer',
+                            backgroundColor: selectedPaymentMethod === 'razorpay' ? 'var(--color-surface)' : 'transparent'
+                          }}>
+                            <input
+                              type="radio"
+                              name="paymentMethod"
+                              value="razorpay"
+                              checked={selectedPaymentMethod === 'razorpay'}
+                              onChange={(e) => setSelectedPaymentMethod(e.target.value)}
+                            />
+                            <div>
+                              <span style={{ fontWeight: 'var(--font-weight-medium)', display: 'block' }}>
+                                UPI / Cards / Netbanking (Razorpay)
+                              </span>
+                              <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-light)' }}>
+                                Pay securely via Razorpay
                               </span>
                             </div>
                           </label>

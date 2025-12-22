@@ -18,11 +18,17 @@ export const getPaymentSettings = async () => {
                     label: 'Cash on Delivery (COD)',
                     description: 'Pay with cash upon delivery.'
                 },
-                // Placeholder for future gateways
                 stripe: {
                     enabled: false,
                     publishableKey: '',
-                    secretKey: '' // Note: Secret keys should ideally be backend-only
+                    secretKey: '',
+                    webhookSecret: ''
+                },
+                razorpay: {
+                    enabled: false,
+                    keyId: '',
+                    keySecret: '',
+                    webhookSecret: ''
                 }
             };
             return defaultSettings;

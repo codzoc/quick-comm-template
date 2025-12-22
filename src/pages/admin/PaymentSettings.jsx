@@ -8,10 +8,12 @@ import {
     FormControlLabel,
     Switch,
     TextField,
-    Button
+    Button,
+    Divider
 } from '@mui/material';
-import { Save, CreditCard } from 'lucide-react';
+import { Save, CreditCard, Mail } from 'lucide-react';
 import { getPaymentSettings, updatePaymentSettings } from '../../services/payment';
+import { getEmailSettings, updateEmailSettings } from '../../services/email';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
 function PaymentSettings() {
@@ -21,7 +23,12 @@ function PaymentSettings() {
     const [error, setError] = useState('');
     const [settings, setSettings] = useState({
         cod: { enabled: true, label: '', description: '' },
-        stripe: { enabled: false, publishableKey: '', secretKey: '' }
+        stripe: { enabled: false, publishableKey: '', secretKey: '', webhookSecret: '' },
+        razorpay: { enabled: false, keyId: '', keySecret: '', webhookSecret: '' }
+    });
+    const [emailSettings, setEmailSettings] = useState({
+        smtp: { user: '', password: '' },
+        storeName: ''
     });
 
     useEffect(() => {
@@ -30,10 +37,14 @@ function PaymentSettings() {
 
     const loadSettings = async () => {
         try {
-            const data = await getPaymentSettings();
-            setSettings(data);
+            const [paymentData, emailData] = await Promise.all([
+                getPaymentSettings(),
+                getEmailSettings()
+            ]);
+            setSettings(paymentData);
+            setEmailSettings(emailData);
         } catch (err) {
-            setError('Failed to load payment settings.');
+            setError('Failed to load settings.');
             console.error(err);
         } finally {
             setLoading(false);
@@ -50,6 +61,16 @@ function PaymentSettings() {
         }));
     };
 
+    const handleEmailChange = (section, field, value) => {
+        setEmailSettings(prev => ({
+            ...prev,
+            [section]: {
+                ...prev[section],
+                [field]: value
+            }
+        }));
+    };
+
     const handleSave = async (e) => {
         e.preventDefault();
         setSaving(true);
@@ -57,8 +78,11 @@ function PaymentSettings() {
         setSuccess('');
 
         try {
-            await updatePaymentSettings(settings);
-            setSuccess('Payment settings saved successfully!');
+            await Promise.all([
+                updatePaymentSettings(settings),
+                updateEmailSettings(emailSettings)
+            ]);
+            setSuccess('Settings saved successfully!');
         } catch (err) {
             setError('Failed to save settings.');
             console.error(err);
@@ -67,21 +91,21 @@ function PaymentSettings() {
         }
     };
 
-    // Check if COD is the only enabled gateway
-    const isCODOnlyOption = !settings.stripe?.enabled; // Add other gateways here in future
+    // Check if at least one payment method is enabled
+    const isAtLeastOneEnabled = settings.cod?.enabled || settings.stripe?.enabled || settings.razorpay?.enabled;
 
     if (loading) {
-        return <LoadingSpinner size="large" message="Loading payment settings..." />;
+        return <LoadingSpinner size="large" message="Loading settings..." />;
     }
 
     return (
         <Box>
             <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
-                Payment Gateways
+                Payment & Email Settings
             </Typography>
 
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Configure payment methods available to customers at checkout.
+                Configure payment gateways and email notifications for your store.
             </Typography>
 
             {success && <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess('')}>{success}</Alert>}
@@ -104,7 +128,7 @@ function PaymentSettings() {
                                     checked={settings.cod?.enabled || false}
                                     onChange={(e) => handleChange('cod', 'enabled', e.target.checked)}
                                     color="success"
-                                    disabled={isCODOnlyOption} // Disable if it's the only option
+                                    disabled={settings.cod?.enabled && !settings.stripe?.enabled && !settings.razorpay?.enabled}
                                 />
                             }
                             label={
@@ -112,7 +136,7 @@ function PaymentSettings() {
                                     <Typography variant="body1">
                                         {settings.cod?.enabled ? "Enabled" : "Disabled"}
                                     </Typography>
-                                    {isCODOnlyOption && (
+                                    {settings.cod?.enabled && !settings.stripe?.enabled && !settings.razorpay?.enabled && (
                                         <Typography variant="caption" color="text.secondary">
                                             Cannot disable because no other payment method is enabled.
                                         </Typography>
@@ -147,30 +171,196 @@ function PaymentSettings() {
                     </CardContent>
                 </Card>
 
-                {/* Future Gateways (Placeholder) */}
-                <Card sx={{ mb: 3, borderRadius: 2, border: '1px solid', borderColor: 'divider', opacity: 0.7 }}>
+                {/* Stripe */}
+                <Card sx={{ mb: 3, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
                     <CardContent>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                            <CreditCard size={24} style={{ marginRight: '10px', color: '#6366F1' }} />
+                            <CreditCard size={24} style={{ marginRight: '10px', color: '#635BFF' }} />
                             <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                                Stripe / Online Payment (Coming Soon)
+                                Stripe
                             </Typography>
                         </Box>
-                        <Alert severity="info">
-                            Online payment integration is currently in development.
+
+                        <FormControlLabel
+                            control={
+                                <Switch
+                                    checked={settings.stripe?.enabled || false}
+                                    onChange={(e) => handleChange('stripe', 'enabled', e.target.checked)}
+                                    color="primary"
+                                />
+                            }
+                            label={settings.stripe?.enabled ? "Enabled" : "Disabled"}
+                            sx={{ mb: 2 }}
+                        />
+
+                        {settings.stripe?.enabled && (
+                            <Box sx={{ mt: 2, pl: 4 }}>
+                                <TextField
+                                    fullWidth
+                                    label="Publishable Key"
+                                    value={settings.stripe?.publishableKey || ''}
+                                    onChange={(e) => handleChange('stripe', 'publishableKey', e.target.value)}
+                                    margin="normal"
+                                    helperText="Starts with pk_test_ or pk_live_"
+                                    placeholder="pk_test_..."
+                                />
+                                <TextField
+                                    fullWidth
+                                    label="Secret Key"
+                                    value={settings.stripe?.secretKey || ''}
+                                    onChange={(e) => handleChange('stripe', 'secretKey', e.target.value)}
+                                    margin="normal"
+                                    type="password"
+                                    helperText="Starts with sk_test_ or sk_live_ (stored securely)"
+                                    placeholder="sk_test_..."
+                                />
+                                <TextField
+                                    fullWidth
+                                    label="Webhook Secret"
+                                    value={settings.stripe?.webhookSecret || ''}
+                                    onChange={(e) => handleChange('stripe', 'webhookSecret', e.target.value)}
+                                    margin="normal"
+                                    type="password"
+                                    helperText="Webhook signing secret from Stripe Dashboard"
+                                    placeholder="whsec_..."
+                                />
+                                <Alert severity="info" sx={{ mt: 2 }}>
+                                    After deploying functions, add webhook URL in Stripe Dashboard:<br />
+                                    <code>https://&lt;region&gt;-&lt;project-id&gt;.cloudfunctions.net/stripeWebhook</code>
+                                </Alert>
+                            </Box>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Razorpay */}
+                <Card sx={{ mb: 3, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+                    <CardContent>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                            <CreditCard size={24} style={{ marginRight: '10px', color: '#3395FF' }} />
+                            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                Razorpay
+                            </Typography>
+                        </Box>
+
+                        <FormControlLabel
+                            control={
+                                <Switch
+                                    checked={settings.razorpay?.enabled || false}
+                                    onChange={(e) => handleChange('razorpay', 'enabled', e.target.checked)}
+                                    color="primary"
+                                />
+                            }
+                            label={settings.razorpay?.enabled ? "Enabled" : "Disabled"}
+                            sx={{ mb: 2 }}
+                        />
+
+                        {settings.razorpay?.enabled && (
+                            <Box sx={{ mt: 2, pl: 4 }}>
+                                <TextField
+                                    fullWidth
+                                    label="Key ID"
+                                    value={settings.razorpay?.keyId || ''}
+                                    onChange={(e) => handleChange('razorpay', 'keyId', e.target.value)}
+                                    margin="normal"
+                                    helperText="Starts with rzp_test_ or rzp_live_"
+                                    placeholder="rzp_test_..."
+                                />
+                                <TextField
+                                    fullWidth
+                                    label="Key Secret"
+                                    value={settings.razorpay?.keySecret || ''}
+                                    onChange={(e) => handleChange('razorpay', 'keySecret', e.target.value)}
+                                    margin="normal"
+                                    type="password"
+                                    helperText="Your Razorpay key secret (stored securely)"
+                                />
+                                <TextField
+                                    fullWidth
+                                    label="Webhook Secret"
+                                    value={settings.razorpay?.webhookSecret || ''}
+                                    onChange={(e) => handleChange('razorpay', 'webhookSecret', e.target.value)}
+                                    margin="normal"
+                                    type="password"
+                                    helperText="Webhook secret from Razorpay Dashboard"
+                                />
+                                <Alert severity="info" sx={{ mt: 2 }}>
+                                    After deploying functions, add webhook URL in Razorpay Dashboard:<br />
+                                    <code>https://&lt;region&gt;-&lt;project-id&gt;.cloudfunctions.net/razorpayWebhook</code>
+                                </Alert>
+                            </Box>
+                        )}
+                    </CardContent>
+                </Card>
+
+                <Divider sx={{ my: 4 }} />
+
+                {/* Email Settings */}
+                <Card sx={{ mb: 3, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+                    <CardContent>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                            <Mail size={24} style={{ marginRight: '10px', color: '#F59E0B' }} />
+                            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                Email Configuration (Gmail SMTP)
+                            </Typography>
+                        </Box>
+
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                            Configure Gmail SMTP for sending order and payment confirmation emails.
+                        </Typography>
+
+                        <TextField
+                            fullWidth
+                            label="Store Name"
+                            value={emailSettings.storeName || ''}
+                            onChange={(e) => setEmailSettings(prev => ({ ...prev, storeName: e.target.value }))}
+                            margin="normal"
+                            helperText="Name shown in email sender (e.g., 'My Store')"
+                        />
+
+                        <TextField
+                            fullWidth
+                            label="Gmail Address"
+                            value={emailSettings.smtp?.user || ''}
+                            onChange={(e) => handleEmailChange('smtp', 'user', e.target.value)}
+                            margin="normal"
+                            type="email"
+                            helperText="Your Gmail address for sending emails"
+                            placeholder="yourstore@gmail.com"
+                        />
+
+                        <TextField
+                            fullWidth
+                            label="Gmail App Password"
+                            value={emailSettings.smtp?.password || ''}
+                            onChange={(e) => handleEmailChange('smtp', 'password', e.target.value)}
+                            margin="normal"
+                            type="password"
+                            helperText="Gmail app-specific password (not your regular password)"
+                        />
+
+                        <Alert severity="warning" sx={{ mt: 2 }}>
+                            <strong>Important:</strong> You must create an App Password in your Google Account settings.
+                            Regular Gmail passwords won't work. Visit: <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer">Google App Passwords</a>
                         </Alert>
                     </CardContent>
                 </Card>
+
+                {!isAtLeastOneEnabled && (
+                    <Alert severity="error" sx={{ mb: 3 }}>
+                        At least one payment method must be enabled.
+                    </Alert>
+                )}
 
                 <Button
                     type="submit"
                     variant="contained"
                     size="large"
                     startIcon={<Save size={20} />}
-                    disabled={saving}
+                    disabled={saving || !isAtLeastOneEnabled}
                     sx={{ mt: 2 }}
                 >
-                    {saving ? 'Saving...' : 'Save Payment Settings'}
+                    {saving ? 'Saving...' : 'Save All Settings'}
                 </Button>
             </form>
         </Box>

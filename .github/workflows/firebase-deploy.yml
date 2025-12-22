@@ -130,6 +130,18 @@ jobs:
         env:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
+      - name: Install Functions Dependencies
+        run: |
+          cd functions
+          npm ci
+
+      - name: Deploy Functions (Preview)
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only functions --project ${{ steps.firebase-config.outputs.project_id }}
+        env:
+          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
       - name: Deploy to Firebase Preview Channel
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
@@ -184,6 +196,18 @@ jobs:
         uses: w9jds/firebase-action@master
         with:
           args: deploy --only firestore --project ${{ steps.firebase-config.outputs.project_id }}
+        env:
+          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Install Functions Dependencies
+        run: |
+          cd functions
+          npm ci
+
+      - name: Deploy Functions
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only functions --project ${{ steps.firebase-config.outputs.project_id }}
         env:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
