@@ -281,7 +281,12 @@ You only need **2 secrets** for the entire setup:
    - Click "Manage service account permissions"
    - Or go to [Google Cloud Console IAM](https://console.cloud.google.com/iam-admin/iam)
    - Find the service account (looks like `firebase-adminsdk-xxxxx@your-project.iam.gserviceaccount.com`)
-   - Ensure it has the **"Editor"** role and **"Firebase Rules Admin"** role
+   - Click the pencil icon to edit
+   - Ensure it has these roles:
+     - **"Editor"** - General Firebase access
+     - **"Firebase Rules Admin"** - Deploy Firestore rules
+     - **"Cloud Functions Admin"** - Deploy payment webhooks (required for Stripe/Razorpay)
+   - Click "Save"
 5. Open the JSON file in a text editor
 6. Copy the **entire contents** of the file
 7. Create a secret named `FIREBASE_SERVICE_ACCOUNT` and paste the entire JSON
@@ -705,6 +710,43 @@ This means you need to add the "Firebase Rules Admin" role specifically:
 **Other common issues:**
 - Ensure `FIREBASE_SERVICE_ACCOUNT` secret contains the complete JSON file
 - Check that `firestore.rules` and `firestore.indexes.json` files exist in the repository
+
+### Cloud Functions Deployment Fails
+
+**Error: "Missing required permission cloudfunctions.functions.setIamPolicy"**
+
+This error occurs when deploying Firebase Cloud Functions (for payment webhooks and email notifications). The service account needs additional permissions to deploy HTTPS functions.
+
+**Solution: Add Cloud Functions Admin Role**
+
+1. Go to [Google Cloud Console IAM](https://console.cloud.google.com/iam-admin/iam)
+2. Select your Firebase project from the dropdown at the top
+3. Find the service account (looks like `firebase-adminsdk-xxxxx@your-project.iam.gserviceaccount.com`)
+4. Click the pencil icon (✏️) to edit
+5. Click **"ADD ANOTHER ROLE"**
+6. Search for and select **"Cloud Functions Admin"**
+7. Click **"Save"**
+8. Re-run the GitHub Actions workflow
+
+**Alternative: Use Owner Role (Not Recommended for Production)**
+
+If you continue to have permission issues, you can temporarily use the Owner role:
+1. Follow steps 1-4 above
+2. Add the **"Owner"** role instead
+3. This gives full access but should only be used for testing
+
+**Required Roles Summary**
+
+For full functionality, your service account should have these roles:
+- ✅ **Editor** - General Firebase access
+- ✅ **Firebase Rules Admin** - Deploy Firestore rules
+- ✅ **Cloud Datastore Index Admin** - Deploy Firestore indexes
+- ✅ **Cloud Functions Admin** - Deploy Cloud Functions (for payments)
+- ✅ **Service Usage Consumer** - API access checks
+
+**Note**: After adding the Cloud Functions Admin role, it may take 1-2 minutes for permissions to propagate. If the deployment still fails immediately, wait a moment and try again.
+
+---
 
 ### Admin Login Not Working
 
