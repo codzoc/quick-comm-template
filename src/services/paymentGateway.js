@@ -73,6 +73,7 @@ export async function initiateStripePayment({
 export async function initiateRazorpayPayment({
     keyId,
     orderId,
+    storeName = 'Our Store',
     amount,
     currency = 'INR',
     customerEmail,
@@ -104,7 +105,7 @@ export async function initiateRazorpayPayment({
                     key: keyId,
                     amount: Math.round(amount * 100), // Convert to paise
                     currency: currency,
-                    name: 'Your Store Name', // This should come from store settings
+                    name: storeName,
                     description: `Order ${orderId}`,
                     order_id: orderId, // This should be created via Razorpay API
                     prefill: {

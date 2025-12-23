@@ -46,16 +46,33 @@ async function createTransporter() {
 }
 
 /**
+ * Escape HTML to prevent XSS
+ */
+function escapeHtml(text) {
+    if (!text) return '';
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+/**
  * Load and process email template
  */
 function loadTemplate(templateName, data) {
     const templatePath = path.join(__dirname, '..', 'templates', `${templateName}.html`);
     let template = fs.readFileSync(templatePath, 'utf8');
 
-    // Replace placeholders with actual data
+    // Replace placeholders with actual data (escaped for security)
     Object.keys(data).forEach(key => {
         const regex = new RegExp(`{{${key}}}`, 'g');
-        template = template.replace(regex, data[key] || '');
+        // Don't escape HTML content (itemsHtml, paymentStatus)
+        const value = (key === 'itemsHtml' || key === 'paymentStatus')
+            ? (data[key] || '')
+            : escapeHtml(data[key]);
+        template = template.replace(regex, value);
     });
 
     return template;
@@ -69,15 +86,15 @@ async function sendOrderConfirmationEmail(orderDetails) {
         const transporter = await createTransporter();
         const config = await getEmailConfig();
 
-        // Format items list
+        // Format items list (titles will be escaped by loadTemplate)
         const itemsHtml = orderDetails.items.map(item => `
       <tr>
         <td style="padding: 10px; border-bottom: 1px solid #eee;">
-          <strong>${item.title}</strong><br>
+          <strong>${escapeHtml(item.title)}</strong><br>
           <small>Quantity: ${item.quantity}</small>
         </td>
         <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">
-          ${orderDetails.currencySymbol}${item.subtotal.toFixed(2)}
+          ${escapeHtml(orderDetails.currencySymbol)}${item.subtotal.toFixed(2)}
         </td>
       </tr>
     `).join('');
