@@ -177,18 +177,15 @@ export async function createRazorpayOrder(firestoreOrderId, amount, currency = '
 
         // Let's try to find the project ID from .firebaserc
 
-        const response = await fetch('https://us-central1-codzoc-quick-comm-template.cloudfunctions.net/createRazorpayOrder', {
+        // Using Firebase Hosting rewrite to avoid CORS and dynamic URL issues
+        const response = await fetch('/api/razorpay/create-order', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
                 orderId: firestoreOrderId,
-                amount: Math.round(amount * 100), // Function expects paise? No, let's allow it to handle conversion or stay consistent
-                // Wait, initiateRazorpayPayment did conversion. createRazorpayOrder function I wrote expects "amount" and uses it directly as paise options.
-                // But here I'm passing "amount" which is usually rupees.
-                // The function code: options = { amount: amount, ... }
-                // So I should convert to paise HERE.
+                amount: Math.round(amount * 100), // Convert to paise
                 currency
             })
         });
