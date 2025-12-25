@@ -7,7 +7,7 @@ import { getStoreInfo } from '../services/storeInfo';
 import { getPaymentSettings } from '../services/payment';
 import { getCurrentCustomer, signUpCustomer } from '../services/customerAuth';
 import { getDefaultAddress, addAddress } from '../services/addresses';
-import { initiateRazorpayPayment } from '../services/paymentGateway';
+import { initiateRazorpayPayment, createRazorpayOrder } from '../services/paymentGateway';
 import { ShoppingBag } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -336,9 +336,17 @@ function StoreFront() {
         const order = await createOrder(orderData);
 
         try {
+          // Create Razorpay Order from backend
+          // ID returned will be like "order_EKwxwVidXV123"
+          const razorpayOrderId = await createRazorpayOrder(
+            order.id, // Pass Firestore ID for reference/receipt
+            getCartGrandTotal(),
+            'INR'
+          );
+
           await initiateRazorpayPayment({
             keyId: paymentSettings.razorpay.keyId,
-            orderId: order.id,
+            orderId: razorpayOrderId, // Use the Razorpay Order ID, NOT Firestore ID
             amount: getCartGrandTotal(),
             currency: 'INR',
             customerEmail: customerInfo.email,

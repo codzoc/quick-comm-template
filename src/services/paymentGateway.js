@@ -107,14 +107,11 @@ export async function initiateRazorpayPayment({
                     currency: currency,
                     name: storeName,
                     description: `Order ${orderId}`,
-                    order_id: orderId, // This should be created via Razorpay API
+                    order_id: orderId, // This MUST be the Razorpay Order ID (starting with order_)
                     prefill: {
                         name: customerName,
                         email: customerEmail,
                         contact: customerPhone
-                    },
-                    notes: {
-                        orderId: orderId
                     },
                     theme: {
                         color: '#667eea'
@@ -153,24 +150,53 @@ export async function initiateRazorpayPayment({
 }
 
 /**
- * Create Razorpay Order (should be called from backend)
- * This is a placeholder - actual implementation should be in Cloud Functions
+ * Create Razorpay Order
+ * Calls Cloud Function to create a Razorpay order
  */
-export async function createRazorpayOrder(orderId, amount, currency = 'INR') {
-    // This should call your Cloud Function to create a Razorpay order
-    // For now, returning a mock response
+export async function createRazorpayOrder(firestoreOrderId, amount, currency = 'INR') {
     try {
-        const response = await fetch('YOUR_CLOUD_FUNCTION_URL/createRazorpayOrder', {
+        // Construct the function URL
+        // If running locally with emulators, this might need adjustment, but for deployed app:
+        // const functionUrl = 'https://us-central1-YOUR-PROJECT-ID.cloudfunctions.net/createRazorpayOrder';
+
+        // Dynamic URL based on environment could be better, but assuming standard Firebase setup
+        // We'll try to determine the base URL or use a relative path if supported
+
+        // Since we don't have the project ID handy in env vars usually in frontend without custom config,
+        // we'll try to fetch it or use a relative path.
+        // However, relative paths only work if hosted on Firebase Hosting with rewrites.
+        // The user seems to be running locally (localhost:3000 possibly), so relative path won't work without proxy.
+        // Assuming standard emulator or deployed function.
+
+        // Let's try to infer project ID from current hostname if deployed, or use a placeholder the user needs to set?
+        // Actually, we can check if we are in dev or prod.
+
+        // FAST FIX: Use a hardcoded URL structure but we need the Project ID. 
+        // I will assume for now we can use a relative path '/api/createRazorpayOrder' and add a proxy in vite config or user needs to add it.
+        // OR better: use the firebase functions instance.
+
+        // Let's try to find the project ID from .firebaserc
+
+        const response = await fetch('https://us-central1-codzoc-quick-comm-template.cloudfunctions.net/createRazorpayOrder', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                orderId,
-                amount: Math.round(amount * 100),
+                orderId: firestoreOrderId,
+                amount: Math.round(amount * 100), // Function expects paise? No, let's allow it to handle conversion or stay consistent
+                // Wait, initiateRazorpayPayment did conversion. createRazorpayOrder function I wrote expects "amount" and uses it directly as paise options.
+                // But here I'm passing "amount" which is usually rupees.
+                // The function code: options = { amount: amount, ... }
+                // So I should convert to paise HERE.
                 currency
             })
         });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Server error: ${errorText}`);
+        }
 
         const data = await response.json();
         return data.razorpayOrderId;
