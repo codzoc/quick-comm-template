@@ -1,7 +1,6 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const express = require('express');
-const cors = require('cors');
 const stripeWebhookHandler = require('./handlers/stripeWebhook');
 const razorpayWebhook = require('./handlers/razorpayWebhook');
 const orderConfirmation = require('./handlers/orderConfirmation');

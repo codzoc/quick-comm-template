@@ -8,6 +8,10 @@
     ],
     "rewrites": [
       {
+        "source": "/api/razorpay/create-order",
+        "function": "createRazorpayOrder"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
