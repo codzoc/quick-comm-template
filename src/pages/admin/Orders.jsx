@@ -29,7 +29,7 @@ import {
 } from '@mui/material';
 import { Eye, Edit, MessageCircle, X } from 'lucide-react';
 import { onAuthChange } from '../../services/auth';
-import { getAllOrders, updateOrderStatus } from '../../services/orders';
+import { getAllOrders, updateOrderStatus, refundOrder } from '../../services/orders';
 import { getStoreInfo } from '../../services/storeInfo';
 import AdminLayout from '../../components/AdminLayout';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -44,6 +44,7 @@ function AdminOrders() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [statusDialog, setStatusDialog] = useState({ open: false, order: null, newStatus: '' });
   const [whatsappDialog, setWhatsappDialog] = useState({ open: false, order: null, message: '' });
+  const [refundLoading, setRefundLoading] = useState(false); // New state for refund
   const [storeInfo, setStoreInfo] = useState(null);
   const navigate = useNavigate();
 
@@ -75,8 +76,10 @@ function AdminOrders() {
     const colors = {
       pending: 'warning',
       processing: 'info',
+      paid: 'info', // 'paid' uses info color (blue)
       completed: 'success',
-      cancelled: 'error'
+      cancelled: 'error',
+      refunded: 'default' // 'refunded' uses default (grey)
     };
     return colors[status] || 'default';
   };
@@ -118,12 +121,37 @@ function AdminOrders() {
     }
   };
 
+  const handleRefund = async (order) => {
+    if (!window.confirm(`Are you sure you want to refund this order (ID: ${order.orderId})? This action cannot be undone.`)) {
+      return;
+    }
+
+    setRefundLoading(true);
+    try {
+      const result = await refundOrder(order.id);
+      if (result.success) {
+        alert('Refund processed successfully!');
+        await loadOrders();
+        // Close details if open
+        if (selectedOrder?.id === order.id) {
+          setSelectedOrder(null);
+        }
+      }
+    } catch (error) {
+      alert(`Refund failed: ${error.message}`);
+    } finally {
+      setRefundLoading(false);
+    }
+  };
+
   const prepareWhatsAppMessage = (order, newStatus) => {
     const statusMessages = {
       pending: 'Your order is pending confirmation',
       processing: 'Your order is being processed and will be delivered soon',
+      paid: 'Payment received! Your order is being processed',
       completed: 'Your order has been completed and delivered',
-      cancelled: 'Your order has been cancelled'
+      cancelled: 'Your order has been cancelled',
+      refunded: 'Your order has been refunded'
     };
 
     const currencySymbol = storeInfo?.currencySymbol || '₹';
@@ -396,6 +424,58 @@ Thank you for shopping with us!
 
               <Divider />
 
+              {/* Payment Details */}
+              <Box sx={{ my: 3 }}>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  Payment Information
+                </Typography>
+                <Grid container spacing={2} sx={{ mt: 0.5 }}>
+                  <Grid item xs={6}>
+                    <Typography variant="body2">
+                      <strong>Method:</strong>
+                    </Typography>
+                    <Typography variant="body2" sx={{ mt: 0.5, textTransform: 'capitalize' }}>
+                      {selectedOrder.paymentGateway === 'cod' ? 'Cash on Delivery' : selectedOrder.paymentGateway}
+                    </Typography>
+                  </Grid>
+                  {selectedOrder.paymentDetails?.transactionId && (
+                    <Grid item xs={6}>
+                      <Typography variant="body2">
+                        <strong>Transaction ID:</strong>
+                      </Typography>
+                      <Typography variant="body2" sx={{ mt: 0.5, fontFamily: 'monospace' }}>
+                        {selectedOrder.paymentDetails.transactionId}
+                      </Typography>
+                    </Grid>
+                  )}
+                  {selectedOrder.transactionId && !selectedOrder.paymentDetails?.transactionId && (
+                    <Grid item xs={6}>
+                      <Typography variant="body2">
+                        <strong>Transaction ID:</strong>
+                      </Typography>
+                      <Typography variant="body2" sx={{ mt: 0.5, fontFamily: 'monospace' }}>
+                        {selectedOrder.transactionId}
+                      </Typography>
+                    </Grid>
+                  )}
+                  <Grid item xs={6}>
+                    <Typography variant="body2">
+                      <strong>Payment Status:</strong>
+                    </Typography>
+                    <Box sx={{ mt: 0.5 }}>
+                      <Chip
+                        label={selectedOrder.paymentStatus || 'pending'}
+                        size="small"
+                        color={selectedOrder.paymentStatus === 'paid' || selectedOrder.paymentStatus === 'completed' ? 'success' : selectedOrder.paymentStatus === 'refunded' ? 'default' : 'warning'}
+                        sx={{ textTransform: 'capitalize' }}
+                      />
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Box>
+
+              <Divider />
+
               {/* Order Items */}
               <Box sx={{ mt: 3 }}>
                 <Typography variant="subtitle2" color="text.secondary" gutterBottom>
@@ -517,6 +597,26 @@ Thank you for shopping with us!
           )}
         </DialogContent>
         <DialogActions>
+          {selectedOrder && (selectedOrder.status === 'paid' || selectedOrder.status === 'completed' || selectedOrder.paymentStatus === 'paid') && selectedOrder.status !== 'refunded' && selectedOrder.paymentGateway !== 'cod' && (
+            <Button
+              onClick={() => handleRefund(selectedOrder)}
+              color="error"
+              variant="outlined"
+              disabled={refundLoading}
+            >
+              {refundLoading ? 'Processing...' : 'Refund Order'}
+            </Button>
+          )}
+          {selectedOrder && (selectedOrder.paymentGateway === 'cod') && selectedOrder.status === 'completed' && (
+            <Button
+              onClick={() => handleRefund(selectedOrder)}
+              color="error"
+              variant="outlined"
+              disabled={refundLoading}
+            >
+              Mark Refunded
+            </Button>
+          )}
           <Button onClick={() => setSelectedOrder(null)}>Close</Button>
         </DialogActions>
       </Dialog>
@@ -543,9 +643,11 @@ Thank you for shopping with us!
                   onChange={(e) => setStatusDialog({ ...statusDialog, newStatus: e.target.value })}
                 >
                   <MenuItem value="pending">Pending</MenuItem>
+                  <MenuItem value="paid">Paid</MenuItem>
                   <MenuItem value="processing">Processing</MenuItem>
                   <MenuItem value="completed">Completed</MenuItem>
                   <MenuItem value="cancelled">Cancelled</MenuItem>
+                  <MenuItem value="refunded">Refunded</MenuItem>
                 </Select>
               </FormControl>
             </Box>

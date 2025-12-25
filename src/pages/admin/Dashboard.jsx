@@ -15,7 +15,9 @@ function AdminDashboard() {
     pendingOrders: 0,
     processingOrders: 0,
     completedOrders: 0,
-    totalRevenue: 0
+    totalRevenue: 0,
+    onlineRevenue: 0,
+    codRevenue: 0
   });
   const [lowStockProducts, setLowStockProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -86,6 +88,18 @@ function AdminDashboard() {
       value: `₹${stats.totalRevenue.toLocaleString()}`,
       icon: TrendingUp,
       color: '#10b981'
+    },
+    {
+      title: 'Online Revenue',
+      value: `₹${(stats.onlineRevenue || 0).toLocaleString()}`,
+      icon: TrendingUp,
+      color: '#8b5cf6'
+    },
+    {
+      title: 'COD Revenue',
+      value: `₹${(stats.codRevenue || 0).toLocaleString()}`,
+      icon: TrendingUp,
+      color: '#f59e0b'
     }
   ];
 

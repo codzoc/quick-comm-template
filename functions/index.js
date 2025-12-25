@@ -30,3 +30,9 @@ exports.onOrderCreated = functions.firestore
 
 // Export Razorpay order creation
 exports.createRazorpayOrder = functions.https.onRequest(require('./handlers/createRazorpayOrder'));
+
+// Export Refund Order function (Callable)
+exports.refundOrder = functions.https.onCall(require('./handlers/refundOrder'));
+
+// Export Warmup function (Callable)
+exports.warmup = functions.https.onCall(require('./handlers/warmup'));

@@ -93,10 +93,13 @@ function CustomerOrders() {
     const getStatusColor = (status) => {
         switch (status) {
             case 'pending': return '#f59e0b'; // orange
+            case 'paid': return '#3b82f6'; // blue (same as processing)
             case 'processing': return '#3b82f6'; // blue
             case 'shipped': return '#8b5cf6'; // purple
             case 'delivered': return '#10b981'; // green
+            case 'completed': return '#10b981'; // green
             case 'cancelled': return '#ef4444'; // red
+            case 'refunded': return '#6b7280'; // gray
             default: return '#6b7280'; // gray
         }
     };
@@ -144,6 +147,9 @@ function CustomerOrders() {
                                                 <div style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>Order #{order.id.slice(0, 8)}</div>
                                                 <div style={{ fontSize: '0.9rem', color: 'var(--color-text-light)' }}>
                                                     {order.createdAt?.toLocaleDateString()} at {order.createdAt?.toLocaleTimeString()}
+                                                </div>
+                                                <div style={{ fontSize: '0.85rem', marginTop: '0.5rem', color: 'var(--color-text-light)' }}>
+                                                    Pay via {order.paymentGateway === 'cod' ? 'Cash' : 'Online'} • <span style={{ textTransform: 'capitalize' }}>{order.paymentStatus || 'Pending'}</span>
                                                 </div>
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>

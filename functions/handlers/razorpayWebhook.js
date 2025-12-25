@@ -66,7 +66,8 @@ module.exports = async (req, res) => {
                 // Update order in Firestore
                 const orderRef = admin.firestore().collection('orders').doc(orderId);
                 await orderRef.update({
-                    paymentStatus: 'completed',
+                    status: 'paid', // Changing status to 'paid' as requested
+                    paymentStatus: 'paid', // Changing paymentStatus to 'paid' as requested
                     transactionId: payload.id,
                     paymentDetails: {
                         razorpayPaymentId: payload.id,

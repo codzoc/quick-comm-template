@@ -187,14 +187,8 @@ export async function getOrderById(orderId) {
   }
 }
 
-/**
- * Update order status
- * @param {string} orderId
- * @param {string} newStatus - 'pending' | 'processing' | 'completed' | 'cancelled'
- * @returns {Promise<void>}
- */
 export async function updateOrderStatus(orderId, newStatus) {
-  const validStatuses = ['pending', 'processing', 'completed', 'cancelled'];
+  const validStatuses = ['pending', 'processing', 'completed', 'cancelled', 'paid', 'refunded']; // Added paid & refunded
 
   if (!validStatuses.includes(newStatus)) {
     throw new Error('Invalid order status');
@@ -213,6 +207,36 @@ export async function updateOrderStatus(orderId, newStatus) {
 }
 
 /**
+ * Refund Order (Calls Cloud Function)
+ * @param {string} orderId
+ * @returns {Promise<Object>}
+ */
+export async function refundOrder(orderId) {
+  try {
+    const { getFunctions, slightly_different_import_if_needed, httpsCallable } = require('firebase/functions');
+    // Dynamic import or assume functions is initialized in config/firebase
+    // Let's use the standard import pattern if possible, or just fetch
+    // Better to use callable if possible.
+    // Assuming 'functions' is exported from '../config/firebase' or we initialize it here.
+    // Let's import functions from config if available, or initialize.
+
+    // Actually, let's use the one from config if it exists, checking paymentGateway.js/orders.js imports
+    // Checking imports... only 'db' is imported.
+    // I'll grab functions from 'firebase/functions' and 'app' from config.
+    const { functions } = require('../config/firebase');
+    // Wait, I need to check if 'functions' is exported from config/firebase. 
+    // I will assume it is OR I will initialize it.
+
+    const refundFn = httpsCallable(functions, 'refundOrder');
+    const result = await refundFn({ orderId });
+    return result.data;
+  } catch (error) {
+    console.error('Error refunding order:', error);
+    throw new Error(error.message || 'Refund failed');
+  }
+}
+
+/**
  * Get order statistics
  * @returns {Promise<Object>} Stats object
  */
@@ -226,6 +250,8 @@ export async function getOrderStats() {
     let processingOrders = 0;
     let completedOrders = 0;
     let totalRevenue = 0;
+    let onlineRevenue = 0;
+    let codRevenue = 0;
 
     snapshot.forEach((doc) => {
       const order = doc.data();
@@ -233,14 +259,21 @@ export async function getOrderStats() {
 
       if (order.status === 'pending') {
         pendingOrders++;
-      } else if (order.status === 'processing') {
+      } else if (order.status === 'processing' || order.status === 'paid') {
         processingOrders++;
       } else if (order.status === 'completed') {
         completedOrders++;
       }
 
-      if (order.status !== 'cancelled') {
-        totalRevenue += order.total || 0;
+      if (order.status !== 'cancelled' && order.status !== 'refunded') {
+        const amount = order.total || 0;
+        totalRevenue += amount;
+
+        if (order.paymentGateway === 'cod') {
+          codRevenue += amount;
+        } else {
+          onlineRevenue += amount;
+        }
       }
     });
 
@@ -249,7 +282,9 @@ export async function getOrderStats() {
       pendingOrders,
       processingOrders,
       completedOrders,
-      totalRevenue
+      totalRevenue,
+      onlineRevenue,
+      codRevenue
     };
   } catch (error) {
     console.error('Error fetching order stats:', error);
@@ -258,7 +293,9 @@ export async function getOrderStats() {
       pendingOrders: 0,
       processingOrders: 0,
       completedOrders: 0,
-      totalRevenue: 0
+      totalRevenue: 0,
+      onlineRevenue: 0,
+      codRevenue: 0
     };
   }
 }
