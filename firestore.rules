@@ -47,9 +47,9 @@ service cloud.firestore {
     // Allow guest checkout (create without auth)
     match /orders/{orderId} {
       // Customers can read their own orders, admins can read all
+      // Guest orders (customerId == null) are only readable by admins for privacy
       allow read: if isAdmin() || 
-                     (request.auth != null && resource.data.customerId == request.auth.uid) ||
-                     (resource.data.customerId == null);
+                     (request.auth != null && resource.data.customerId == request.auth.uid);
       
       // Anyone can create orders (guest checkout support)
       allow create: if request.resource.data.keys().hasAll(['orderId', 'items', 'customer', 'status', 'total', 'createdAt'])

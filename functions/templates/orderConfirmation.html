@@ -13,7 +13,7 @@
           
           <!-- Header -->
           <tr>
-            <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
+            <td style="background: linear-gradient(135deg, {{primaryColor}} 0%, {{primaryHoverColor}} 100%); padding: 40px 30px; text-align: center;">
               <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;">Order Confirmed!</h1>
               <p style="margin: 10px 0 0; color: #ffffff; opacity: 0.9; font-size: 16px;">Thank you for your order</p>
             </td>
@@ -38,7 +38,7 @@
                 <tr>
                   <td style="padding-bottom: 10px;">
                     <strong style="color: #333; font-size: 14px;">Order ID:</strong>
-                    <span style="color: #667eea; font-size: 16px; font-weight: 600; margin-left: 10px;">{{orderId}}</span>
+                    <span style="color: {{primaryColor}}; font-size: 16px; font-weight: 600; margin-left: 10px;">{{orderId}}</span>
                   </td>
                 </tr>
                 <tr>
@@ -79,7 +79,7 @@
                 </tr>
                 <tr style="border-top: 2px solid #e5e7eb;">
                   <td style="padding: 15px 0 0; color: #333; font-size: 18px; font-weight: 600;">Total:</td>
-                  <td style="padding: 15px 0 0; text-align: right; color: #667eea; font-size: 20px; font-weight: 700;">{{total}}</td>
+                  <td style="padding: 15px 0 0; text-align: right; color: {{primaryColor}}; font-size: 20px; font-weight: 700;">{{total}}</td>
                 </tr>
               </table>
             </td>

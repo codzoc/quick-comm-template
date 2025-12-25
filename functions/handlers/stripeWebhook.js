@@ -54,10 +54,37 @@ module.exports = async (req, res) => {
                     return res.status(400).send('Order ID missing');
                 }
 
+                // Check if payment was actually successful
+                // checkout.session.completed can fire even if payment failed
+                // We need to verify the payment status
+                if (session.payment_status !== 'paid') {
+                    console.log(`Payment not successful for order ${orderId}. Payment status: ${session.payment_status}`);
+                    // Update order status to failed
+                    const orderRef = admin.firestore().collection('orders').doc(orderId);
+                    await orderRef.update({
+                        paymentStatus: 'failed',
+                        paymentDetails: {
+                            error: `Payment status: ${session.payment_status}`,
+                            stripeSessionId: session.id
+                        },
+                        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                    });
+                    // Do NOT send confirmation email for failed payments
+                    return res.json({ received: true });
+                }
+
                 // Update order in Firestore
                 const orderRef = admin.firestore().collection('orders').doc(orderId);
+                const orderDoc = await orderRef.get();
+
+                if (!orderDoc.exists) {
+                    console.error(`Order document ${orderId} not found in Firestore`);
+                    return res.status(404).send('Order not found');
+                }
+
                 await orderRef.update({
-                    paymentStatus: 'completed',
+                    status: 'paid',
+                    paymentStatus: 'paid',
                     transactionId: session.payment_intent,
                     paymentDetails: {
                         stripeSessionId: session.id,
@@ -69,11 +96,11 @@ module.exports = async (req, res) => {
                     updatedAt: admin.firestore.FieldValue.serverTimestamp()
                 });
 
-                // Get order data for email
-                const orderDoc = await orderRef.get();
-                const orderData = orderDoc.data();
+                // Get updated order data for email
+                const updatedOrderDoc = await orderRef.get();
+                const orderData = updatedOrderDoc.data();
 
-                // Send payment confirmation email
+                // Send payment confirmation email ONLY if payment was successful
                 if (orderData.customer?.email) {
                     await sendPaymentConfirmationEmail({
                         to: orderData.customer.email,
@@ -85,7 +112,7 @@ module.exports = async (req, res) => {
                     });
                 }
 
-                console.log(`Payment completed for order ${orderId}`);
+                console.log(`Payment completed successfully for order ${orderId}`);
                 break;
             }
 

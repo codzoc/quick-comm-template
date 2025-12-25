@@ -18,7 +18,7 @@
                     <!-- Header -->
                     <tr>
                         <td
-                            style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); padding: 40px 30px; text-align: center;">
+                            style="background: linear-gradient(135deg, {{secondaryColor}} 0%, {{primaryColor}} 100%); padding: 40px 30px; text-align: center;">
                             <div
                                 style="width: 60px; height: 60px; background-color: rgba(255,255,255,0.2); border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center;">
                                 <span style="font-size: 36px; color: #ffffff;">✓</span>
@@ -50,7 +50,7 @@
                                             style="color: #333; font-size: 14px; display: block; margin-bottom: 5px;">Order
                                             ID:</strong>
                                         <span
-                                            style="color: #667eea; font-size: 16px; font-weight: 600;">{{orderId}}</span>
+                                            style="color: {{primaryColor}}; font-size: 16px; font-weight: 600;">{{orderId}}</span>
                                     </td>
                                 </tr>
                                 <tr>
@@ -68,7 +68,7 @@
                                             style="color: #333; font-size: 14px; display: block; margin-bottom: 5px;">Amount
                                             Paid:</strong>
                                         <span
-                                            style="color: #10B981; font-size: 24px; font-weight: 700;">{{amount}}</span>
+                                            style="color: {{secondaryColor}}; font-size: 24px; font-weight: 700;">{{amount}}</span>
                                     </td>
                                 </tr>
                                 <tr>
@@ -95,8 +95,8 @@
                     <tr>
                         <td style="padding: 0 30px 30px;">
                             <div
-                                style="background-color: #D1FAE5; border-left: 4px solid #10B981; padding: 15px; border-radius: 4px;">
-                                <p style="margin: 0; color: #065F46; font-size: 14px; line-height: 1.6;">
+                                style="background-color: {{secondaryColorLight}}; border-left: 4px solid {{secondaryColor}}; padding: 15px; border-radius: 4px;">
+                                <p style="margin: 0; color: {{secondaryColor}}; font-size: 14px; line-height: 1.6;">
                                     <strong>✓ Payment Successful</strong><br>
                                     Your order is now being processed and will be shipped soon. You'll receive a
                                     shipping confirmation email once your order is on its way.
@@ -113,6 +113,9 @@
                                 Thank you for your purchase! If you have any questions, please contact our support team.
                             </p>
                             <p style="margin: 15px 0 0; color: #999; font-size: 12px;">
+                                © {{storeName}}. All rights reserved.
+                            </p>
+                            <p style="margin: 10px 0 0; color: #999; font-size: 12px;">
                                 This is an automated email. Please do not reply to this message.
                             </p>
                         </td>

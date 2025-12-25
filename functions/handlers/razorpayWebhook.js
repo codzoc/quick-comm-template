@@ -56,18 +56,47 @@ module.exports = async (req, res) => {
         switch (event) {
             case 'payment.captured': {
                 // Get order ID from notes
+                // The orderId in notes is the Firestore document ID (set when creating Razorpay order)
                 const orderId = payload.notes?.orderId;
 
                 if (!orderId) {
-                    console.error('Order ID not found in payment notes');
-                    return res.status(400).send('Order ID missing');
+                    console.error('Order ID not found in payment notes. Payment:', payload.id);
+                    return res.status(400).send('Order ID missing from payment notes');
                 }
 
-                // Update order in Firestore
+                // Verify payment status - payment.captured should only fire for successful payments
+                // But we'll double-check the status field
+                if (payload.status !== 'captured' && payload.status !== 'authorized') {
+                    console.log(`Payment not successful for order ${orderId}. Status: ${payload.status}`);
+                    // Update order status to failed
+                    const orderRef = admin.firestore().collection('orders').doc(orderId);
+                    const orderDoc = await orderRef.get();
+                    if (orderDoc.exists) {
+                        await orderRef.update({
+                            paymentStatus: 'failed',
+                            paymentDetails: {
+                                error: `Payment status: ${payload.status}`,
+                                razorpayPaymentId: payload.id
+                            },
+                            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                        });
+                    }
+                    // Do NOT send confirmation email for failed payments
+                    return res.json({ status: 'ok' });
+                }
+
+                // Update order in Firestore using the document ID
                 const orderRef = admin.firestore().collection('orders').doc(orderId);
+                const orderDoc = await orderRef.get();
+
+                if (!orderDoc.exists) {
+                    console.error(`Order document ${orderId} not found in Firestore`);
+                    return res.status(404).send('Order not found');
+                }
+
                 await orderRef.update({
-                    status: 'paid', // Changing status to 'paid' as requested
-                    paymentStatus: 'paid', // Changing paymentStatus to 'paid' as requested
+                    status: 'paid',
+                    paymentStatus: 'paid',
                     transactionId: payload.id,
                     paymentDetails: {
                         razorpayPaymentId: payload.id,
@@ -80,11 +109,10 @@ module.exports = async (req, res) => {
                     updatedAt: admin.firestore.FieldValue.serverTimestamp()
                 });
 
-                // Get order data for email
-                const orderDoc = await orderRef.get();
+                // Get updated order data for email
                 const orderData = orderDoc.data();
 
-                // Send payment confirmation email
+                // Send payment confirmation email ONLY if payment was successful
                 if (orderData.customer?.email) {
                     await sendPaymentConfirmationEmail({
                         to: orderData.customer.email,
@@ -96,23 +124,33 @@ module.exports = async (req, res) => {
                     });
                 }
 
-                console.log(`Payment captured for order ${orderId}`);
+                console.log(`Payment captured successfully for order ${orderId}`);
                 break;
             }
 
             case 'payment.failed': {
+                // Get order ID from notes
                 const orderId = payload.notes?.orderId;
 
                 if (orderId) {
-                    await admin.firestore().collection('orders').doc(orderId).update({
-                        paymentStatus: 'failed',
-                        paymentDetails: {
-                            error: payload.error_description || 'Payment failed'
-                        },
-                        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-                    });
+                    const orderRef = admin.firestore().collection('orders').doc(orderId);
+                    const orderDoc = await orderRef.get();
 
-                    console.log(`Payment failed for order ${orderId}`);
+                    if (orderDoc.exists) {
+                        await orderRef.update({
+                            paymentStatus: 'failed',
+                            paymentDetails: {
+                                error: payload.error_description || 'Payment failed'
+                            },
+                            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                        });
+
+                        console.log(`Payment failed for order ${orderId}`);
+                    } else {
+                        console.warn(`Order document ${orderId} not found for failed payment`);
+                    }
+                } else {
+                    console.warn('Order ID not found in payment.failed event');
                 }
                 break;
             }

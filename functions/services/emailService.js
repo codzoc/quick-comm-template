@@ -59,6 +59,21 @@ function escapeHtml(text) {
 }
 
 /**
+ * Convert hex color to rgba string
+ */
+function hexToRgba(hex, alpha = 1) {
+    // Remove # if present
+    hex = hex.replace('#', '');
+    
+    // Parse RGB values
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+/**
  * Load and process email template
  */
 function loadTemplate(templateName, data) {
@@ -68,8 +83,10 @@ function loadTemplate(templateName, data) {
     // Replace placeholders with actual data (escaped for security)
     Object.keys(data).forEach(key => {
         const regex = new RegExp(`{{${key}}}`, 'g');
-        // Don't escape HTML content (itemsHtml, paymentStatus)
-        const value = (key === 'itemsHtml' || key === 'paymentStatus')
+        // Don't escape HTML content (itemsHtml, paymentStatus) or color values
+        const isHtmlContent = key === 'itemsHtml' || key === 'paymentStatus';
+        const isColorValue = key === 'primaryColor' || key === 'primaryHoverColor' || key === 'secondaryColor' || key === 'secondaryColorLight';
+        const value = (isHtmlContent || isColorValue)
             ? (data[key] || '')
             : escapeHtml(data[key]);
         template = template.replace(regex, value);
@@ -112,6 +129,13 @@ async function sendOrderConfirmationEmail(orderDetails) {
             ? '<span style="color: #10B981;">Paid</span>'
             : '<span style="color: #F59E0B;">Pending</span>';
 
+        // Get theme colors (defaults if not provided)
+        const themeColors = orderDetails.themeColors || {
+            primary: '#667eea',
+            primaryHover: '#764ba2',
+            secondary: '#10B981'
+        };
+
         const templateData = {
             customerName: orderDetails.customerName,
             orderId: orderDetails.orderId,
@@ -128,7 +152,10 @@ async function sendOrderConfirmationEmail(orderDetails) {
             paymentMethod: paymentMethodText,
             paymentStatus: paymentStatusText,
             shippingAddress: `${orderDetails.customer.address}, ${orderDetails.customer.pin}`,
-            storeName: orderDetails.storeName
+            storeName: orderDetails.storeName,
+            primaryColor: themeColors.primary,
+            primaryHoverColor: themeColors.primaryHover,
+            secondaryColor: themeColors.secondary
         };
 
         const html = loadTemplate('orderConfirmation', templateData);
@@ -157,6 +184,51 @@ async function sendPaymentConfirmationEmail(paymentDetails) {
         const transporter = await createTransporter();
         const config = await getEmailConfig();
 
+        // Get store info for email
+        const storeInfoDoc = await admin.firestore()
+            .collection('storeInfo')
+            .doc('contact')
+            .get();
+
+        const storeInfo = storeInfoDoc.exists ? storeInfoDoc.data() : {};
+        const storeName = storeInfo.storeName || storeInfo.name || 'Our Store';
+
+        // Get theme colors for email styling
+        const themeDoc = await admin.firestore()
+            .collection('settings')
+            .doc('theme')
+            .get();
+
+        let themeColors = {
+            primary: '#667eea',
+            primaryHover: '#764ba2',
+            secondary: '#10B981'
+        };
+
+        if (themeDoc.exists) {
+            const themeData = themeDoc.data();
+            // Handle template-based theme
+            if (themeData.templateKey) {
+                // If custom overrides exist, use them (they override template defaults)
+                if (themeData.customOverrides?.colors) {
+                    themeColors = {
+                        primary: themeData.customOverrides.colors.primary || themeColors.primary,
+                        primaryHover: themeData.customOverrides.colors.primaryHover || themeData.customOverrides.colors.primary || themeColors.primaryHover,
+                        secondary: themeData.customOverrides.colors.secondary || themeColors.secondary
+                    };
+                }
+                // Note: If no customOverrides, we use defaults. In a full implementation,
+                // we could fetch the template colors, but defaults work fine for most cases.
+            } else if (themeData.theme?.colors) {
+                // Legacy theme format
+                themeColors = {
+                    primary: themeData.theme.colors.primary || themeColors.primary,
+                    primaryHover: themeData.theme.colors.primaryHover || themeData.theme.colors.primary || themeColors.primaryHover,
+                    secondary: themeData.theme.colors.secondary || themeColors.secondary
+                };
+            }
+        }
+
         const templateData = {
             orderId: paymentDetails.orderId,
             transactionId: paymentDetails.transactionId,
@@ -168,13 +240,18 @@ async function sendPaymentConfirmationEmail(paymentDetails) {
                 day: 'numeric',
                 hour: '2-digit',
                 minute: '2-digit'
-            })
+            }),
+            storeName: storeName,
+            primaryColor: themeColors.primary,
+            primaryHoverColor: themeColors.primaryHover,
+            secondaryColor: themeColors.secondary,
+            secondaryColorLight: hexToRgba(themeColors.secondary, 0.1)
         };
 
         const html = loadTemplate('paymentConfirmation', templateData);
 
         const mailOptions = {
-            from: `"${config.storeName || 'Our Store'}" <${config.smtp.user}>`,
+            from: `"${storeName}" <${config.smtp.user}>`,
             to: paymentDetails.to,
             subject: `Payment Received - ${paymentDetails.orderId}`,
             html: html
