@@ -15,7 +15,12 @@ module.exports = async (data, context) => {
     // const token = context.auth.token;
     // if (!token.admin) throw new functions.https.HttpsError('permission-denied', 'Admin access required');
 
-    const { orderId } = data;
+    const { orderId, warmup } = data;
+
+    // Warmup check
+    if (warmup) {
+        return { message: 'Warmed up' };
+    }
 
     if (!orderId) {
         throw new functions.https.HttpsError('invalid-argument', 'Order ID is required');

@@ -13,8 +13,11 @@ function AdminDashboard() {
   const [stats, setStats] = useState({
     totalOrders: 0,
     pendingOrders: 0,
+    paidOrders: 0,
     processingOrders: 0,
     completedOrders: 0,
+    refundedOrders: 0,
+    cancelledOrders: 0,
     totalRevenue: 0,
     onlineRevenue: 0,
     codRevenue: 0
@@ -66,22 +69,34 @@ function AdminDashboard() {
       color: '#3b82f6'
     },
     {
-      title: 'Pending Orders',
+      title: 'Pending',
       value: stats.pendingOrders,
       icon: Package,
       color: '#f59e0b'
     },
     {
-      title: 'Processing Orders',
-      value: stats.processingOrders,
-      icon: Clock,
+      title: 'Paid',
+      value: stats.paidOrders,
+      icon: CheckCircle,
       color: '#3b82f6'
     },
     {
-      title: 'Completed Orders',
+      title: 'Processing',
+      value: stats.processingOrders,
+      icon: Clock,
+      color: '#8b5cf6'
+    },
+    {
+      title: 'Completed',
       value: stats.completedOrders,
       icon: CheckCircle,
       color: '#10b981'
+    },
+    {
+      title: 'Refunded',
+      value: stats.refundedOrders,
+      icon: AlertTriangle,
+      color: '#ef4444' // Red/Orange for refund? Or Gray? AlertTriangle suggests warning/error.
     },
     {
       title: 'Total Revenue',

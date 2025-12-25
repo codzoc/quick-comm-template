@@ -6,8 +6,10 @@ import { createOrder } from '../services/orders';
 import { getStoreInfo } from '../services/storeInfo';
 import { getPaymentSettings } from '../services/payment';
 import { getCurrentCustomer, signUpCustomer } from '../services/customerAuth';
-import { getDefaultAddress, addAddress } from '../services/addresses';
+import { getDefaultAddress, addAddress, getCustomerAddresses } from '../services/addresses';
 import { initiateRazorpayPayment, createRazorpayOrder } from '../services/paymentGateway';
+import { functions } from '../config/firebase'; // Import functions instance
+import { httpsCallable } from 'firebase/functions'; // Import httpsCallable
 import { ShoppingBag } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -69,6 +71,34 @@ function StoreFront() {
     address: '',
     pin: ''
   });
+
+  // Warmup Cloud Functions
+  useEffect(() => {
+    const warmUpFunctions = async () => {
+      try {
+        // 1. Generic Warmup
+        const warmupFn = httpsCallable(functions, 'warmup');
+        warmupFn().catch(err => console.log('Generic warmup failed', err));
+
+        // 2. Razorpay Order Creation Warmup (HTTP Trigger)
+        fetch('/api/razorpay/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ warmup: true })
+        }).catch(err => console.log('Razorpay warmup failed', err));
+
+        // 3. Refund Order Warmup (Callable) - Only if user is admin? 
+        // Actually refundOrder requires auth. If user is guest, this fails.
+        // So we should NOT warm up refundOrder here unless we are logged in as admin.
+        // But createRazorpayOrder is public.
+
+      } catch (error) {
+        console.log('Warmup sequence error', error);
+      }
+    };
+
+    warmUpFunctions();
+  }, []);
   const [formErrors, setFormErrors] = useState({});
 
   // Account creation state for guests
@@ -292,13 +322,29 @@ function StoreFront() {
       }
       // Handle Address Saving for Logged-in Users
       else if (currentUser && createAccount) {
-        await addAddress(currentUser.uid, {
-          name: customerInfo.name,
-          phone: customerInfo.phone,
-          address: customerInfo.address,
-          pin: customerInfo.pin,
-          isDefault: true
-        });
+        // Check for duplicates before saving
+        try {
+          const existingAddresses = await getCustomerAddresses(currentUser.uid);
+          const isDuplicate = existingAddresses.some(addr =>
+            addr.name.toLowerCase() === customerInfo.name.toLowerCase() &&
+            addr.phone === customerInfo.phone &&
+            addr.address.toLowerCase().trim() === customerInfo.address.toLowerCase().trim() &&
+            addr.pin === customerInfo.pin
+          );
+
+          if (!isDuplicate) {
+            await addAddress(currentUser.uid, {
+              name: customerInfo.name,
+              phone: customerInfo.phone,
+              address: customerInfo.address,
+              pin: customerInfo.pin,
+              isDefault: existingAddresses.length === 0 // Make default if it's the first one
+            });
+          }
+        } catch (addrErr) {
+          console.error('Error checking/saving address:', addrErr);
+          // Continue with order placement even if address save fails
+        }
       }
 
       const orderData = {

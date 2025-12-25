@@ -15,6 +15,7 @@ function CustomerOrders() {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [cancelling, setCancelling] = useState(null);
+    const [selectedOrder, setSelectedOrder] = useState(null);
 
     useEffect(() => {
         if (!authLoading && !currentUser) {
@@ -133,72 +134,202 @@ function CustomerOrders() {
                                 </button>
                             </div>
                         ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                 {orders.map(order => (
                                     <div key={order.id} style={{
                                         backgroundColor: 'var(--color-surface)',
                                         borderRadius: 'var(--border-radius-lg)',
                                         padding: '1.5rem',
                                         boxShadow: 'var(--shadow-sm)',
-                                        border: '1px solid var(--color-border)'
+                                        border: '1px solid var(--color-border)',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        flexWrap: 'wrap',
+                                        gap: '1rem'
                                     }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
-                                            <div>
-                                                <div style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>Order #{order.id.slice(0, 8)}</div>
-                                                <div style={{ fontSize: '0.9rem', color: 'var(--color-text-light)' }}>
-                                                    {order.createdAt?.toLocaleDateString()} at {order.createdAt?.toLocaleTimeString()}
-                                                </div>
-                                                <div style={{ fontSize: '0.85rem', marginTop: '0.5rem', color: 'var(--color-text-light)' }}>
-                                                    Pay via {order.paymentGateway === 'cod' ? 'Cash' : 'Online'} • <span style={{ textTransform: 'capitalize' }}>{order.paymentStatus || 'Pending'}</span>
-                                                </div>
+                                        <div>
+                                            <div style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>#{order.id.slice(0, 8)}</div>
+                                            <div style={{ fontSize: '0.9rem', color: 'var(--color-text-light)' }}>
+                                                {order.createdAt?.toLocaleDateString()} • {order.items.length} Items
                                             </div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                                <span style={{
-                                                    padding: '0.25rem 0.75rem',
-                                                    borderRadius: '999px',
-                                                    fontSize: '0.85rem',
-                                                    fontWeight: '500',
-                                                    backgroundColor: `${getStatusColor(order.status)}20`,
-                                                    color: getStatusColor(order.status),
-                                                    textTransform: 'capitalize'
-                                                }}>
-                                                    {order.status}
-                                                </span>
-                                                {order.status === 'pending' && (
-                                                    <button
-                                                        onClick={() => handleCancelOrder(order.id)}
-                                                        disabled={cancelling === order.id}
-                                                        style={{
-                                                            color: 'var(--color-error)',
-                                                            background: 'none',
-                                                            border: '1px solid var(--color-error)',
-                                                            padding: '0.25rem 0.75rem',
-                                                            borderRadius: 'var(--border-radius-sm)',
-                                                            fontSize: '0.85rem',
-                                                            cursor: 'pointer'
-                                                        }}
-                                                    >
-                                                        {cancelling === order.id ? 'Cancelling...' : 'Cancel'}
-                                                    </button>
-                                                )}
+                                            <div style={{ fontSize: '0.9rem', marginTop: '0.25rem', fontWeight: 500 }}>
+                                                ₹{order.total?.toFixed(2)}
                                             </div>
                                         </div>
 
-                                        <div style={{ borderTop: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)', padding: '1rem 0', margin: '1rem 0' }}>
-                                            {order.items.map((item, index) => (
-                                                <div key={index} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                                                    <span>{item.quantity}x {item.product?.title || item.title}</span>
-                                                    <span>₹{(item.price * item.quantity).toFixed(2)}</span>
-                                                </div>
-                                            ))}
-                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                            <span style={{
+                                                padding: '0.25rem 0.75rem',
+                                                borderRadius: '999px',
+                                                fontSize: '0.85rem',
+                                                fontWeight: '500',
+                                                backgroundColor: `${getStatusColor(order.status)}20`,
+                                                color: getStatusColor(order.status),
+                                                textTransform: 'capitalize'
+                                            }}>
+                                                {order.status}
+                                            </span>
 
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
-                                            <span>Total</span>
-                                            <span>₹{order.total?.toFixed(2)}</span>
+                                            <button
+                                                className="btn-secondary"
+                                                onClick={() => setSelectedOrder(order)}
+                                                style={{ fontSize: '0.9rem', padding: '0.4rem 0.8rem' }}
+                                            >
+                                                View Details
+                                            </button>
+
+                                            {order.status === 'pending' && (
+                                                <button
+                                                    onClick={() => handleCancelOrder(order.id)}
+                                                    disabled={cancelling === order.id}
+                                                    style={{
+                                                        color: 'var(--color-error)',
+                                                        background: 'none',
+                                                        border: '1px solid var(--color-error)',
+                                                        padding: '0.4rem 0.8rem',
+                                                        borderRadius: 'var(--border-radius-sm)',
+                                                        fontSize: '0.9rem',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                >
+                                                    {cancelling === order.id ? '...' : 'Cancel'}
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
+
+                                {/* Order Details Modal */}
+                                {selectedOrder && (
+                                    <div style={{
+                                        position: 'fixed',
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        bottom: 0,
+                                        backgroundColor: 'rgba(0,0,0,0.5)',
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        zIndex: 1000,
+                                        padding: '1rem'
+                                    }} onClick={() => setSelectedOrder(null)}>
+                                        <div style={{
+                                            backgroundColor: 'var(--color-surface)',
+                                            borderRadius: 'var(--border-radius-lg)',
+                                            width: '100%',
+                                            maxWidth: '600px',
+                                            maxHeight: '90vh',
+                                            overflowY: 'auto',
+                                            position: 'relative',
+                                            boxShadow: 'var(--shadow-lg)'
+                                        }} onClick={e => e.stopPropagation()}>
+                                            <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <h3 style={{ margin: 0 }}>Order #{selectedOrder.id.slice(0, 8)}</h3>
+                                                <button onClick={() => setSelectedOrder(null)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', lineHeight: 1 }}>&times;</button>
+                                            </div>
+
+                                            <div style={{ padding: '1.5rem' }}>
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+                                                    <div>
+                                                        <h4 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--color-text-light)', marginBottom: '0.5rem' }}>Status</h4>
+                                                        <span style={{
+                                                            padding: '0.25rem 0.5rem',
+                                                            borderRadius: '4px',
+                                                            backgroundColor: `${getStatusColor(selectedOrder.status)}20`,
+                                                            color: getStatusColor(selectedOrder.status),
+                                                            fontSize: '0.9rem',
+                                                            fontWeight: 500,
+                                                            textTransform: 'capitalize'
+                                                        }}>
+                                                            {selectedOrder.status}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <h4 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--color-text-light)', marginBottom: '0.5rem' }}>Date</h4>
+                                                        <div style={{ fontSize: '0.95rem' }}>
+                                                            {selectedOrder.createdAt?.toLocaleDateString()} {selectedOrder.createdAt?.toLocaleTimeString()}
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <h4 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--color-text-light)', marginBottom: '0.5rem' }}>Delivery To</h4>
+                                                        <div style={{ fontSize: '0.95rem' }}>
+                                                            {selectedOrder.customer.name}<br />
+                                                            {selectedOrder.customer.phone}<br />
+                                                            <span style={{ color: 'var(--color-text-light)' }}>
+                                                                {selectedOrder.customer.address}, {selectedOrder.customer.pin}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <h4 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--color-text-light)', marginBottom: '0.5rem' }}>Payment</h4>
+                                                        <div style={{ fontSize: '0.95rem' }}>
+                                                            {selectedOrder.paymentGateway === 'cod' ? 'Cash on Delivery' : 'Online Payment'}<br />
+                                                            Status: <span style={{ textTransform: 'capitalize', color: getStatusColor(selectedOrder.paymentStatus) }}>{selectedOrder.paymentStatus || 'Pending'}</span>
+                                                            {(selectedOrder.transactionId || selectedOrder.paymentDetails?.transactionId) && (
+                                                                <div style={{ fontSize: '0.85rem', fontFamily: 'monospace', marginTop: '0.25rem', overflowWrap: 'anywhere' }}>
+                                                                    Tx: {selectedOrder.paymentDetails?.transactionId || selectedOrder.transactionId}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <h4 style={{ fontSize: '0.9rem', marginBottom: '1rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem' }}>Order Items</h4>
+
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                                                    {selectedOrder.items.map((item, idx) => (
+                                                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                            <div style={{ display: 'flex', gap: '1rem' }}>
+                                                                <div style={{
+                                                                    width: '50px', height: '50px',
+                                                                    backgroundColor: 'var(--color-background)',
+                                                                    borderRadius: '8px',
+                                                                    backgroundImage: `url(${item.imagePath || item.product?.imagePath || '/images/placeholder.png'})`,
+                                                                    backgroundSize: 'cover',
+                                                                    backgroundPosition: 'center'
+                                                                }}></div>
+                                                                <div>
+                                                                    <div style={{ fontWeight: 500, fontSize: '0.95rem' }}>{item.product?.title || item.title}</div>
+                                                                    <div style={{ fontSize: '0.85rem', color: 'var(--color-text-light)' }}>Qty: {item.quantity}</div>
+                                                                </div>
+                                                            </div>
+                                                            <div style={{ fontWeight: 500 }}>₹{(item.price * item.quantity).toFixed(2)}</div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+
+                                                <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '1rem' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+                                                        <span>Subtotal</span>
+                                                        <span>₹{selectedOrder.subtotal?.toFixed(2) || (selectedOrder.total).toFixed(2)}</span>
+                                                    </div>
+                                                    {selectedOrder.tax > 0 && (
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+                                                            <span>Tax</span>
+                                                            <span>₹{selectedOrder.tax.toFixed(2)}</span>
+                                                        </div>
+                                                    )}
+                                                    {selectedOrder.shipping > 0 && (
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+                                                            <span>Shipping</span>
+                                                            <span>₹{selectedOrder.shipping.toFixed(2)}</span>
+                                                        </div>
+                                                    )}
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem', fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--color-primary)' }}>
+                                                        <span>Total</span>
+                                                        <span>₹{selectedOrder.total?.toFixed(2)}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--color-border)', backgroundColor: 'var(--color-background)', borderBottomLeftRadius: 'var(--border-radius-lg)', borderBottomRightRadius: 'var(--border-radius-lg)', textAlign: 'right' }}>
+                                                <button className="btn-secondary" onClick={() => setSelectedOrder(null)}>Close</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>

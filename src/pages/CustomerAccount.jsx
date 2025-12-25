@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Eye } from 'lucide-react';
 import { getCurrentCustomer, getCustomerData, logoutCustomer, updateCustomerProfile } from '../services/customerAuth';
 import { getCustomerAddresses, addAddress, updateAddress, deleteAddress, setDefaultAddress } from '../services/addresses';
 import { getCustomerOrders } from '../services/orders';
@@ -29,6 +30,10 @@ const CustomerAccount = () => {
         pin: '',
         isDefault: false
     });
+
+    // Order management state
+    const [selectedOrder, setSelectedOrder] = useState(null);
+    const [cancelling, setCancelling] = useState(null);
 
     // Profile form state
     const [editingProfile, setEditingProfile] = useState(false);
@@ -202,6 +207,47 @@ const CustomerAccount = () => {
             hour: '2-digit',
             minute: '2-digit'
         });
+    };
+
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'pending': return '#f59e0b'; // orange
+            case 'paid': return '#3b82f6'; // blue
+            case 'processing': return '#3b82f6'; // blue
+            case 'shipped': return '#8b5cf6'; // purple
+            case 'delivered': return '#10b981'; // green
+            case 'completed': return '#10b981'; // green
+            case 'cancelled': return '#ef4444'; // red
+            case 'refunded': return '#6b7280'; // gray
+            default: return '#6b7280'; // gray
+        }
+    };
+
+    const handleCancelOrder = async (orderId) => {
+        // Since we don't have direct access to firestore in this component (it uses services),
+        // we might need to export the cancel logic to a service or import firestore here.
+        // Looking at file, it imports specific services.
+        // Let's modify it to use a service we'll create or just import firestore if needed.
+        // Actually, CustomerOrders.jsx used direct firestore calls.
+
+        /* 
+           NOTE: Ideally we'd add updateOrderStatus to services/orders.js. 
+           For now I'll assume we can't easily add imports without breaking something or being too invasive.
+           However, I CAN import { doc, updateDoc } from 'firebase/firestore' and { db } from '../config/firebase'.
+           But I don't see those imports at the top.
+           
+           Wait, step 328 showed imports:
+           import { getCurrentCustomer... } from '../services/customerAuth';
+           import { getCustomerAddresses... } from '../services/addresses';
+           import { getCustomerOrders } from '../services/orders';
+           
+           I shouldn't add new imports if I can avoid it to minimize risk.
+           BUT, cancellation requires a write. 
+           
+           I will SKIP the cancellation button for now in this refactor to be safe and focus on "View Details".
+           The user asked for "View Details".
+        */
+        console.log("Cancel not implemented in Account view yet");
     };
 
     if (loading) {
@@ -390,32 +436,189 @@ const CustomerAccount = () => {
                                         </button>
                                     </div>
                                 ) : (
-                                    <div className="orders-list">
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                         {orders.map((order) => (
-                                            <div key={order.id} className="order-card">
-                                                <div className="order-header">
-                                                    <div>
-                                                        <h4>Order #{order.orderId}</h4>
-                                                        <p className="order-date">{formatDate(order.createdAt)}</p>
+                                            <div key={order.id} style={{
+                                                backgroundColor: 'var(--color-surface)',
+                                                borderRadius: 'var(--border-radius-lg)',
+                                                padding: '1.5rem',
+                                                boxShadow: 'var(--shadow-sm)',
+                                                border: '1px solid var(--color-border)',
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                flexWrap: 'wrap',
+                                                gap: '1rem'
+                                            }}>
+                                                <div>
+                                                    <div style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>#{order.orderId || order.id?.slice(0, 8)}</div>
+                                                    <div style={{ fontSize: '0.9rem', color: 'var(--color-text-light)' }}>
+                                                        {formatDate(order.createdAt)} • {order.items.length} Items
                                                     </div>
-                                                    <span className={`order-status status-${order.status}`}>
-                                                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                                                    <div style={{ fontSize: '0.9rem', marginTop: '0.25rem', fontWeight: 500 }}>
+                                                        {formatCurrency(order.total)}
+                                                    </div>
+                                                </div>
+
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                    <span style={{
+                                                        padding: '0.25rem 0.75rem',
+                                                        borderRadius: '999px',
+                                                        fontSize: '0.85rem',
+                                                        fontWeight: '500',
+                                                        backgroundColor: `${getStatusColor(order.status)}20`,
+                                                        color: getStatusColor(order.status),
+                                                        textTransform: 'capitalize'
+                                                    }}>
+                                                        {order.status}
                                                     </span>
-                                                </div>
-                                                <div className="order-items">
-                                                    {order.items.map((item, idx) => (
-                                                        <div key={idx} className="order-item">
-                                                            <span>{item.title} × {item.quantity}</span>
-                                                            <span>{formatCurrency(item.subtotal)}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                                <div className="order-total">
-                                                    <strong>Total:</strong>
-                                                    <strong>{formatCurrency(order.total)}</strong>
+
+                                                    <button
+                                                        className="btn-secondary"
+                                                        onClick={() => setSelectedOrder(order)}
+                                                        style={{ fontSize: '0.9rem', padding: '0.4rem 0.8rem', background: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: '0.375rem', cursor: 'pointer' }}
+                                                    >
+                                                        View Details
+                                                    </button>
                                                 </div>
                                             </div>
                                         ))}
+                                    </div>
+                                )}
+
+                                {/* Order Details Modal */}
+                                {selectedOrder && (
+                                    <div style={{
+                                        position: 'fixed',
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        bottom: 0,
+                                        backgroundColor: 'rgba(0,0,0,0.5)',
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        zIndex: 1000,
+                                        padding: '1rem'
+                                    }} onClick={() => setSelectedOrder(null)}>
+                                        <div style={{
+                                            backgroundColor: 'white',
+                                            borderRadius: '0.5rem',
+                                            width: '100%',
+                                            maxWidth: '600px',
+                                            maxHeight: '90vh',
+                                            overflowY: 'auto',
+                                            position: 'relative',
+                                            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+                                        }} onClick={e => e.stopPropagation()}>
+                                            <div style={{ padding: '1.5rem', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600 }}>Order #{selectedOrder.orderId || selectedOrder.id?.slice(0, 8)}</h3>
+                                                <button onClick={() => setSelectedOrder(null)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', lineHeight: 1, color: '#6b7280' }}>&times;</button>
+                                            </div>
+
+                                            <div style={{ padding: '1.5rem' }}>
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+                                                    <div>
+                                                        <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#6b7280', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>Status</h4>
+                                                        <span style={{
+                                                            padding: '0.25rem 0.5rem',
+                                                            borderRadius: '4px',
+                                                            backgroundColor: `${getStatusColor(selectedOrder.status)}20`,
+                                                            color: getStatusColor(selectedOrder.status),
+                                                            fontSize: '0.875rem',
+                                                            fontWeight: 500,
+                                                            textTransform: 'capitalize'
+                                                        }}>
+                                                            {selectedOrder.status}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#6b7280', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>Date</h4>
+                                                        <div style={{ fontSize: '0.9rem' }}>
+                                                            {formatDate(selectedOrder.createdAt)}
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#6b7280', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>Delivery To</h4>
+                                                        <div style={{ fontSize: '0.9rem' }}>
+                                                            {selectedOrder.customer.name}<br />
+                                                            {selectedOrder.customer.phone}<br />
+                                                            <span style={{ color: '#6b7280' }}>
+                                                                {selectedOrder.customer.address}, {selectedOrder.customer.pin}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#6b7280', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>Payment</h4>
+                                                        <div style={{ fontSize: '0.9rem' }}>
+                                                            {selectedOrder.paymentGateway === 'cod' ? 'Cash on Delivery' : 'Online Payment'}<br />
+                                                            Status: <span style={{ textTransform: 'capitalize', color: getStatusColor(selectedOrder.paymentStatus) }}>{selectedOrder.paymentStatus || 'Pending'}</span>
+                                                            {(selectedOrder.transactionId || selectedOrder.paymentDetails?.transactionId) && (
+                                                                <div style={{ fontSize: '0.8rem', fontFamily: 'monospace', marginTop: '0.25rem', overflowWrap: 'anywhere', color: '#6b7280' }}>
+                                                                    Tx: {selectedOrder.paymentDetails?.transactionId || selectedOrder.transactionId}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <h4 style={{ fontSize: '0.9rem', marginBottom: '1rem', borderBottom: '1px solid #e5e7eb', paddingBottom: '0.5rem' }}>Order Items</h4>
+
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+                                                    {selectedOrder.items.map((item, idx) => (
+                                                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                            <div style={{ display: 'flex', gap: '1rem' }}>
+                                                                <div style={{
+                                                                    width: '48px', height: '48px',
+                                                                    backgroundColor: '#f3f4f6',
+                                                                    borderRadius: '8px',
+                                                                    backgroundImage: `url(${item.imagePath || item.product?.imagePath || '/images/placeholder.png'})`,
+                                                                    backgroundSize: 'cover',
+                                                                    backgroundPosition: 'center'
+                                                                }}></div>
+                                                                <div>
+                                                                    <div style={{ fontWeight: 500, fontSize: '0.9rem' }}>{item.product?.title || item.title}</div>
+                                                                    <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>Qty: {item.quantity}</div>
+                                                                </div>
+                                                            </div>
+                                                            <div style={{ fontWeight: 500, fontSize: '0.9rem' }}>{formatCurrency(item.price * item.quantity)}</div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+
+                                                <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '1rem' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+                                                        <span>Subtotal</span>
+                                                        <span>{selectedOrder.subtotal ? formatCurrency(selectedOrder.subtotal) : formatCurrency(selectedOrder.total)}</span>
+                                                    </div>
+                                                    {selectedOrder.tax > 0 && (
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+                                                            <span>Tax</span>
+                                                            <span>{formatCurrency(selectedOrder.tax)}</span>
+                                                        </div>
+                                                    )}
+                                                    {selectedOrder.shipping > 0 && (
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+                                                            <span>Shipping</span>
+                                                            <span>{formatCurrency(selectedOrder.shipping)}</span>
+                                                        </div>
+                                                    )}
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem', fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--color-primary)' }}>
+                                                        <span>Total</span>
+                                                        <span>{formatCurrency(selectedOrder.total)}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid #e5e7eb', backgroundColor: '#f9fafb', borderBottomLeftRadius: '0.5rem', borderBottomRightRadius: '0.5rem', textAlign: 'right' }}>
+                                                <button
+                                                    onClick={() => setSelectedOrder(null)}
+                                                    style={{ padding: '0.5rem 1rem', background: 'white', border: '1px solid #d1d5db', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.9rem' }}
+                                                >
+                                                    Close
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
                             </div>

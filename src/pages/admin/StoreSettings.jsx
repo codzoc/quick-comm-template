@@ -21,6 +21,7 @@ import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { onAuthChange } from '../../services/auth';
 import { getStoreInfo, updateStoreInfo, getAllStaticPages, updateStaticPage } from '../../services/storeInfo';
+import { getEmailSettings, updateEmailSettings } from '../../services/email';
 import { getCurrentTemplate, updateThemeTemplate } from '../../services/theme';
 import { getThemeTemplateOptions } from '../../config/themeTemplates';
 import AdminLayout from '../../components/AdminLayout';
@@ -63,6 +64,11 @@ function AdminStoreSettings() {
     shippingCost: 0
   });
 
+  const [emailSettings, setEmailSettings] = useState({
+    smtp: { user: '', password: '' }
+    // storeName removed as requested
+  });
+
   const [staticPages, setStaticPages] = useState({
     about: { content: '', imagePath: '' },
     terms: { content: '', imagePath: '' },
@@ -82,14 +88,18 @@ function AdminStoreSettings() {
 
   const loadSettings = async () => {
     try {
-      const [info, pages, currentTemplate] = await Promise.all([
+      const [info, pages, currentTemplate, emailData] = await Promise.all([
         getStoreInfo(),
         getAllStaticPages(),
-        getCurrentTemplate()
+        getCurrentTemplate(),
+        getEmailSettings()
       ]);
       setStoreInfo(info);
       setStaticPages(pages);
       setSelectedTemplate(currentTemplate);
+      if (emailData) {
+        setEmailSettings(prev => ({ ...prev, ...emailData }));
+      }
     } catch (err) {
       console.error('Error loading settings:', err);
     } finally {
@@ -111,8 +121,11 @@ function AdminStoreSettings() {
   const handleSaveStoreInfo = async (e) => {
     e.preventDefault();
     try {
-      await updateStoreInfo(storeInfo);
-      showSuccess('Store information saved successfully!');
+      await Promise.all([
+        updateStoreInfo(storeInfo),
+        updateEmailSettings(emailSettings)
+      ]);
+      showSuccess('Store information and email settings saved successfully!');
     } catch (err) {
       alert(err.message);
     }
@@ -296,13 +309,47 @@ function AdminStoreSettings() {
                 placeholder="https://youtube.com/@yourchannel"
               />
 
+              <Divider sx={{ my: 3 }} />
+
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
+                Email Configuration (Gmail SMTP)
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Configure Gmail SMTP for sending order and payment confirmation emails.
+              </Typography>
+
+              <TextField
+                fullWidth
+                label="Gmail Address"
+                value={emailSettings.smtp?.user || ''}
+                onChange={(e) => setEmailSettings(prev => ({ ...prev, smtp: { ...prev.smtp, user: e.target.value } }))}
+                margin="normal"
+                type="email"
+                placeholder="yourstore@gmail.com"
+              />
+
+              <TextField
+                fullWidth
+                label="Gmail App Password"
+                value={emailSettings.smtp?.password || ''}
+                onChange={(e) => setEmailSettings(prev => ({ ...prev, smtp: { ...prev.smtp, password: e.target.value } }))}
+                margin="normal"
+                type="password"
+                helperText="Gmail app-specific password (not your regular password)"
+              />
+
+              <Alert severity="warning" sx={{ mt: 2 }}>
+                <strong>Important:</strong> You must create an App Password in your Google Account settings.
+                Regular Gmail passwords won't work. Visit: <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer">Google App Passwords</a>
+              </Alert>
+
               <Button
                 type="submit"
                 variant="contained"
                 startIcon={<Save size={18} />}
                 sx={{ mt: 3 }}
               >
-                Save Store Information
+                Save All Settings
               </Button>
             </form>
           </CardContent>

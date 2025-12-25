@@ -11,6 +11,11 @@ module.exports = async (req, res) => {
             return res.status(405).send('Method Not Allowed');
         }
 
+        // Warmup check
+        if (req.body && req.body.warmup) {
+            return res.status(200).json({ message: 'Warmed up' });
+        }
+
         const { amount, currency, orderId } = req.body;
 
         if (!amount || !orderId) {

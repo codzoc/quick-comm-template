@@ -230,8 +230,10 @@ Thank you for shopping with us!
             >
               <MenuItem value="">All Orders</MenuItem>
               <MenuItem value="pending">Pending</MenuItem>
+              <MenuItem value="paid">Paid</MenuItem>
               <MenuItem value="processing">Processing</MenuItem>
               <MenuItem value="completed">Completed</MenuItem>
+              <MenuItem value="refunded">Refunded</MenuItem>
               <MenuItem value="cancelled">Cancelled</MenuItem>
             </Select>
           </FormControl>
@@ -329,9 +331,9 @@ Thank you for shopping with us!
         fullWidth
       >
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+          <Box component="span" sx={{ typography: 'h6', fontWeight: 600 }}>
             Order Details
-          </Typography>
+          </Box>
           <IconButton size="small" onClick={() => setSelectedOrder(null)}>
             <X size={20} />
           </IconButton>

@@ -11,7 +11,8 @@ import {
   serverTimestamp,
   runTransaction
 } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { httpsCallable } from 'firebase/functions';
+import { db, functions } from '../config/firebase';
 import { generateOrderId } from '../utils/orderIdGenerator';
 import { decreaseStock } from './products';
 
@@ -213,20 +214,6 @@ export async function updateOrderStatus(orderId, newStatus) {
  */
 export async function refundOrder(orderId) {
   try {
-    const { getFunctions, slightly_different_import_if_needed, httpsCallable } = require('firebase/functions');
-    // Dynamic import or assume functions is initialized in config/firebase
-    // Let's use the standard import pattern if possible, or just fetch
-    // Better to use callable if possible.
-    // Assuming 'functions' is exported from '../config/firebase' or we initialize it here.
-    // Let's import functions from config if available, or initialize.
-
-    // Actually, let's use the one from config if it exists, checking paymentGateway.js/orders.js imports
-    // Checking imports... only 'db' is imported.
-    // I'll grab functions from 'firebase/functions' and 'app' from config.
-    const { functions } = require('../config/firebase');
-    // Wait, I need to check if 'functions' is exported from config/firebase. 
-    // I will assume it is OR I will initialize it.
-
     const refundFn = httpsCallable(functions, 'refundOrder');
     const result = await refundFn({ orderId });
     return result.data;
@@ -247,8 +234,11 @@ export async function getOrderStats() {
 
     let totalOrders = 0;
     let pendingOrders = 0;
+    let paidOrders = 0;
     let processingOrders = 0;
     let completedOrders = 0;
+    let refundedOrders = 0;
+    let cancelledOrders = 0;
     let totalRevenue = 0;
     let onlineRevenue = 0;
     let codRevenue = 0;
@@ -257,14 +247,28 @@ export async function getOrderStats() {
       const order = doc.data();
       totalOrders++;
 
-      if (order.status === 'pending') {
-        pendingOrders++;
-      } else if (order.status === 'processing' || order.status === 'paid') {
-        processingOrders++;
-      } else if (order.status === 'completed') {
-        completedOrders++;
+      switch (order.status) {
+        case 'pending':
+          pendingOrders++;
+          break;
+        case 'paid':
+          paidOrders++;
+          break;
+        case 'processing':
+          processingOrders++;
+          break;
+        case 'completed':
+          completedOrders++;
+          break;
+        case 'refunded':
+          refundedOrders++;
+          break;
+        case 'cancelled':
+          cancelledOrders++;
+          break;
       }
 
+      // Calculate revenue (exclude cancelled and refunded)
       if (order.status !== 'cancelled' && order.status !== 'refunded') {
         const amount = order.total || 0;
         totalRevenue += amount;
@@ -280,8 +284,11 @@ export async function getOrderStats() {
     return {
       totalOrders,
       pendingOrders,
+      paidOrders,
       processingOrders,
       completedOrders,
+      refundedOrders,
+      cancelledOrders,
       totalRevenue,
       onlineRevenue,
       codRevenue
@@ -291,8 +298,11 @@ export async function getOrderStats() {
     return {
       totalOrders: 0,
       pendingOrders: 0,
+      paidOrders: 0,
       processingOrders: 0,
       completedOrders: 0,
+      refundedOrders: 0,
+      cancelledOrders: 0,
       totalRevenue: 0,
       onlineRevenue: 0,
       codRevenue: 0

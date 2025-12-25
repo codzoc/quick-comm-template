@@ -78,10 +78,7 @@ function PaymentSettings() {
         setSuccess('');
 
         try {
-            await Promise.all([
-                updatePaymentSettings(settings),
-                updateEmailSettings(emailSettings)
-            ]);
+            await updatePaymentSettings(settings);
             setSuccess('Settings saved successfully!');
         } catch (err) {
             setError('Failed to save settings.');
@@ -290,59 +287,6 @@ function PaymentSettings() {
                                 </Alert>
                             </Box>
                         )}
-                    </CardContent>
-                </Card>
-
-                <Divider sx={{ my: 4 }} />
-
-                {/* Email Settings */}
-                <Card sx={{ mb: 3, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
-                    <CardContent>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                            <Mail size={24} style={{ marginRight: '10px', color: '#F59E0B' }} />
-                            <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                                Email Configuration (Gmail SMTP)
-                            </Typography>
-                        </Box>
-
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                            Configure Gmail SMTP for sending order and payment confirmation emails.
-                        </Typography>
-
-                        <TextField
-                            fullWidth
-                            label="Store Name"
-                            value={emailSettings.storeName || ''}
-                            onChange={(e) => setEmailSettings(prev => ({ ...prev, storeName: e.target.value }))}
-                            margin="normal"
-                            helperText="Name shown in email sender (e.g., 'My Store')"
-                        />
-
-                        <TextField
-                            fullWidth
-                            label="Gmail Address"
-                            value={emailSettings.smtp?.user || ''}
-                            onChange={(e) => handleEmailChange('smtp', 'user', e.target.value)}
-                            margin="normal"
-                            type="email"
-                            helperText="Your Gmail address for sending emails"
-                            placeholder="yourstore@gmail.com"
-                        />
-
-                        <TextField
-                            fullWidth
-                            label="Gmail App Password"
-                            value={emailSettings.smtp?.password || ''}
-                            onChange={(e) => handleEmailChange('smtp', 'password', e.target.value)}
-                            margin="normal"
-                            type="password"
-                            helperText="Gmail app-specific password (not your regular password)"
-                        />
-
-                        <Alert severity="warning" sx={{ mt: 2 }}>
-                            <strong>Important:</strong> You must create an App Password in your Google Account settings.
-                            Regular Gmail passwords won't work. Visit: <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer">Google App Passwords</a>
-                        </Alert>
                     </CardContent>
                 </Card>
 
