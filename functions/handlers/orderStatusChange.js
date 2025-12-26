@@ -1,5 +1,5 @@
 const admin = require('firebase-admin');
-const { sendOrderStatusChangeEmail } = require('../services/emailService');
+const { sendOrderStatusChangeEmail, getStoreInfo } = require('../services/emailService');
 
 /**
  * Order Status Change Handler
@@ -30,12 +30,7 @@ module.exports = async (change, context) => {
         }
 
         // Get store info for email
-        const storeDoc = await admin.firestore()
-            .collection('store_settings')
-            .doc('store_info')
-            .get();
-
-        const storeInfo = storeDoc.exists ? storeDoc.data() : {};
+        const storeInfo = await getStoreInfo();
 
         // Send order status change email
         await sendOrderStatusChangeEmail({
@@ -44,7 +39,7 @@ module.exports = async (change, context) => {
             orderId: afterData.orderId,
             previousStatus: beforeData.status || 'pending',
             newStatus: afterData.status,
-            storeName: storeInfo.name || 'Our Store'
+            storeName: storeInfo.name
         });
 
         console.log(`Order status change email sent for order ${orderId}: ${beforeData.status} -> ${afterData.status}`);

@@ -1,5 +1,5 @@
 const admin = require('firebase-admin');
-const { sendOrderConfirmationEmail, sendStoreOwnerNotificationEmail } = require('../services/emailService');
+const { sendOrderConfirmationEmail, sendStoreOwnerNotificationEmail, getStoreInfo } = require('../services/emailService');
 
 /**
  * Order Confirmation Handler
@@ -15,12 +15,7 @@ module.exports = async (snapshot, context) => {
         const orderId = context.params.orderId;
 
         // Get store info for email
-        const storeDoc = await admin.firestore()
-            .collection('store_settings')
-            .doc('store_info')
-            .get();
-
-        const storeInfo = storeDoc.exists ? storeDoc.data() : {};
+        const storeInfo = await getStoreInfo();
 
         // Only send order confirmation email for COD orders
         // For Razorpay/Stripe, email will be sent after payment is confirmed via webhook
@@ -41,8 +36,8 @@ module.exports = async (snapshot, context) => {
                 total: orderData.total,
                 paymentMethod: orderData.paymentMethod,
                 paymentStatus: orderData.paymentStatus,
-                storeName: storeInfo.name || 'Our Store',
-                currencySymbol: storeInfo.currencySymbol || '₹'
+                storeName: storeInfo.name,
+                currencySymbol: storeInfo.currencySymbol
             });
             console.log(`Order confirmation email sent for COD order ${orderId}`);
         } else if (!isCOD) {
@@ -61,8 +56,8 @@ module.exports = async (snapshot, context) => {
             total: orderData.total,
             paymentMethod: orderData.paymentMethod,
             paymentStatus: orderData.paymentStatus,
-            storeName: storeInfo.name || 'Our Store',
-            currencySymbol: storeInfo.currencySymbol || '₹'
+            storeName: storeInfo.name,
+            currencySymbol: storeInfo.currencySymbol
         });
         console.log(`Store owner notification sent for order ${orderId}`);
 

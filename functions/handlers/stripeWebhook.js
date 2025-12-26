@@ -1,6 +1,6 @@
 const admin = require('firebase-admin');
 const Stripe = require('stripe');
-const { sendPaymentConfirmationEmail, sendOrderConfirmationEmail } = require('../services/emailService');
+const { sendPaymentConfirmationEmail, sendOrderConfirmationEmail, getStoreInfo } = require('../services/emailService');
 
 /**
  * Stripe Webhook Handler
@@ -92,12 +92,7 @@ module.exports = async (req, res) => {
                 // Send emails only if not already sent
                 if (orderData.customer?.email) {
                     // Get store info for emails
-                    const storeDoc = await admin.firestore()
-                        .collection('store_settings')
-                        .doc('store_info')
-                        .get();
-
-                    const storeInfo = storeDoc.exists ? storeDoc.data() : {};
+                    const storeInfo = await getStoreInfo();
 
                     // Send payment confirmation email
                     await sendPaymentConfirmationEmail({
@@ -123,8 +118,8 @@ module.exports = async (req, res) => {
                         total: orderData.total,
                         paymentMethod: orderData.paymentMethod,
                         paymentStatus: 'completed',
-                        storeName: storeInfo.name || 'Our Store',
-                        currencySymbol: storeInfo.currencySymbol || '₹'
+                        storeName: storeInfo.name,
+                        currencySymbol: storeInfo.currencySymbol
                     });
                 }
 
