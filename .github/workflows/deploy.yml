@@ -314,11 +314,11 @@ jobs:
       project_id: ${{ steps.firebase-config.outputs.project_id }}
     
     steps:
-      - name: Download project config
-        uses: actions/download-artifact@v4
-        with:
-          name: project-config
-          path: ./
+      - name: Create .firebaserc from config
+        run: |
+          echo '${{ secrets.VITE_FIREBASE_CONFIG }}' > config.json
+          cat config.json | jq '{projects: {default: .projectId}}' > .firebaserc
+          rm config.json
 
       - name: Extract project ID
         id: firebase-config
@@ -384,10 +384,10 @@ jobs:
           
           echo "✅ Firebase permissions check complete (roles may already be granted)"
 
-      - name: Upload project ID artifact
+      - name: Upload project config artifact
         uses: actions/upload-artifact@v4
         with:
-          name: project-id
+          name: project-config
           path: .firebaserc
           retention-days: 1
 
@@ -404,7 +404,7 @@ jobs:
       - name: Download project config
         uses: actions/download-artifact@v4
         with:
-          name: project-id
+          name: project-config
           path: ./
 
       - name: Extract project ID
@@ -450,7 +450,7 @@ jobs:
       - name: Download project config
         uses: actions/download-artifact@v4
         with:
-          name: project-id
+          name: project-config
           path: ./
 
       - name: Extract project ID
@@ -496,7 +496,7 @@ jobs:
       - name: Download project config
         uses: actions/download-artifact@v4
         with:
-          name: project-id
+          name: project-config
           path: ./
 
       - name: Extract project ID
@@ -559,11 +559,8 @@ jobs:
       - name: Download project config
         uses: actions/download-artifact@v4
         with:
-          name: project-id
+          name: project-config
           path: ./
-
-      - name: Copy .firebaserc from dist to root
-        run: cp dist/.firebaserc .firebaserc
 
       - name: Extract project ID
         id: firebase-config
