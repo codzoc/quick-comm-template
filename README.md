@@ -14,8 +14,7 @@ A simple, browser-only React + Firebase e-commerce template designed for non-cod
 
 **Helpful Tools:**
 - 🔧 [JSON Validator](https://jsonformatter.curiousconcept.com/) - Validate Firebase config
-- 🖼️ [Image Compressor](https://tinyjpg.com/) - Compress product images
-- 📸 [Image Host](https://imgbb.com/) - Quick image URLs
+- 🖼️ Built-in image upload with automatic compression and optimization
 
 ---
 
@@ -113,10 +112,27 @@ Now updates only happen when you manually trigger the workflow.
 
 ---
 
+## ✨ Recent Updates
+
+### Image Upload & Management (New!)
+- **Built-in image upload** - No external hosting needed! Upload directly to Firebase Storage
+- **Automatic compression & resizing**:
+  - Product images: Max 1024px width, auto-compressed
+  - Logo images: Max 512px width, auto-compressed
+- **Multiple images per product** - Upload several images, first one is main display
+- **Image gallery slider** - Customers can click product images to view all images in a full-screen slider
+- **Logo upload** - Upload store logo and icon directly (height-based display)
+- **Static page images** - Upload images for About, Terms, Privacy pages
+
+All images are automatically optimized for fast loading and stored securely in Firebase Storage.
+
+---
+
 ## Features
 
 ### Customer-Facing
 - **Product catalog** with real-time search functionality
+- **Product image gallery** - click any product image to view multiple images in a full-screen slider
 - **Shopping cart** with real-time stock validation
 - **Customer accounts** with login/signup
   - Save multiple delivery addresses
@@ -140,17 +156,21 @@ Now updates only happen when you manually trigger the workflow.
 - **Admin accounts management**: Add/remove admin users by email
 - **Customer management**: View all customer accounts and order history
 - **Product management** (CRUD operations)
+  - **Multiple images per product** with automatic compression and resizing
+  - **Image upload** directly to Firebase Storage (no external hosting needed)
+  - **Automatic image optimization**: Products max 1024px width, auto-compressed
+  - **Image gallery slider** - customers can view all product images in a popup
 - **Order management** with status tracking (Pending, Processing, Completed, Cancelled)
 - Enhanced dashboard with order statistics and low stock alerts
 - **Store settings** with tabbed interface:
-  - **General**: Store name, logo, store icon, contact info, social media
+  - **General**: Store name, **logo upload**, **store icon upload**, contact info, social media
   - **Appearance**: Theme templates (Professional, Vibrant, Minimal, Elegant, Modern)
-  - **Pages**: WYSIWYG editor for About, Terms, Privacy pages
+  - **Pages**: WYSIWYG editor for About, Terms, Privacy pages with **image upload**
   - **SEO**: Meta title, description, keywords
   - **Pricing**: Currency symbol, tax percentage, shipping cost
   - **Payment**: Configure payment methods (COD, Stripe, Razorpay) and email notifications
 - Settings tab persistence via URL parameters
-- Logo and icon URL configuration (local paths or external URLs)
+- **Built-in image upload** with automatic compression (logos max 512px width)
 
 ### Security & Authentication
 - **Role-based access control**: Separate admin and customer sessions
@@ -181,8 +201,7 @@ Now updates only happen when you manually trigger the workflow.
 
 ### Helpful Tools
 - **JSON Validator**: [jsonformatter.curiousconcept.com](https://jsonformatter.curiousconcept.com/) - Validate and format your Firebase config JSON
-- **Image Compression**: [tinyjpg.com](https://tinyjpg.com/) - Compress product images for faster loading
-- **Temporary Image Hosting**: [imgbb.com](https://imgbb.com/) - Upload product images and get direct URLs
+- **Built-in Image Upload**: All images are automatically compressed and optimized when uploaded through the admin panel
 
 ---
 
@@ -224,7 +243,17 @@ Now updates only happen when you manually trigger the workflow.
 4. Enable "Email/Password"
 5. Click "Save"
 
-#### C. Enable Hosting
+#### C. Enable Storage ⚠️ **REQUIRED for Image Uploads**
+1. Go to "Build" > "Storage"
+2. Click "Get Started"
+3. Click "Next" through the setup wizard
+4. Choose "Start in production mode" (security rules will be deployed via GitHub Actions)
+5. Choose a location (same as Firestore recommended)
+6. Click "Done"
+
+**Important**: Storage is required for uploading product images, logos, and other assets. The security rules will be automatically deployed via GitHub Actions.
+
+#### D. Enable Hosting
 1. Go to "Build" > "Hosting"
 2. Click "Get Started"
 3. Follow the setup wizard (we'll deploy via GitHub Actions, so you can skip the CLI steps)
@@ -348,6 +377,8 @@ The first deployment will automatically set up everything you need:
    - Build your site
    - Deploy Firestore security rules
    - Deploy Firestore indexes
+   - Deploy Storage security rules
+   - Deploy Cloud Functions
    - Deploy to Firebase Hosting
 
 **Note**: You don't need to create any local `.env` or `.firebaserc` files - the GitHub Actions workflow handles everything automatically from your secrets!
@@ -366,8 +397,8 @@ You can customize your store in two ways:
 
 **General Tab**:
 - Store name
-- **Logo URL**: Enter `/images/logo.png` for local images or paste a direct URL (e.g., from imgbb.com)
-- **Store Icon**: Square icon for favicon and header (e.g., `/images/icon.png`)
+- **Logo Upload**: Upload your logo image directly (auto-compressed to max 512px width)
+- **Store Icon Upload**: Upload square icon/logo for favicon and header (auto-compressed to max 512px width)
 - Phone and WhatsApp numbers
 - Social media links (Facebook, Instagram, YouTube)
 
@@ -387,7 +418,7 @@ You can customize your store in two ways:
   - Links
   - Text colors
 - Edit About Us, Terms & Conditions, Privacy Policy
-- Add optional images for pages
+- **Upload images** for pages (auto-compressed to max 1024px width)
 
 **SEO Tab**:
 - SEO Title (50-60 characters)
@@ -405,13 +436,6 @@ You can customize your store in two ways:
 
 ### Option B: Through Code (Advanced)
 
-**Upload Your Logo**:
-1. Compress your logo using [tinyjpg.com](https://tinyjpg.com/)
-2. Go to `public/images/` folder in GitHub
-3. Click "Add file" > "Upload files"
-4. Upload your logo as `logo.png` and icon as `icon.png`
-5. Or use Admin Panel > Settings > General > Logo/Icon URL to set them
-
 **Customize Theme Manually**:
 1. Edit `src/config/theme.js` in GitHub:
    ```javascript
@@ -424,9 +448,7 @@ You can customize your store in two ways:
    ```
 2. The Google Font will load automatically!
 
-**Add Product Images**:
-- **Option 1**: Upload to `public/images/` and use paths like `/images/product-1.jpg`
-- **Option 2**: Compress images with [tinyjpg.com](https://tinyjpg.com/), upload to [imgbb.com](https://imgbb.com/), and use the direct URL
+**Note**: For images (logos, products), use the Admin Panel upload feature instead of manual file uploads. Images are automatically compressed and optimized.
 
 ---
 
@@ -514,15 +536,20 @@ After merging to `main`, GitHub Actions will deploy to production:
    - **Description**: Short description
    - **Price**: Regular price (in your selected currency)
    - **Discounted Price** (optional): Sale price - shows % OFF badge
-   - **Image Path**: Choose one option:
-     - Upload to `/public/images/` and use `/images/product-1.jpg`
-     - Or compress with [tinyjpg.com](https://tinyjpg.com/), upload to [imgbb.com](https://imgbb.com/), paste direct URL
+   - **Product Images**: 
+     - Click "Upload Images" to select one or more images
+     - Images are automatically compressed and resized (max 1024px width)
+     - First image is the main display image
+     - Additional images appear in a gallery slider when customers click the product image
+     - Preview images before saving
    - **Stock**: Available quantity (cart validates against this)
+   - **SEO Tags** (optional): Comma-separated keywords for search
 4. Click "Save"
 
 **Tips**:
-- Compress images before uploading for faster page loads
-- Use descriptive file names
+- Upload multiple images per product for better customer experience
+- Images are automatically optimized - no manual compression needed
+- First image is used as the main product image
 - Keep stock updated to prevent overselling
 
 ### Managing Orders
@@ -548,8 +575,8 @@ After merging to `main`, GitHub Actions will deploy to production:
 1. Go to admin panel > "Settings" tab
 2. **General Tab**:
    - Store name (appears in header and page title)
-   - **Logo URL**: Full logo image with store name (e.g., `/images/logo.png`)
-   - **Store Icon**: Square icon/logo for favicon and header (e.g., `/images/icon.png`)
+   - **Logo Upload**: Upload your full logo image (auto-compressed to max 512px width)
+   - **Store Icon Upload**: Upload square icon/logo for favicon and header (auto-compressed to max 512px width)
    - Contact information (phone, WhatsApp)
    - Social media links (Facebook, Instagram, YouTube)
 3. **Appearance Tab**:
@@ -558,7 +585,7 @@ After merging to `main`, GitHub Actions will deploy to production:
 4. **Pages Tab**:
    - **WYSIWYG Editor** for rich text formatting
    - Customize About Us, Terms, Privacy Policy pages
-   - Add images for pages (optional)
+   - **Upload images** for pages (auto-compressed to max 1024px width)
    - Supports: bold, italic, headings, lists, links, colors
 5. **SEO Tab**:
    - SEO Title (50-60 characters recommended)
@@ -780,9 +807,15 @@ For full functionality, your service account should have these roles:
 - Check browser console for errors
 
 ### Images Not Loading
-- Ensure images are uploaded to `public/images/`
-- Check image paths start with `/images/`
-- Verify image files are properly named
+- If using built-in upload feature:
+  - Ensure Firebase Storage is enabled in Firebase Console
+  - Verify Storage rules are deployed (check GitHub Actions logs)
+  - Make sure you're logged in as admin when uploading
+  - Check browser console for CORS errors (indicates Storage rules not deployed)
+- For legacy image paths:
+  - Ensure images are uploaded to `public/images/`
+  - Check image paths start with `/images/`
+  - Verify image files are properly named
 
 ---
 
@@ -1270,13 +1303,15 @@ A: Yes! Configure custom domain in Firebase Hosting settings
 A: Free for small stores (Firebase free tier). GitHub and Firebase both have generous free tiers.
 
 **Q: Where should I upload product images?**
-A: Three options:
-1. Upload to `/public/images/` in your repository (recommended for permanent images)
-2. Upload to [imgbb.com](https://imgbb.com/) for quick testing (get direct URLs)
-3. Use any image hosting service that provides direct image URLs
+A: Use the built-in image upload feature in the admin panel (recommended):
+- Click "Upload Images" when adding/editing products
+- Images are automatically compressed and resized (max 1024px width)
+- Multiple images per product supported - first image is main, others appear in gallery slider
+- Images are stored in Firebase Storage - no external hosting needed
+- Legacy option: Upload to `/public/images/` and use paths like `/images/product.jpg` (still supported)
 
 **Q: Should I compress my images?**
-A: Yes! Use [tinyjpg.com](https://tinyjpg.com/) to compress images before uploading. This makes your site load faster.
+A: Images are automatically compressed and optimized when uploaded through the admin panel. Product images are resized to max 1024px width, and logos to max 512px width. No manual compression needed!
 
 **Q: How do I validate my Firebase JSON config?**
 A: Use [jsonformatter.curiousconcept.com](https://jsonformatter.curiousconcept.com/) to validate and format your JSON correctly.

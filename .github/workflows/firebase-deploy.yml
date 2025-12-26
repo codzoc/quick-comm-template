@@ -130,6 +130,13 @@ jobs:
         env:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
+      - name: Deploy Storage Rules (Preview)
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only storage --project ${{ steps.firebase-config.outputs.project_id }}
+        env:
+          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
       - name: Install Functions Dependencies
         run: |
           cd functions
@@ -196,6 +203,13 @@ jobs:
         uses: w9jds/firebase-action@master
         with:
           args: deploy --only firestore --project ${{ steps.firebase-config.outputs.project_id }}
+        env:
+          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Deploy Storage Rules
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only storage --project ${{ steps.firebase-config.outputs.project_id }}
         env:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
