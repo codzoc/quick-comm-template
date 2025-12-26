@@ -3,6 +3,7 @@ import {
   doc,
   getDocs,
   getDoc,
+  addDoc,
   updateDoc,
   query,
   orderBy,
@@ -13,6 +14,7 @@ import {
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '../config/firebase';
 import { generateOrderId } from '../utils/orderIdGenerator';
+import { decreaseStock } from './products';
 
 const COLLECTION_NAME = 'orders';
 
@@ -28,28 +30,8 @@ const COLLECTION_NAME = 'orders';
  */
 export async function createOrder(orderData) {
   try {
-    // Check if email is provided and find matching customer (outside transaction)
-    // Note: This lookup is done outside transaction because queries can't be used inside transactions
-    // The customer linking is informational and doesn't affect order validity
-    let linkedCustomerId = orderData.customerId || null;
-
-    if (!linkedCustomerId && orderData.customer.email) {
-      try {
-        const customersRef = collection(db, 'customers');
-        const emailQuery = query(customersRef, where('email', '==', orderData.customer.email));
-        const emailSnapshot = await getDocs(emailQuery);
-
-        if (!emailSnapshot.empty) {
-          linkedCustomerId = emailSnapshot.docs[0].id;
-        }
-      } catch (err) {
-        // If customer lookup fails, continue without linking (guest checkout)
-        console.warn('Could not link customer by email:', err);
-      }
-    }
-
-    // Run as transaction to ensure stock is updated atomically with order creation
-    const orderResult = await runTransaction(db, async (transaction) => {
+    // Run as transaction to ensure stock is updated atomically
+    const orderId = await runTransaction(db, async (transaction) => {
       // Read all product data first and validate stock availability
       const productData = new Map();
 
@@ -75,13 +57,24 @@ export async function createOrder(orderData) {
         });
       }
 
-      // All reads complete - now we can do writes atomically
+      // All reads complete - now we can do writes
 
-      // Create order document reference
+      // Check if email is provided and find matching customer
+      let linkedCustomerId = orderData.customerId || null;
+
+      if (!linkedCustomerId && orderData.customer.email) {
+        // Query customers collection for matching email
+        const customersRef = collection(db, 'customers');
+        const emailQuery = query(customersRef, where('email', '==', orderData.customer.email));
+        const emailSnapshot = await getDocs(emailQuery);
+
+        if (!emailSnapshot.empty) {
+          linkedCustomerId = emailSnapshot.docs[0].id;
+        }
+      }
+
+      // Create order
       const ordersRef = collection(db, COLLECTION_NAME);
-      const orderDocRef = doc(ordersRef);
-      const orderId = orderDocRef.id;
-
       const newOrder = {
         orderId: generateOrderId(),
         items: orderData.items.map((item) => ({
@@ -108,8 +101,7 @@ export async function createOrder(orderData) {
         createdAt: serverTimestamp()
       };
 
-      // Create order inside transaction (atomic with stock updates)
-      transaction.set(orderDocRef, newOrder);
+      const docRef = await addDoc(ordersRef, newOrder);
 
       // Decrease stock for each product using previously read data
       for (const item of orderData.items) {
@@ -122,10 +114,10 @@ export async function createOrder(orderData) {
         });
       }
 
-      return { id: orderId, ...newOrder };
+      return { id: docRef.id, ...newOrder };
     });
 
-    return orderResult;
+    return orderId;
   } catch (error) {
     console.error('Error creating order:', error);
     throw new Error(error.message || 'Failed to place order. Please try again.');

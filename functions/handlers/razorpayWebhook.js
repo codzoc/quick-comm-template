@@ -56,47 +56,38 @@ module.exports = async (req, res) => {
         switch (event) {
             case 'payment.captured': {
                 // Get order ID from notes
-                // The orderId in notes is the Firestore document ID (set when creating Razorpay order)
                 const orderId = payload.notes?.orderId;
 
                 if (!orderId) {
-                    console.error('Order ID not found in payment notes. Payment:', payload.id);
-                    return res.status(400).send('Order ID missing from payment notes');
+                    console.error('Order ID not found in payment notes');
+                    return res.status(400).send('Order ID missing');
                 }
 
-                // Verify payment status - payment.captured should only fire for successful payments
-                // But we'll double-check the status field
-                if (payload.status !== 'captured' && payload.status !== 'authorized') {
-                    console.log(`Payment not successful for order ${orderId}. Status: ${payload.status}`);
-                    // Update order status to failed
-                    const orderRef = admin.firestore().collection('orders').doc(orderId);
-                    const orderDoc = await orderRef.get();
-                    if (orderDoc.exists) {
-                        await orderRef.update({
-                            paymentStatus: 'failed',
-                            paymentDetails: {
-                                error: `Payment status: ${payload.status}`,
-                                razorpayPaymentId: payload.id
-                            },
-                            updatedAt: admin.firestore.FieldValue.serverTimestamp()
-                        });
-                    }
-                    // Do NOT send confirmation email for failed payments
-                    return res.json({ status: 'ok' });
-                }
-
-                // Update order in Firestore using the document ID
+                // Get current order data to check if payment was already processed
                 const orderRef = admin.firestore().collection('orders').doc(orderId);
                 const orderDoc = await orderRef.get();
-
+                
                 if (!orderDoc.exists) {
-                    console.error(`Order document ${orderId} not found in Firestore`);
+                    console.error(`Order ${orderId} not found`);
                     return res.status(404).send('Order not found');
                 }
 
+                const orderData = orderDoc.data();
+                
+                // Check if payment was already processed (idempotency check)
+                // This prevents duplicate emails when webhooks are retried
+                const isAlreadyProcessed = orderData.paymentStatus === 'completed' || 
+                                         orderData.paymentStatus === 'paid';
+                
+                if (isAlreadyProcessed) {
+                    console.log(`Payment already processed for order ${orderId}, skipping duplicate processing`);
+                    return res.json({ status: 'ok', message: 'Already processed' });
+                }
+
+                // Update order in Firestore
                 await orderRef.update({
-                    status: 'paid',
-                    paymentStatus: 'paid',
+                    status: 'paid', // Changing status to 'paid' as requested
+                    paymentStatus: 'paid', // Changing paymentStatus to 'paid' as requested
                     transactionId: payload.id,
                     paymentDetails: {
                         razorpayPaymentId: payload.id,
@@ -109,10 +100,7 @@ module.exports = async (req, res) => {
                     updatedAt: admin.firestore.FieldValue.serverTimestamp()
                 });
 
-                // Get updated order data for email
-                const orderData = orderDoc.data();
-
-                // Send payment confirmation email ONLY if payment was successful
+                // Send payment confirmation email only if not already sent
                 if (orderData.customer?.email) {
                     await sendPaymentConfirmationEmail({
                         to: orderData.customer.email,
@@ -124,33 +112,23 @@ module.exports = async (req, res) => {
                     });
                 }
 
-                console.log(`Payment captured successfully for order ${orderId}`);
+                console.log(`Payment captured for order ${orderId}`);
                 break;
             }
 
             case 'payment.failed': {
-                // Get order ID from notes
                 const orderId = payload.notes?.orderId;
 
                 if (orderId) {
-                    const orderRef = admin.firestore().collection('orders').doc(orderId);
-                    const orderDoc = await orderRef.get();
+                    await admin.firestore().collection('orders').doc(orderId).update({
+                        paymentStatus: 'failed',
+                        paymentDetails: {
+                            error: payload.error_description || 'Payment failed'
+                        },
+                        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                    });
 
-                    if (orderDoc.exists) {
-                        await orderRef.update({
-                            paymentStatus: 'failed',
-                            paymentDetails: {
-                                error: payload.error_description || 'Payment failed'
-                            },
-                            updatedAt: admin.firestore.FieldValue.serverTimestamp()
-                        });
-
-                        console.log(`Payment failed for order ${orderId}`);
-                    } else {
-                        console.warn(`Order document ${orderId} not found for failed payment`);
-                    }
-                } else {
-                    console.warn('Order ID not found in payment.failed event');
+                    console.log(`Payment failed for order ${orderId}`);
                 }
                 break;
             }
