@@ -43,7 +43,7 @@ function AdminLayout({ children }) {
   const handleLogout = async () => {
     try {
       await signOut();
-      navigate('/admin/login');
+      navigate('/', { replace: true });
     } catch (error) {
       console.error('Error logging out:', error);
     }

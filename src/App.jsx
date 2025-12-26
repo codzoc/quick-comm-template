@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import StoreFront from './pages/StoreFront';
 import AdminLogin from './pages/admin/Login';
 import AdminDashboard from './pages/admin/Dashboard';
@@ -37,6 +37,7 @@ function App() {
         } />
 
         {/* Admin Routes */}
+        <Route path="/admin/login" element={<Navigate to="/admin" replace />} />
         <Route path="/admin" element={<AdminLogin />} />
         <Route path="/admin/dashboard" element={
           <AdminProtectedRoute>
