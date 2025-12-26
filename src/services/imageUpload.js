@@ -1,5 +1,6 @@
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { storage } from '../config/firebase';
+import { storage, auth } from '../config/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 import imageCompression from 'browser-image-compression';
 
 /**
@@ -32,6 +33,33 @@ async function compressImage(file, maxWidth, maxSizeMB = 1) {
 }
 
 /**
+ * Check if user is authenticated and get current user
+ * @returns {Promise<{authenticated: boolean, user: any}>}
+ */
+function checkAuth() {
+  return new Promise((resolve) => {
+    // Check current user first (synchronous)
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+      resolve({ authenticated: true, user: currentUser });
+      return;
+    }
+    
+    // If no current user, wait for auth state change
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      unsubscribe();
+      resolve({ authenticated: !!user, user });
+    });
+    
+    // Timeout after 2 seconds
+    setTimeout(() => {
+      unsubscribe();
+      resolve({ authenticated: false, user: null });
+    }, 2000);
+  });
+}
+
+/**
  * Upload image to Firebase Storage
  * @param {File} file - Image file to upload
  * @param {string} path - Storage path (e.g., 'products/image.jpg')
@@ -39,22 +67,47 @@ async function compressImage(file, maxWidth, maxSizeMB = 1) {
  */
 async function uploadImageToStorage(file, path) {
   try {
+    // Verify user is authenticated before uploading
+    const authState = await checkAuth();
+    if (!authState.authenticated || !authState.user) {
+      console.error('Upload failed: User not authenticated', {
+        currentUser: auth.currentUser,
+        authState
+      });
+      throw new Error('You must be logged in to upload images. Please log in as an admin and try again.');
+    }
+
+    console.log('Uploading image with authenticated user:', {
+      email: authState.user.email,
+      uid: authState.user.uid,
+      path,
+      tokenEmail: authState.user.email, // This should match Firestore document ID exactly
+      note: 'Make sure this email exactly matches (case-sensitive) the document ID in Firestore admins collection'
+    });
+
     const storageRef = ref(storage, path);
     await uploadBytes(storageRef, file);
     const downloadURL = await getDownloadURL(storageRef);
     return downloadURL;
   } catch (error) {
     console.error('Error uploading image:', error);
+    console.error('Error details:', {
+      code: error.code,
+      message: error.message,
+      serverResponse: error.serverResponse,
+      currentUser: auth.currentUser?.email || 'Not authenticated'
+    });
     
     // Provide more specific error messages
     if (error.code === 'storage/unauthorized') {
-      throw new Error('You do not have permission to upload images. Please make sure you are logged in as an admin.');
+      throw new Error('You do not have permission to upload images. Please make sure: 1) You are logged in as an admin, 2) Your email is in the admins collection in Firestore, 3) Storage rules are deployed.');
     } else if (error.code === 'storage/canceled') {
       throw new Error('Upload was canceled.');
     } else if (error.code === 'storage/unknown') {
       throw new Error('An unknown error occurred. Please check your internet connection and try again.');
-    } else if (error.message && error.message.includes('CORS')) {
-      throw new Error('CORS error: Please make sure Firebase Storage rules are deployed. Run: firebase deploy --only storage');
+    } else if (error.message && (error.message.includes('CORS') || error.message.includes('preflight') || error.message.includes('XMLHttpRequest'))) {
+      const userEmail = auth.currentUser?.email || 'Not logged in';
+      throw new Error(`CORS error detected. This usually means: 1) You are not authenticated (current: ${userEmail}), 2) Storage rules are not deployed, or 3) Your email is not in the admins collection. Please log out and log back in as admin, then verify your email is in Firestore admins collection.`);
     }
     
     throw new Error(error.message || 'Failed to upload image. Please try again.');
