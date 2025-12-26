@@ -20,6 +20,7 @@ service cloud.firestore {
     }
 
     // Admins collection - read for authenticated users, write for admins only
+    // Note: Storage rules can read Firestore regardless of these rules (server-side)
     match /admins/{email} {
       allow read: if request.auth != null;
       allow write: if isAdmin();

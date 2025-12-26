@@ -4,10 +4,14 @@ service firebase.storage {
     // Helper function to check if user is admin
     // Storage rules can access email via request.auth.token.email
     function isAdmin() {
+      // Must be authenticated
       return request.auth != null 
+        // Must have email in token
         && request.auth.token.email != null
+        // Check if admin document exists in Firestore
         && firestore.exists(/databases/(default)/documents/admins/$(request.auth.token.email))
-        && firestore.get(/databases/(default)/documents/admins/$(request.auth.token.email)).data.role == 'admin';
+        // Verify role is 'admin'
+        && firestore.get(/databases/(default)/documents/admins/$(request.auth.token.email)).data.get('role', '') == 'admin';
     }
 
     // Products folder - only admins can upload/delete, everyone can read

@@ -115,11 +115,23 @@ function AdminProducts() {
     setUploadingImages(true);
     try {
       let finalFormData = { ...formData };
+      let productId = editingProduct?.id;
       
-      // Upload new images if any
+      // For new products, create product first to get the ID, then upload images
+      if (!editingProduct) {
+        // Create product without images first to get the product ID
+        const tempFormData = { ...finalFormData };
+        tempFormData.images = [];
+        tempFormData.imagePath = '';
+        productId = await createProduct(tempFormData);
+        console.log('Created product with ID:', productId);
+      }
+      
+      // Upload new images if any (now we have the real product ID)
       if (imageFiles.length > 0) {
-        const productId = editingProduct?.id || 'temp';
-        const uploadedUrls = await uploadProductImages(imageFiles, productId);
+        const uploadProductId = productId || 'temp';
+        console.log('Uploading images with product ID:', uploadProductId);
+        const uploadedUrls = await uploadProductImages(imageFiles, uploadProductId);
         
         // Merge with existing images
         const existingImages = formData.images || [];
@@ -138,17 +150,18 @@ function AdminProducts() {
       delete finalFormData.imageFiles;
       
       if (editingProduct) {
+        // Update existing product with new images
         await updateProduct(editingProduct.id, finalFormData);
       } else {
-        const productId = await createProduct(finalFormData);
-        // If we used 'temp' as productId, we might want to rename the files
-        // For now, we'll keep the temp prefix as it's still unique
+        // Update the newly created product with images
+        await updateProduct(productId, finalFormData);
       }
       
       setShowModal(false);
       setImageFiles([]);
       loadProducts();
     } catch (err) {
+      console.error('Error in handleSubmit:', err);
       alert(err.message);
     } finally {
       setUploadingImages(false);

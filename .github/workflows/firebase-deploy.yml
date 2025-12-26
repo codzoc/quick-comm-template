@@ -123,6 +123,25 @@ jobs:
           PROJECT_ID=$(cat .firebaserc | jq -r '.projects.default')
           echo "project_id=$PROJECT_ID" >> $GITHUB_OUTPUT
 
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Grant Storage Service Account IAM Role for Firestore Access
+        run: |
+          PROJECT_ID="${{ steps.firebase-config.outputs.project_id }}"
+          # Get the default Storage service account email
+          STORAGE_SA="service-$(gcloud projects describe $PROJECT_ID --format='value(projectNumber)')@gs-project-accounts.iam.gserviceaccount.com"
+          echo "Granting Datastore User role to Storage service account: $STORAGE_SA"
+          gcloud projects add-iam-policy-binding $PROJECT_ID \
+            --member="serviceAccount:$STORAGE_SA" \
+            --role="roles/datastore.user" \
+            --condition=None || echo "Role may already be granted, continuing..."
+
       - name: Deploy Firestore Rules and Indexes (Preview)
         uses: w9jds/firebase-action@master
         with:
@@ -198,6 +217,25 @@ jobs:
         run: |
           PROJECT_ID=$(cat .firebaserc | jq -r '.projects.default')
           echo "project_id=$PROJECT_ID" >> $GITHUB_OUTPUT
+
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Grant Storage Service Account IAM Role for Firestore Access
+        run: |
+          PROJECT_ID="${{ steps.firebase-config.outputs.project_id }}"
+          # Get the default Storage service account email
+          STORAGE_SA="service-$(gcloud projects describe $PROJECT_ID --format='value(projectNumber)')@gs-project-accounts.iam.gserviceaccount.com"
+          echo "Granting Datastore User role to Storage service account: $STORAGE_SA"
+          gcloud projects add-iam-policy-binding $PROJECT_ID \
+            --member="serviceAccount:$STORAGE_SA" \
+            --role="roles/datastore.user" \
+            --condition=None || echo "Role may already be granted, continuing..."
 
       - name: Deploy Firestore Rules and Indexes
         uses: w9jds/firebase-action@master
