@@ -20,9 +20,10 @@ import {
   Chip,
   Grid
 } from '@mui/material';
-import { Edit, Trash2, Plus, X } from 'lucide-react';
+import { Edit, Trash2, Plus, X, Upload, Trash } from 'lucide-react';
 import { onAuthChange } from '../../services/auth';
 import { getAllProducts, createProduct, updateProduct, deleteProduct } from '../../services/products';
+import { uploadProductImages, deleteImage } from '../../services/imageUpload';
 import AdminLayout from '../../components/AdminLayout';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ErrorMessage from '../../components/ErrorMessage';
@@ -39,10 +40,13 @@ function AdminProducts() {
     description: '',
     price: '',
     discountedPrice: '',
-    imagePath: '/images/placeholder.png',
+    images: [], // Array of image URLs
+    imagePath: '', // Legacy support
     stock: '',
     tags: ''
   });
+  const [imageFiles, setImageFiles] = useState([]);
+  const [uploadingImages, setUploadingImages] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -72,20 +76,27 @@ function AdminProducts() {
       description: '',
       price: '',
       discountedPrice: '',
-      imagePath: '/images/placeholder.png',
+      images: [],
+      imagePath: '',
       stock: '',
       tags: ''
     });
+    setImageFiles([]);
     setShowModal(true);
   };
 
   const handleEdit = (product) => {
     setEditingProduct(product);
+    // Support both new format (images array) and legacy (imagePath)
+    const images = product.images || (product.imagePath ? [product.imagePath] : []);
     setFormData({
       ...product,
+      images: images,
+      imagePath: product.imagePath || '',
       discountedPrice: product.discountedPrice || '',
       tags: product.tags || ''
     });
+    setImageFiles([]);
     setShowModal(true);
   };
 
@@ -101,16 +112,46 @@ function AdminProducts() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setUploadingImages(true);
     try {
-      if (editingProduct) {
-        await updateProduct(editingProduct.id, formData);
-      } else {
-        await createProduct(formData);
+      let finalFormData = { ...formData };
+      
+      // Upload new images if any
+      if (imageFiles.length > 0) {
+        const productId = editingProduct?.id || 'temp';
+        const uploadedUrls = await uploadProductImages(imageFiles, productId);
+        
+        // Merge with existing images
+        const existingImages = formData.images || [];
+        finalFormData.images = [...existingImages, ...uploadedUrls];
+        
+        // Set imagePath for backward compatibility (use first image)
+        if (finalFormData.images.length > 0) {
+          finalFormData.imagePath = finalFormData.images[0];
+        }
+      } else if (finalFormData.images.length > 0) {
+        // Ensure imagePath is set for backward compatibility
+        finalFormData.imagePath = finalFormData.images[0];
       }
+      
+      // Remove imageFiles from formData before saving
+      delete finalFormData.imageFiles;
+      
+      if (editingProduct) {
+        await updateProduct(editingProduct.id, finalFormData);
+      } else {
+        const productId = await createProduct(finalFormData);
+        // If we used 'temp' as productId, we might want to rename the files
+        // For now, we'll keep the temp prefix as it's still unique
+      }
+      
       setShowModal(false);
+      setImageFiles([]);
       loadProducts();
     } catch (err) {
       alert(err.message);
+    } finally {
+      setUploadingImages(false);
     }
   };
 
@@ -118,6 +159,29 @@ function AdminProducts() {
     if (stock === 0) return { label: 'Out of Stock', color: 'error' };
     if (stock < 5) return { label: 'Low Stock', color: 'warning' };
     return { label: 'In Stock', color: 'success' };
+  };
+
+  const handleImageFilesChange = (e) => {
+    const files = Array.from(e.target.files);
+    setImageFiles([...imageFiles, ...files]);
+    e.target.value = ''; // Reset input
+  };
+
+  const removeImageFile = (index) => {
+    setImageFiles(imageFiles.filter((_, i) => i !== index));
+  };
+
+  const removeUploadedImage = (index) => {
+    const newImages = formData.images.filter((_, i) => i !== index);
+    setFormData({ ...formData, images: newImages, imagePath: newImages[0] || '' });
+  };
+
+  // Get display image (first image from array or legacy imagePath)
+  const getDisplayImage = (product) => {
+    if (product.images && product.images.length > 0) {
+      return product.images[0];
+    }
+    return product.imagePath || '/images/placeholder.png';
   };
 
   if (loading) {
@@ -166,7 +230,7 @@ function AdminProducts() {
                     <TableCell>
                       <Box
                         component="img"
-                        src={product.imagePath || '/images/placeholder.png'}
+                        src={getDisplayImage(product)}
                         alt={product.title}
                         sx={{
                           width: 60,
@@ -176,7 +240,15 @@ function AdminProducts() {
                           border: '1px solid',
                           borderColor: 'divider'
                         }}
+                        onError={(e) => {
+                          e.target.src = '/images/placeholder.png';
+                        }}
                       />
+                      {(product.images && product.images.length > 1) && (
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                          +{product.images.length - 1} more
+                        </Typography>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Box>
@@ -268,7 +340,7 @@ function AdminProducts() {
         fullWidth
       >
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+          <Typography component="span" variant="h6" sx={{ fontWeight: 600 }}>
             {editingProduct ? 'Edit Product' : 'Add Product'}
           </Typography>
           <IconButton size="small" onClick={() => setShowModal(false)}>
@@ -324,18 +396,148 @@ function AdminProducts() {
                   helperText="Leave empty if no discount"
                 />
               </Grid>
-              <Grid item xs={8}>
-                <TextField
-                  fullWidth
-                  label="Image Path"
-                  value={formData.imagePath}
-                  onChange={(e) => setFormData({ ...formData, imagePath: e.target.value })}
-                  required
-                  placeholder="/images/product.jpg"
-                  helperText="Path to product image in /public folder"
+              <Grid item xs={12}>
+                <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
+                  Product Images *
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                  Upload one or more images. First image will be the main display image. Max width: 1024px, auto-compressed.
+                </Typography>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageFilesChange}
+                  style={{ display: 'none' }}
+                  id="product-image-upload"
                 />
+                <label htmlFor="product-image-upload">
+                  <Button
+                    component="span"
+                    variant="outlined"
+                    startIcon={<Upload size={18} />}
+                    sx={{ mb: 2 }}
+                  >
+                    Upload Images
+                  </Button>
+                </label>
+                
+                {/* Preview uploaded images */}
+                {formData.images && formData.images.length > 0 && (
+                  <Box sx={{ mt: 2, mb: 2 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                      Uploaded Images:
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                      {formData.images.map((url, index) => (
+                        <Box key={index} sx={{ position: 'relative' }}>
+                          <Box
+                            component="img"
+                            src={url}
+                            alt={`Product image ${index + 1}`}
+                            sx={{
+                              width: 80,
+                              height: 80,
+                              objectFit: 'cover',
+                              borderRadius: 1,
+                              border: '1px solid',
+                              borderColor: 'divider'
+                            }}
+                            onError={(e) => {
+                              e.target.src = '/images/placeholder.png';
+                            }}
+                          />
+                          {index === 0 && (
+                            <Chip
+                              label="Main"
+                              size="small"
+                              color="primary"
+                              sx={{
+                                position: 'absolute',
+                                top: -8,
+                                left: -8,
+                                fontSize: '10px',
+                                height: '20px'
+                              }}
+                            />
+                          )}
+                          <IconButton
+                            size="small"
+                            onClick={() => removeUploadedImage(index)}
+                            sx={{
+                              position: 'absolute',
+                              top: -8,
+                              right: -8,
+                              backgroundColor: 'error.main',
+                              color: 'white',
+                              width: 24,
+                              height: 24,
+                              '&:hover': {
+                                backgroundColor: 'error.dark'
+                              }
+                            }}
+                          >
+                            <X size={14} />
+                          </IconButton>
+                        </Box>
+                      ))}
+                    </Box>
+                  </Box>
+                )}
+                
+                {/* Preview new image files to upload */}
+                {imageFiles.length > 0 && (
+                  <Box sx={{ mt: 2, mb: 2 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                      New Images to Upload:
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                      {imageFiles.map((file, index) => (
+                        <Box key={index} sx={{ position: 'relative' }}>
+                          <Box
+                            component="img"
+                            src={URL.createObjectURL(file)}
+                            alt={`Preview ${index + 1}`}
+                            sx={{
+                              width: 80,
+                              height: 80,
+                              objectFit: 'cover',
+                              borderRadius: 1,
+                              border: '1px solid',
+                              borderColor: 'divider'
+                            }}
+                          />
+                          <IconButton
+                            size="small"
+                            onClick={() => removeImageFile(index)}
+                            sx={{
+                              position: 'absolute',
+                              top: -8,
+                              right: -8,
+                              backgroundColor: 'error.main',
+                              color: 'white',
+                              width: 24,
+                              height: 24,
+                              '&:hover': {
+                                backgroundColor: 'error.dark'
+                              }
+                            }}
+                          >
+                            <X size={14} />
+                          </IconButton>
+                        </Box>
+                      ))}
+                    </Box>
+                  </Box>
+                )}
+                
+                {(!formData.images || formData.images.length === 0) && imageFiles.length === 0 && (
+                  <Typography variant="caption" color="error" sx={{ display: 'block', mt: 1 }}>
+                    At least one image is required
+                  </Typography>
+                )}
               </Grid>
-              <Grid item xs={4}>
+              <Grid item xs={12}>
                 <TextField
                   fullWidth
                   label="Stock Quantity"
@@ -357,39 +559,14 @@ function AdminProducts() {
                   helperText="Comma-separated keywords for search optimization"
                 />
               </Grid>
-              {formData.imagePath && (
-                <Grid item xs={12}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      Image Preview:
-                    </Typography>
-                    <Box
-                      component="img"
-                      src={formData.imagePath}
-                      alt="Preview"
-                      sx={{
-                        width: 80,
-                        height: 80,
-                        objectFit: 'cover',
-                        borderRadius: 1,
-                        border: '1px solid',
-                        borderColor: 'divider'
-                      }}
-                      onError={(e) => {
-                        e.target.src = '/images/placeholder.png';
-                      }}
-                    />
-                  </Box>
-                </Grid>
-              )}
             </Grid>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setShowModal(false)}>
               Cancel
             </Button>
-            <Button type="submit" variant="contained">
-              {editingProduct ? 'Update Product' : 'Add Product'}
+            <Button type="submit" variant="contained" disabled={uploadingImages}>
+              {uploadingImages ? 'Uploading Images...' : editingProduct ? 'Update Product' : 'Add Product'}
             </Button>
           </DialogActions>
         </form>

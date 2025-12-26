@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ShoppingBag, AlertCircle } from 'lucide-react';
+import ProductImageSlider from './ProductImageSlider';
 import './ProductCard.css';
 
 /**
@@ -7,14 +8,19 @@ import './ProductCard.css';
  * Displays individual product with image, details, and add to cart button
  *
  * Props:
- * - product: {id, title, description, price, discountedPrice, imagePath, stock}
+ * - product: {id, title, description, price, discountedPrice, imagePath, images, stock}
  * - onAddToCart: Callback function when "Add to Cart" is clicked
  * - currencySymbol: Currency symbol to display (default: ₹)
  */
 function ProductCard({ product, onAddToCart, currencySymbol = '₹' }) {
-  const { title, description, price, discountedPrice, imagePath, stock } = product;
+  const { title, description, price, discountedPrice, imagePath, images, stock } = product;
   const isOutOfStock = stock === 0;
   const hasDiscount = discountedPrice && discountedPrice < price;
+  const [showSlider, setShowSlider] = useState(false);
+
+  // Support both new format (images array) and legacy (imagePath)
+  const productImages = images && images.length > 0 ? images : (imagePath ? [imagePath] : ['/images/placeholder.png']);
+  const mainImage = productImages[0];
 
   const handleAddToCart = () => {
     if (!isOutOfStock && onAddToCart) {
@@ -22,18 +28,30 @@ function ProductCard({ product, onAddToCart, currencySymbol = '₹' }) {
     }
   };
 
+  const handleImageClick = () => {
+    // Always allow opening slider, even with just one image (including placeholder)
+    setShowSlider(true);
+  };
+
   return (
     <div className="product-card">
       {/* Product Image */}
-      <div className="product-image-container">
+      <div className="product-image-container" onClick={handleImageClick} style={{ cursor: 'pointer' }}>
         <img
-          src={imagePath}
+          src={mainImage}
           alt={title}
           className="product-image"
+          loading="lazy"
+          decoding="async"
           onError={(e) => {
             e.target.src = '/images/placeholder.png';
           }}
         />
+        {productImages.length > 1 && (
+          <div className="multiple-images-indicator">
+            {productImages.length} images
+          </div>
+        )}
         {isOutOfStock && (
           <div className="out-of-stock-badge">Out of Stock</div>
         )}
@@ -43,6 +61,14 @@ function ProductCard({ product, onAddToCart, currencySymbol = '₹' }) {
           </div>
         )}
       </div>
+
+      {/* Image Slider Modal */}
+      <ProductImageSlider
+        images={productImages}
+        isOpen={showSlider}
+        onClose={() => setShowSlider(false)}
+        initialIndex={0}
+      />
 
       {/* Product Details */}
       <div className="product-details">

@@ -72,32 +72,31 @@ function StoreFront() {
     pin: ''
   });
 
-  // Warmup Cloud Functions
+  // Warmup Cloud Functions (deferred to not block initial render)
   useEffect(() => {
-    const warmUpFunctions = async () => {
-      try {
-        // 1. Generic Warmup
-        const warmupFn = httpsCallable(functions, 'warmup');
-        warmupFn().catch(err => console.log('Generic warmup failed', err));
+    // Delay warmup by 2 seconds to not compete with critical initial load
+    const warmupTimer = setTimeout(() => {
+      const warmUpFunctions = async () => {
+        try {
+          // 1. Generic Warmup
+          const warmupFn = httpsCallable(functions, 'warmup');
+          warmupFn().catch(() => {}); // Silently fail - non-critical
 
-        // 2. Razorpay Order Creation Warmup (HTTP Trigger)
-        fetch('/api/razorpay/create-order', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ warmup: true })
-        }).catch(err => console.log('Razorpay warmup failed', err));
+          // 2. Razorpay Order Creation Warmup (HTTP Trigger)
+          fetch('/api/razorpay/create-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ warmup: true })
+          }).catch(() => {}); // Silently fail - non-critical
+        } catch (error) {
+          // Silently fail - warmup is non-critical
+        }
+      };
 
-        // 3. Refund Order Warmup (Callable) - Only if user is admin? 
-        // Actually refundOrder requires auth. If user is guest, this fails.
-        // So we should NOT warm up refundOrder here unless we are logged in as admin.
-        // But createRazorpayOrder is public.
+      warmUpFunctions();
+    }, 2000); // 2 second delay
 
-      } catch (error) {
-        console.log('Warmup sequence error', error);
-      }
-    };
-
-    warmUpFunctions();
+    return () => clearTimeout(warmupTimer);
   }, []);
   const [formErrors, setFormErrors] = useState({});
 

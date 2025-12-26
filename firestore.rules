@@ -79,16 +79,19 @@ service cloud.firestore {
       allow read: if true;
 
       allow create: if isAdmin()
-        && hasRequiredFields(request.resource.data, ['title', 'description', 'price', 'imagePath', 'stock'])
+        && hasRequiredFields(request.resource.data, ['title', 'description', 'price', 'stock'])
         && request.resource.data.title is string
         && request.resource.data.description is string
         && request.resource.data.price is number
         && request.resource.data.price >= 0
         && request.resource.data.stock is number
-        && request.resource.data.stock >= 0;
+        && request.resource.data.stock >= 0
+        // Must have either imagePath or images array
+        && (request.resource.data.keys().hasAny(['imagePath']) || 
+            (request.resource.data.keys().hasAny(['images']) && request.resource.data.images is list));
 
       allow update: if isAdmin()
-        && request.resource.data.keys().hasAny(['title', 'description', 'price', 'discountedPrice', 'imagePath', 'stock', 'tags', 'updatedAt']);
+        && request.resource.data.keys().hasAny(['title', 'description', 'price', 'discountedPrice', 'imagePath', 'images', 'stock', 'tags', 'updatedAt']);
 
       // Allow public to update stock during order transactions (stock decrease only)
       allow update: if request.resource.data.stock is number

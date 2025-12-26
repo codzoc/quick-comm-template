@@ -197,10 +197,10 @@ function Customers() {
                 >
                     <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <Box>
-                            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                            <Typography component="span" variant="h6" sx={{ fontWeight: 600 }}>
                                 Orders for {selectedCustomer?.name}
                             </Typography>
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography component="span" variant="caption" color="text.secondary">
                                 {selectedCustomer?.email}
                             </Typography>
                         </Box>

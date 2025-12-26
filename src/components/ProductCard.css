@@ -64,6 +64,19 @@
   font-weight: var(--font-weight-bold);
 }
 
+.multiple-images-indicator {
+  position: absolute;
+  bottom: var(--spacing-sm);
+  right: var(--spacing-sm);
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  backdrop-filter: blur(4px);
+}
+
 /* Product Details */
 .product-details {
   padding: var(--spacing-md);

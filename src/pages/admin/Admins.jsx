@@ -206,7 +206,7 @@ function Admins() {
                     fullWidth
                 >
                     <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 600 }}>Add Admin User</Typography>
+                        <Typography component="span" variant="h6" sx={{ fontWeight: 600 }}>Add Admin User</Typography>
                         <IconButton size="small" onClick={() => setShowPromoteModal(false)}>
                             <X size={20} />
                         </IconButton>

@@ -500,7 +500,7 @@ Thank you for shopping with us!
                           <TableCell>
                             <Box
                               component="img"
-                              src={item.imagePath || '/images/placeholder.png'}
+                              src={(item.images && item.images.length > 0) ? item.images[0] : (item.imagePath || '/images/placeholder.png')}
                               alt={item.title}
                               sx={{
                                 width: 50,
@@ -676,7 +676,7 @@ Thank you for shopping with us!
       >
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <MessageCircle size={24} />
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+          <Typography component="span" variant="h6" sx={{ fontWeight: 600 }}>
             Send WhatsApp Notification
           </Typography>
         </DialogTitle>

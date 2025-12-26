@@ -572,7 +572,7 @@ const CustomerAccount = () => {
                                                                     width: '48px', height: '48px',
                                                                     backgroundColor: '#f3f4f6',
                                                                     borderRadius: '8px',
-                                                                    backgroundImage: `url(${item.imagePath || item.product?.imagePath || '/images/placeholder.png'})`,
+                                                                    backgroundImage: `url(${(item.images && item.images.length > 0) ? item.images[0] : (item.imagePath || item.product?.images?.[0] || item.product?.imagePath || '/images/placeholder.png')})`,
                                                                     backgroundSize: 'cover',
                                                                     backgroundPosition: 'center'
                                                                 }}></div>

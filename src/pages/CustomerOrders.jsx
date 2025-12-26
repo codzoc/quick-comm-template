@@ -286,7 +286,7 @@ function CustomerOrders() {
                                                                     width: '50px', height: '50px',
                                                                     backgroundColor: 'var(--color-background)',
                                                                     borderRadius: '8px',
-                                                                    backgroundImage: `url(${item.imagePath || item.product?.imagePath || '/images/placeholder.png'})`,
+                                                                    backgroundImage: `url(${(item.images && item.images.length > 0) ? item.images[0] : (item.imagePath || item.product?.images?.[0] || item.product?.imagePath || '/images/placeholder.png')})`,
                                                                     backgroundSize: 'cover',
                                                                     backgroundPosition: 'center'
                                                                 }}></div>

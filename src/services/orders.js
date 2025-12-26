@@ -77,15 +77,22 @@ export async function createOrder(orderData) {
       const ordersRef = collection(db, COLLECTION_NAME);
       const newOrder = {
         orderId: generateOrderId(),
-        items: orderData.items.map((item) => ({
-          productId: item.product.id,
-          title: item.product.title,
-          price: item.product.discountedPrice || item.product.price,
-          quantity: item.quantity,
-          imagePath: item.product.imagePath,
-          subtotal:
-            (item.product.discountedPrice || item.product.price) * item.quantity
-        })),
+        items: orderData.items.map((item) => {
+          // Support both new format (images array) and legacy (imagePath)
+          const productImage = (item.product.images && item.product.images.length > 0) 
+            ? item.product.images[0] 
+            : (item.product.imagePath || '/images/placeholder.png');
+          return {
+            productId: item.product.id,
+            title: item.product.title,
+            price: item.product.discountedPrice || item.product.price,
+            quantity: item.quantity,
+            imagePath: productImage, // Store first image for backward compatibility
+            images: item.product.images || (item.product.imagePath ? [item.product.imagePath] : []),
+            subtotal:
+              (item.product.discountedPrice || item.product.price) * item.quantity
+          };
+        }),
         customer: orderData.customer,
         customerId: linkedCustomerId, // Link to customer account if found
         status: 'pending',

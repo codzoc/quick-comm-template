@@ -14,7 +14,9 @@ import './CartItem.css';
  */
 function CartItem({ item, onUpdateQuantity, onRemove, currencySymbol = '₹' }) {
   const { product, quantity } = item;
-  const { id, title, imagePath, price, discountedPrice } = product;
+  const { id, title, imagePath, images, price, discountedPrice } = product;
+  // Support both new format (images array) and legacy (imagePath)
+  const displayImage = (images && images.length > 0) ? images[0] : (imagePath || '/images/placeholder.png');
   const finalPrice = discountedPrice || price;
   const subtotal = finalPrice * quantity;
 
@@ -47,7 +49,7 @@ function CartItem({ item, onUpdateQuantity, onRemove, currencySymbol = '₹' }) 
       {/* Product Image */}
       <div className="cart-item-image-container">
         <img
-          src={imagePath}
+          src={displayImage}
           alt={title}
           className="cart-item-image"
           onError={(e) => {

@@ -77,14 +77,21 @@ async function initializeTheme() {
   }
 }
 
-// Initialize theme and render app
-initializeTheme().then((storeInfo) => {
-  ReactDOM.createRoot(document.getElementById('root')).render(
-    <React.StrictMode>
-      <CartProvider>
-        <FaviconLoader iconUrl={storeInfo?.storeIcon} />
-        <App />
-      </CartProvider>
-    </React.StrictMode>
-  );
+// Render app immediately (non-blocking)
+const root = ReactDOM.createRoot(document.getElementById('root'));
+
+root.render(
+  <React.StrictMode>
+    <CartProvider>
+      <FaviconLoader />
+      <App />
+    </CartProvider>
+  </React.StrictMode>
+);
+
+// Load theme and store info in background (non-blocking)
+// This doesn't block initial render - theme will apply when ready
+initializeTheme().catch((error) => {
+  console.error('Error loading theme (non-critical):', error);
+  // App continues to work with default theme from theme.css
 });
