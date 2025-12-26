@@ -297,13 +297,6 @@ jobs:
           include-hidden-files: true
           retention-days: 1
 
-      - name: Upload project ID
-        uses: actions/upload-artifact@v4
-        with:
-          name: project-config
-          path: .firebaserc
-          retention-days: 1
-
   # Setup Firebase permissions and authentication (runs once for all deployment jobs)
   setup-firebase:
     runs-on: ubuntu-latest
@@ -384,12 +377,6 @@ jobs:
           
           echo "✅ Firebase permissions check complete (roles may already be granted)"
 
-      - name: Upload project config artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: project-config
-          path: .firebaserc
-          retention-days: 1
 
   # Deploy Firestore (rules and indexes) - runs in parallel with other deployments
   deploy-firestore:
@@ -401,11 +388,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Download project config
-        uses: actions/download-artifact@v4
-        with:
-          name: project-config
-          path: ./
+      - name: Create .firebaserc from config
+        run: |
+          echo '${{ secrets.VITE_FIREBASE_CONFIG }}' > config.json
+          cat config.json | jq '{projects: {default: .projectId}}' > .firebaserc
+          rm config.json
 
       - name: Extract project ID
         id: firebase-config
@@ -447,11 +434,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Download project config
-        uses: actions/download-artifact@v4
-        with:
-          name: project-config
-          path: ./
+      - name: Create .firebaserc from config
+        run: |
+          echo '${{ secrets.VITE_FIREBASE_CONFIG }}' > config.json
+          cat config.json | jq '{projects: {default: .projectId}}' > .firebaserc
+          rm config.json
 
       - name: Extract project ID
         id: firebase-config
@@ -493,11 +480,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Download project config
-        uses: actions/download-artifact@v4
-        with:
-          name: project-config
-          path: ./
+      - name: Create .firebaserc from config
+        run: |
+          echo '${{ secrets.VITE_FIREBASE_CONFIG }}' > config.json
+          cat config.json | jq '{projects: {default: .projectId}}' > .firebaserc
+          rm config.json
 
       - name: Extract project ID
         id: firebase-config
@@ -556,11 +543,11 @@ jobs:
           name: build-output
           path: dist/
 
-      - name: Download project config
-        uses: actions/download-artifact@v4
-        with:
-          name: project-config
-          path: ./
+      - name: Create .firebaserc from config
+        run: |
+          echo '${{ secrets.VITE_FIREBASE_CONFIG }}' > config.json
+          cat config.json | jq '{projects: {default: .projectId}}' > .firebaserc
+          rm config.json
 
       - name: Extract project ID
         id: firebase-config
