@@ -615,6 +615,12 @@ After merging to `main`, GitHub Actions will deploy to production:
    - Set up Stripe for credit/debit card payments
    - Set up Razorpay for UPI/cards/netbanking
    - Configure Gmail SMTP for email notifications
+   - Automatic email notifications for:
+     - Welcome emails (new customer signup)
+     - Order confirmations (COD and online payments)
+     - Payment confirmations (Stripe/Razorpay)
+     - Order status updates (status changes)
+     - Store owner notifications (new orders)
 
 **Note**: Settings tabs remember your last position via URL parameters
 
@@ -942,7 +948,16 @@ This template supports multiple payment gateways: **Cash on Delivery (COD)**, **
 
 ### Email Notifications
 
-All orders automatically send email confirmations to customers. Email is now **required** during checkout.
+The system automatically sends professional email notifications for various events. Email is **required** during checkout to receive order updates.
+
+**Email Types:**
+1. **Welcome Email** - Sent when a customer creates an account
+2. **Order Confirmation Email** - Sent when an order is placed:
+   - For COD orders: Sent immediately after order placement
+   - For Razorpay/Stripe: Sent after payment is successfully completed
+3. **Payment Confirmation Email** - Sent when online payment is completed (Stripe/Razorpay)
+4. **Order Status Change Email** - Sent to customer when order status is updated (Pending → Processing → Completed, etc.)
+5. **Store Owner Notification Email** - Sent to store owner for every new order received
 
 ---
 
@@ -1176,6 +1191,9 @@ In test mode, Razorpay provides test payment options:
 - Check that 2-Step Verification is enabled on your Google Account
 - Try generating a new App Password
 - Check Firebase Functions logs for errors
+- Verify email settings are saved in Admin Panel → Settings → Payment tab
+- Ensure customer email is provided during checkout
+- Check that store owner email is configured (defaults to SMTP email)
 
 #### Stripe Payments Failing
 - Verify publishable and secret keys are correct
@@ -1201,23 +1219,73 @@ In test mode, Razorpay provides test payment options:
 
 ### Email Templates
 
-Email templates are automatically included in the Firebase Functions. They include:
+The email system uses a modular template architecture with shared header and footer components for easy maintenance and consistent branding.
 
-1. **Order Confirmation Email**:
-   - Sent when any order is placed
-   - Includes order ID, items, total, payment method
-   - Sent to customer's email address
+**Available Email Templates:**
 
-2. **Payment Confirmation Email**:
-   - Sent when online payment is successful
-   - Includes transaction ID, amount, payment method
-   - Sent after Stripe/Razorpay payment completes
+1. **Welcome Email** (`welcome.html`):
+   - Sent when a customer creates an account
+   - Includes store information and account benefits
+   - Encourages customers to start shopping
+
+2. **Order Confirmation Email** (`orderConfirmation.html`):
+   - Sent when an order is placed
+   - For COD: Sent immediately after order creation
+   - For Razorpay/Stripe: Sent after payment is successfully completed
+   - Includes order ID, items, total, payment method, shipping address
+
+3. **Payment Confirmation Email** (`paymentConfirmation.html`):
+   - Sent when online payment is successfully completed
+   - Includes transaction ID, amount, payment method, payment date
+   - Sent after Stripe/Razorpay webhook confirms payment
+
+4. **Order Status Change Email** (`orderStatusChange.html`):
+   - Sent automatically when admin updates order status
+   - Shows previous and new status with color-coded badges
+   - Includes helpful status messages for each status type
+
+5. **Store Owner Notification Email** (`storeOwnerNotification.html`):
+   - Sent to store owner for every new order
+   - Includes complete order details, customer information, and payment status
+   - Helps store owners quickly process new orders
+
+**Template Architecture:**
+
+The email system uses a modular design with shared components:
+
+- **Header Partial** (`templates/partials/header.html`):
+  - Shared header with configurable title, subtitle, and gradient colors
+  - Consistent branding across all emails
+  - Update once, applies to all emails
+
+- **Footer Partial** (`templates/partials/footer.html`):
+  - Shared footer with store name and customizable message
+  - Consistent contact information
+  - Update once, applies to all emails
 
 **Customizing Email Templates**:
-- Email templates are in `functions/templates/`
-- Edit `orderConfirmation.html` for order emails
-- Edit `paymentConfirmation.html` for payment emails
-- Commit changes and redeploy functions
+
+1. **Update Header/Footer** (affects all emails):
+   - Edit `functions/templates/partials/header.html` for header changes
+   - Edit `functions/templates/partials/footer.html` for footer changes
+   - Changes automatically apply to all email templates
+
+2. **Update Individual Templates**:
+   - Edit templates in `functions/templates/` directory
+   - Each template uses `{{header}}` and `{{footer}}` placeholders
+   - Customize content between header and footer
+
+3. **Deploy Changes**:
+   - Commit changes to your repository
+   - Functions automatically redeploy via GitHub Actions
+   - Or manually trigger deployment via Actions tab
+
+**Email Configuration**:
+
+- Configure Gmail SMTP in Admin Panel → Settings → Payment tab
+- Store owner email (for notifications) defaults to SMTP email
+- Can be customized in email settings if needed
+- All emails use the configured store name and branding
 
 ---
 
@@ -1229,6 +1297,8 @@ Payment processing requires Firebase Cloud Functions. The deployment is automati
 - Stripe webhook handler (`stripeWebhook`)
 - Razorpay webhook handler (`razorpayWebhook`)
 - Order confirmation email trigger (`onOrderCreated`)
+- Order status change email trigger (`onOrderStatusChange`)
+- Customer signup welcome email trigger (`onCustomerSignup`)
 
 **Deployment Steps**:
 1. Functions are automatically deployed when you push to `main` branch
@@ -1315,12 +1385,20 @@ quick-comm-template/
 │   ├── handlers/           # Webhook handlers
 │   │   ├── stripeWebhook.js # Stripe payment processing
 │   │   ├── razorpayWebhook.js # Razorpay payment processing
-│   │   └── orderConfirmation.js # Order email trigger
+│   │   ├── orderConfirmation.js # Order email trigger
+│   │   ├── orderStatusChange.js # Order status change email
+│   │   └── customerSignup.js # Welcome email trigger
 │   ├── services/
 │   │   └── emailService.js # Email sending service
 │   └── templates/          # Email templates
+│       ├── partials/       # Shared components
+│       │   ├── header.html # Shared email header
+│       │   └── footer.html # Shared email footer
 │       ├── orderConfirmation.html
-│       └── paymentConfirmation.html
+│       ├── paymentConfirmation.html
+│       ├── welcome.html
+│       ├── orderStatusChange.html
+│       └── storeOwnerNotification.html
 ├── .github/workflows/      # CI/CD automation
 ├── firestore.rules         # Database security rules
 └── firestore.indexes.json  # Database indexes

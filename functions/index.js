@@ -4,6 +4,8 @@ const express = require('express');
 const stripeWebhookHandler = require('./handlers/stripeWebhook');
 const razorpayWebhook = require('./handlers/razorpayWebhook');
 const orderConfirmation = require('./handlers/orderConfirmation');
+const orderStatusChange = require('./handlers/orderStatusChange');
+const customerSignup = require('./handlers/customerSignup');
 
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -27,6 +29,16 @@ exports.razorpayWebhook = functions.https.onRequest(razorpayWebhook);
 exports.onOrderCreated = functions.firestore
     .document('orders/{orderId}')
     .onCreate(orderConfirmation);
+
+// Export order status change trigger (sends email when order status is updated)
+exports.onOrderStatusChange = functions.firestore
+    .document('orders/{orderId}')
+    .onUpdate(orderStatusChange);
+
+// Export customer signup trigger (sends welcome email when new customer is created)
+exports.onCustomerSignup = functions.firestore
+    .document('customers/{customerId}')
+    .onCreate(customerSignup);
 
 // Export Razorpay order creation
 exports.createRazorpayOrder = functions.https.onRequest(require('./handlers/createRazorpayOrder'));

@@ -1,7 +1,7 @@
 const admin = require('firebase-admin');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
-const { sendPaymentConfirmationEmail } = require('../services/emailService');
+const { sendPaymentConfirmationEmail, sendOrderConfirmationEmail } = require('../services/emailService');
 
 /**
  * Razorpay Webhook Handler
@@ -100,8 +100,17 @@ module.exports = async (req, res) => {
                     updatedAt: admin.firestore.FieldValue.serverTimestamp()
                 });
 
-                // Send payment confirmation email only if not already sent
+                // Send emails only if not already sent
                 if (orderData.customer?.email) {
+                    // Get store info for emails
+                    const storeDoc = await admin.firestore()
+                        .collection('store_settings')
+                        .doc('store_info')
+                        .get();
+
+                    const storeInfo = storeDoc.exists ? storeDoc.data() : {};
+
+                    // Send payment confirmation email
                     await sendPaymentConfirmationEmail({
                         to: orderData.customer.email,
                         orderId: orderData.orderId,
@@ -109,6 +118,24 @@ module.exports = async (req, res) => {
                         amount: payload.amount / 100,
                         currency: payload.currency.toUpperCase(),
                         paymentMethod: 'Razorpay - ' + payload.method
+                    });
+
+                    // Send order confirmation email (since payment is now complete)
+                    await sendOrderConfirmationEmail({
+                        to: orderData.customer.email,
+                        customerName: orderData.customer.name,
+                        orderId: orderData.orderId,
+                        orderDate: orderData.createdAt?.toDate() || new Date(),
+                        items: orderData.items,
+                        customer: orderData.customer,
+                        subtotal: orderData.subtotal,
+                        tax: orderData.tax,
+                        shipping: orderData.shipping,
+                        total: orderData.total,
+                        paymentMethod: orderData.paymentMethod,
+                        paymentStatus: 'completed',
+                        storeName: storeInfo.name || 'Our Store',
+                        currencySymbol: storeInfo.currencySymbol || '₹'
                     });
                 }
 

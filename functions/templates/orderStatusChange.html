@@ -1,0 +1,52 @@
+{{header}}
+          
+          <!-- Greeting -->
+          <tr>
+            <td style="padding: 30px 30px 20px;">
+              <p style="margin: 0; font-size: 16px; color: #333; line-height: 1.6;">
+                Hi <strong>{{customerName}}</strong>,
+              </p>
+              <p style="margin: 15px 0 0; font-size: 16px; color: #666; line-height: 1.6;">
+                We wanted to let you know that your order status has been updated.
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Order Info -->
+          <tr>
+            <td style="padding: 0 30px 20px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8f9fa; border-radius: 6px; padding: 20px;">
+                <tr>
+                  <td style="padding-bottom: 10px;">
+                    <strong style="color: #333; font-size: 14px;">Order ID:</strong>
+                    <span style="color: #667eea; font-size: 16px; font-weight: 600; margin-left: 10px;">{{orderId}}</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding-bottom: 10px;">
+                    <strong style="color: #333; font-size: 14px;">Previous Status:</strong>
+                    <span style="color: #666; margin-left: 10px;">{{previousStatus}}</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <strong style="color: #333; font-size: 14px;">New Status:</strong>
+                    {{newStatusBadge}}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Status Message -->
+          <tr>
+            <td style="padding: 0 30px 20px;">
+              <div style="background-color: #EFF6FF; border-left: 4px solid #667eea; padding: 15px; border-radius: 4px;">
+                <p style="margin: 0; color: #1E40AF; font-size: 14px; line-height: 1.6;">
+                  {{statusMessage}}
+                </p>
+              </div>
+            </td>
+          </tr>
+          
+{{footer}}

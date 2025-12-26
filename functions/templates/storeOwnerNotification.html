@@ -1,14 +1,13 @@
 {{header}}
           
-          <!-- Greeting -->
+          <!-- Alert -->
           <tr>
-            <td style="padding: 30px 30px 20px;">
-              <p style="margin: 0; font-size: 16px; color: #333; line-height: 1.6;">
-                Hi <strong>{{customerName}}</strong>,
-              </p>
-              <p style="margin: 15px 0 0; font-size: 16px; color: #666; line-height: 1.6;">
-                We've received your order and will process it shortly. Here are your order details:
-              </p>
+            <td style="padding: 20px 30px;">
+              <div style="background-color: #FEF3C7; border-left: 4px solid #F59E0B; padding: 15px; border-radius: 4px;">
+                <p style="margin: 0; color: #92400E; font-size: 14px; line-height: 1.6; font-weight: 600;">
+                  ⚠️ Action Required: Please review and process this order.
+                </p>
+              </div>
             </td>
           </tr>
           
@@ -23,9 +22,39 @@
                   </td>
                 </tr>
                 <tr>
-                  <td>
+                  <td style="padding-bottom: 10px;">
                     <strong style="color: #333; font-size: 14px;">Order Date:</strong>
                     <span style="color: #666; margin-left: 10px;">{{orderDate}}</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding-bottom: 10px;">
+                    <strong style="color: #333; font-size: 14px;">Customer:</strong>
+                    <span style="color: #666; margin-left: 10px;">{{customerName}}</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding-bottom: 10px;">
+                    <strong style="color: #333; font-size: 14px;">Email:</strong>
+                    <span style="color: #666; margin-left: 10px;">{{customerEmail}}</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding-bottom: 10px;">
+                    <strong style="color: #333; font-size: 14px;">Phone:</strong>
+                    <span style="color: #666; margin-left: 10px;">{{customerPhone}}</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding-bottom: 10px;">
+                    <strong style="color: #333; font-size: 14px;">Payment Method:</strong>
+                    <span style="color: #666; margin-left: 10px;">{{paymentMethod}}</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <strong style="color: #333; font-size: 14px;">Payment Status:</strong>
+                    {{paymentStatus}}
                   </td>
                 </tr>
               </table>
@@ -60,28 +89,16 @@
                 </tr>
                 <tr style="border-top: 2px solid #e5e7eb;">
                   <td style="padding: 15px 0 0; color: #333; font-size: 18px; font-weight: 600;">Total:</td>
-                  <td style="padding: 15px 0 0; text-align: right; color: #667eea; font-size: 20px; font-weight: 700;">{{total}}</td>
+                  <td style="padding: 15px 0 0; text-align: right; color: #F59E0B; font-size: 20px; font-weight: 700;">{{total}}</td>
                 </tr>
               </table>
             </td>
           </tr>
           
-          <!-- Payment & Shipping Info -->
+          <!-- Shipping Address -->
           <tr>
             <td style="padding: 0 30px 30px;">
               <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8f9fa; border-radius: 6px; padding: 20px;">
-                <tr>
-                  <td style="padding-bottom: 15px;">
-                    <strong style="color: #333; font-size: 14px; display: block; margin-bottom: 5px;">Payment Method:</strong>
-                    <span style="color: #666;">{{paymentMethod}}</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding-bottom: 15px;">
-                    <strong style="color: #333; font-size: 14px; display: block; margin-bottom: 5px;">Payment Status:</strong>
-                    {{paymentStatus}}
-                  </td>
-                </tr>
                 <tr>
                   <td>
                     <strong style="color: #333; font-size: 14px; display: block; margin-bottom: 5px;">Shipping Address:</strong>
