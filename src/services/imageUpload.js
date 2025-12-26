@@ -109,52 +109,104 @@ async function uploadImageToStorage(file, path) {
       const { doc, getDoc } = await import('firebase/firestore');
       const { db } = await import('../config/firebase');
       const adminDocRef = doc(db, 'admins', userEmail);
+      
+      console.log('4. Admin check in Firestore (CLIENT-SIDE):');
+      console.log('   - Email being checked:', userEmail);
+      console.log('   - Firestore path: admins/' + userEmail);
+      console.log('   - Document reference:', adminDocRef.path);
+      
       const adminDoc = await getDoc(adminDocRef);
       
-      console.log('4. Admin check in Firestore:', {
-        emailBeingChecked: userEmail,
+      console.log('4a. Firestore read result:', {
         documentExists: adminDoc.exists(),
+        documentId: adminDoc.id,
         documentData: adminDoc.exists() ? adminDoc.data() : null,
         role: adminDoc.exists() ? adminDoc.data()?.role : 'N/A',
-        isAdmin: adminDoc.exists() && adminDoc.data()?.role === 'admin'
+        roleType: adminDoc.exists() ? typeof adminDoc.data()?.role : 'N/A',
+        isAdmin: adminDoc.exists() && adminDoc.data()?.role === 'admin',
+        allFields: adminDoc.exists() ? Object.keys(adminDoc.data()) : []
       });
 
       if (!adminDoc.exists()) {
         console.error('❌ Admin document NOT FOUND in Firestore');
-        console.error('   Expected document ID:', userEmail);
-        console.error('   Action: Create document in Firestore admins collection with this exact email as document ID');
-      } else if (adminDoc.data()?.role !== 'admin') {
-        console.error('❌ Admin document exists but role is not "admin"');
-        console.error('   Current role:', adminDoc.data()?.role);
-        console.error('   Action: Update role field to "admin"');
+        console.error('   Expected document ID (exact match required):', userEmail);
+        console.error('   Case-sensitive check: "' + userEmail + '"');
+        console.error('   Action: Create document in Firestore admins collection');
+        console.error('   - Collection: admins');
+        console.error('   - Document ID: ' + userEmail + ' (exact email)');
+        console.error('   - Fields: role: "admin" (string), email: "' + userEmail + '" (string)');
       } else {
-        console.log('✅ Admin check passed - user is admin');
+        const docData = adminDoc.data();
+        const roleValue = docData?.role;
+        console.log('4b. Document found - verifying role:');
+        console.log('   - Role value:', roleValue);
+        console.log('   - Role type:', typeof roleValue);
+        console.log('   - Role === "admin":', roleValue === 'admin');
+        console.log('   - Role == "admin" (loose):', roleValue == 'admin');
+        console.log('   - All document fields:', Object.keys(docData));
+        console.log('   - Full document data:', JSON.stringify(docData, null, 2));
+        
+        if (roleValue !== 'admin') {
+          console.error('❌ Admin document exists but role is not "admin"');
+          console.error('   Current role value:', roleValue);
+          console.error('   Current role type:', typeof roleValue);
+          console.error('   Expected: "admin" (string)');
+          console.error('   Action: Update role field to "admin" (string type)');
+        } else {
+          console.log('✅ Client-side admin check PASSED');
+          console.log('   - Document exists: ✅');
+          console.log('   - Role is "admin": ✅');
+          console.log('   - This means the issue is likely in Storage rules');
+          console.log('   - Storage rules need Storage service account to have Cloud Datastore User role');
+          console.log('   - Storage service account is DIFFERENT from Firebase Admin SDK service account');
+          console.log('   - Storage SA format: service-XXXXX@gs-project-accounts.iam.gserviceaccount.com');
+        }
       }
     } catch (adminCheckError) {
-      console.warn('⚠️ Could not verify admin status in Firestore:', adminCheckError);
+      console.error('❌ Error checking admin status in Firestore:', adminCheckError);
+      console.error('   Error details:', {
+        message: adminCheckError.message,
+        code: adminCheckError.code,
+        stack: adminCheckError.stack
+      });
     }
 
-    console.log('5. Attempting upload to Storage...');
-    console.log('   Storage rules will check:');
+    console.log('5. Storage Rules Check (SERVER-SIDE):');
+    console.log('   Storage rules will evaluate:');
     console.log('   - request.auth != null:', !!auth.currentUser);
     console.log('   - request.auth.token.email:', auth.currentUser?.email);
-    console.log('   - Firestore path: /databases/(default)/documents/admins/' + userEmail);
-    console.log('   - Expected role: "admin"');
+    console.log('   - request.auth.uid:', auth.currentUser?.uid);
+    console.log('   - Firestore path Storage rules will check:');
+    console.log('     /databases/(default)/documents/admins/' + userEmail);
+    console.log('   - Storage rules function: isAdmin()');
+    console.log('   - Storage rules need Storage service account to read Firestore');
+    console.log('   - Storage SA must have: roles/datastore.user IAM role');
+    console.log('   - Storage SA format: service-XXXXX@gs-project-accounts.iam.gserviceaccount.com');
+    console.log('   - NOTE: This is DIFFERENT from Firebase Admin SDK service account!');
+    console.log('');
+    console.log('6. Attempting upload to Storage...');
     
     const storageRef = ref(storage, path);
     
-    console.log('6. Storage reference created:', {
+    console.log('7. Storage reference created:', {
       fullPath: storageRef.fullPath,
       bucket: storageRef.bucket,
-      name: storageRef.name
+      name: storageRef.name,
+      storageBucket: storage.app.options.storageBucket
     });
 
-    console.log('7. Calling uploadBytes...');
+    console.log('8. Calling uploadBytes (this triggers Storage rules evaluation)...');
+    console.log('   If this fails with 403, Storage rules could not verify admin status');
+    console.log('   Common causes:');
+    console.log('   1. Storage service account missing Cloud Datastore User role');
+    console.log('   2. Email mismatch in Firestore (case-sensitive)');
+    console.log('   3. Role field not exactly "admin" (string)');
+    console.log('   4. Storage rules not deployed correctly');
     await uploadBytes(storageRef, file);
-    console.log('✅ Upload successful!');
+    console.log('✅ Upload successful! Storage rules passed.');
     
     const downloadURL = await getDownloadURL(storageRef);
-    console.log('7. Download URL obtained:', downloadURL);
+    console.log('9. Download URL obtained:', downloadURL);
     console.log('=== IMAGE UPLOAD DEBUG END (SUCCESS) ===');
     
     return downloadURL;
@@ -173,12 +225,44 @@ async function uploadImageToStorage(file, path) {
     // Provide more specific error messages
     if (error.code === 'storage/unauthorized' || error.code === 403) {
       const userEmail = auth.currentUser?.email || 'Not logged in';
-      console.error('❌ Permission denied. Debugging info:');
-      console.error('   - User email:', userEmail);
-      console.error('   - Check Firestore admins collection for document with ID:', userEmail);
-      console.error('   - Document must have role: "admin"');
-      console.error('   - Email must match EXACTLY (case-sensitive)');
-      throw new Error(`Permission denied. You are logged in as ${userEmail}. Please verify: 1) This email exists in Firestore admins collection (as document ID), 2) The document has role: "admin", 3) Email matches exactly (case-sensitive).`);
+      console.error('❌❌❌ PERMISSION DENIED (403) - Detailed Analysis ❌❌❌');
+      console.error('');
+      console.error('CLIENT-SIDE CHECK (from logs above):');
+      console.error('   - User authenticated: ✅ (we got this far)');
+      console.error('   - Admin check in Firestore: Check logs above');
+      console.error('');
+      console.error('SERVER-SIDE CHECK (Storage Rules):');
+      console.error('   - Storage rules evaluated: isAdmin() function');
+      console.error('   - Storage rules check Firestore: /databases/(default)/documents/admins/' + userEmail);
+      console.error('   - Storage rules FAILED to verify admin status');
+      console.error('');
+      console.error('MOST LIKELY CAUSES:');
+      console.error('   1. Storage service account missing IAM role');
+      console.error('      - Go to: https://console.cloud.google.com/iam-admin/iam?project=online-chayakkada');
+      console.error('      - Find: service-XXXXX@gs-project-accounts.iam.gserviceaccount.com');
+      console.error('      - Add role: Cloud Datastore User (roles/datastore.user)');
+      console.error('      - NOTE: This is DIFFERENT from firebase-adminsdk service account!');
+      console.error('');
+      console.error('   2. Email mismatch in Firestore');
+      console.error('      - Check Firestore admins collection');
+      console.error('      - Document ID must be EXACTLY: ' + userEmail);
+      console.error('      - Case-sensitive! "User@Email.com" ≠ "user@email.com"');
+      console.error('');
+      console.error('   3. Role field incorrect');
+      console.error('      - Must be: role: "admin" (string, lowercase)');
+      console.error('      - Not: "Admin", "ADMIN", or any other value');
+      console.error('');
+      console.error('   4. Storage rules not deployed');
+      console.error('      - Check Firebase Console → Storage → Rules');
+      console.error('      - Should match storage.rules file');
+      console.error('      - Redeploy if needed: firebase deploy --only storage');
+      console.error('');
+      console.error('CURRENT USER INFO:');
+      console.error('   - Email:', userEmail);
+      console.error('   - UID:', auth.currentUser?.uid);
+      console.error('   - Email verified:', auth.currentUser?.emailVerified);
+      console.error('');
+      throw new Error(`Permission denied (403). Check console for detailed analysis. Most likely: Storage service account needs Cloud Datastore User IAM role.`);
     } else if (error.code === 'storage/canceled') {
       throw new Error('Upload was canceled.');
     } else if (error.code === 'storage/unknown') {

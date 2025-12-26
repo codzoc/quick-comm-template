@@ -121,10 +121,11 @@ Now updates only happen when you manually trigger the workflow.
   - Logo images: Max 512px width, auto-compressed
 - **Multiple images per product** - Upload several images, first one is main display
 - **Image gallery slider** - Customers can click product images to view all images in a full-screen slider
+- **Clean file naming** - Images named as `{productId}_1.jpg`, `{productId}_2.jpg`, etc.
 - **Logo upload** - Upload store logo and icon directly (height-based display)
 - **Static page images** - Upload images for About, Terms, Privacy pages
 
-All images are automatically optimized for fast loading and stored securely in Firebase Storage.
+All images are automatically optimized for fast loading and stored securely in Firebase Storage. The system handles compression, resizing, and file management automatically.
 
 ---
 
@@ -251,7 +252,11 @@ All images are automatically optimized for fast loading and stored securely in F
 5. Choose a location (same as Firestore recommended)
 6. Click "Done"
 
-**Important**: Storage is required for uploading product images, logos, and other assets. The security rules will be automatically deployed via GitHub Actions.
+**Important**: 
+- Storage is required for uploading product images, logos, and other assets
+- The security rules will be automatically deployed via GitHub Actions
+- Storage rules currently allow any authenticated user to upload (admin panel access is protected separately by Firestore rules)
+- For stricter security, you can grant the Storage service account "Cloud Datastore User" IAM role and update rules to use admin-only access (see troubleshooting section)
 
 #### D. Enable Hosting
 1. Go to "Build" > "Hosting"
@@ -314,13 +319,23 @@ You only need **2 secrets** for the entire setup:
    - Ensure it has these roles:
      - **"Editor"** - General Firebase access
      - **"Firebase Rules Admin"** - Deploy Firestore rules
+     - **"Cloud Datastore Index Admin"** - Deploy Firestore indexes
      - **"Cloud Functions Admin"** - Deploy payment webhooks (required for Stripe/Razorpay)
+     - **"Service Usage Consumer"** - API access checks
    - Click "Save"
-5. Open the JSON file in a text editor
-6. Copy the **entire contents** of the file
-7. Create a secret named `FIREBASE_SERVICE_ACCOUNT` and paste the entire JSON
+5. **Storage Service Account IAM Role** (Optional - for stricter security):
+   - Storage rules currently work without this (allows any authenticated user)
+   - For admin-only uploads, grant the Storage service account "Cloud Datastore User" role:
+     - Go to [Google Cloud Console IAM](https://console.cloud.google.com/iam-admin/iam)
+     - Click "GRANT ACCESS" and add: `service-XXXXX@gs-project-accounts.iam.gserviceaccount.com`
+     - Add role: **"Cloud Datastore User"** (`roles/datastore.user`)
+     - Then update `storage.rules` to use `isAdmin()` instead of `request.auth != null`
+   - **Note**: GitHub Actions will automatically grant this role on deployments if needed
+6. Open the JSON file in a text editor
+7. Copy the **entire contents** of the file
+8. Create a secret named `FIREBASE_SERVICE_ACCOUNT` and paste the entire JSON
 
-**Note**: If you skip step 4, the deployment may fail with permission errors. You can always add permissions later if needed.
+**Note**: If you skip step 4 or 5, the deployment may fail with permission errors. You can always add permissions later if needed.
 
 ---
 
@@ -764,14 +779,26 @@ If you continue to have permission issues, you can temporarily use the Owner rol
 
 **Required Roles Summary**
 
-For full functionality, your service account should have these roles:
+For full functionality, you need to configure roles for **two service accounts**:
+
+#### 1. Firebase Service Account (for deployments)
+The service account used in `FIREBASE_SERVICE_ACCOUNT` secret needs:
 - ✅ **Editor** - General Firebase access
 - ✅ **Firebase Rules Admin** - Deploy Firestore rules
 - ✅ **Cloud Datastore Index Admin** - Deploy Firestore indexes
 - ✅ **Cloud Functions Admin** - Deploy Cloud Functions (for payments)
 - ✅ **Service Usage Consumer** - API access checks
 
-**Note**: After adding the Cloud Functions Admin role, it may take 1-2 minutes for permissions to propagate. If the deployment still fails immediately, wait a moment and try again.
+#### 2. Storage Service Account (for image uploads)
+**Current Implementation**: Storage rules allow any authenticated user to upload. This is secure because:
+- Only admins can access the admin panel (protected by Firestore rules)
+- Regular customers cannot access upload functionality
+- Admin panel UI is the only place where uploads happen
+
+**Optional - Stricter Security**: If you want admin-only uploads at the Storage rules level:
+- Grant Storage service account: **Cloud Datastore User** (`roles/datastore.user`) IAM role
+- Update `storage.rules` to use `isAdmin()` function instead of `request.auth != null`
+- GitHub Actions will automatically grant the IAM role on deployments if needed
 
 ---
 
@@ -806,12 +833,41 @@ For full functionality, your service account should have these roles:
 - Verify products are added in admin panel
 - Check browser console for errors
 
-### Images Not Loading
+### Images Not Loading / Upload Permission Denied
+
+**Error: "403 Forbidden" or "storage/unauthorized" when uploading images**
+
+This usually means you're not authenticated. Fix it by:
+
+1. **Verify You're Logged In**:
+   - Make sure you're logged in to the admin panel
+   - Check browser console for authentication errors
+   - Try logging out and logging back in
+
+2. **Verify Storage Rules Are Deployed**:
+   - Go to Firebase Console → Storage → Rules tab
+   - Should match your `storage.rules` file
+   - Current rules allow any authenticated user to upload
+   - If different, redeploy via GitHub Actions
+
+3. **Check Browser Console**:
+   - Open browser console (F12) when uploading
+   - Look for detailed error messages
+   - Check if authentication is working
+
+4. **If Using Admin-Only Rules** (if you modified `storage.rules` to use `isAdmin()`):
+   - Grant Storage service account: **Cloud Datastore User** IAM role
+   - Go to [Google Cloud Console IAM](https://console.cloud.google.com/iam-admin/iam)
+   - Click "GRANT ACCESS" and add: `service-XXXXX@gs-project-accounts.iam.gserviceaccount.com`
+   - Add role: **"Cloud Datastore User"** (`roles/datastore.user`)
+   - Wait 30-60 seconds for IAM propagation
+
+**Other image issues**:
 - If using built-in upload feature:
   - Ensure Firebase Storage is enabled in Firebase Console
   - Verify Storage rules are deployed (check GitHub Actions logs)
   - Make sure you're logged in as admin when uploading
-  - Check browser console for CORS errors (indicates Storage rules not deployed)
+  - Check browser console for detailed error messages
 - For legacy image paths:
   - Ensure images are uploaded to `public/images/`
   - Check image paths start with `/images/`

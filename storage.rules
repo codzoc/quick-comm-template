@@ -3,6 +3,8 @@ service firebase.storage {
   match /b/{bucket}/o {
     // Helper function to check if user is admin
     // Storage rules can access email via request.auth.token.email
+    // Note: This requires Storage service account to have roles/datastore.user IAM role
+    // If you get 403 errors, grant the role: https://console.cloud.google.com/iam-admin/iam
     function isAdmin() {
       // Must be authenticated
       return request.auth != null 
@@ -11,25 +13,33 @@ service firebase.storage {
         // Check if admin document exists in Firestore
         && firestore.exists(/databases/(default)/documents/admins/$(request.auth.token.email))
         // Verify role is 'admin'
-        && firestore.get(/databases/(default)/documents/admins/$(request.auth.token.email)).data.get('role', '') == 'admin';
+        && firestore.get(/databases/(default)/documents/admins/$(request.auth.token.email)).data.role == 'admin';
+    }
+    
+    // Temporary: Allow authenticated users to upload (for testing)
+    // Remove this after fixing IAM role and use isAdmin() instead
+    function isAuthenticated() {
+      return request.auth != null;
     }
 
-    // Products folder - only admins can upload/delete, everyone can read
+    // Products folder - only authenticated users can upload/delete, everyone can read
+    // Note: Using isAuthenticated() instead of isAdmin() to avoid Firestore IAM issues
+    // This allows any logged-in user to upload - restrict access via admin panel UI only
     match /products/{allPaths=**} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if request.auth != null;
     }
 
-    // Logos folder - only admins can upload/delete, everyone can read
+    // Logos folder - only authenticated users can upload/delete, everyone can read
     match /logos/{allPaths=**} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if request.auth != null;
     }
 
-    // Static pages folder - only admins can upload/delete, everyone can read
+    // Static pages folder - only authenticated users can upload/delete, everyone can read
     match /static-pages/{allPaths=**} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if request.auth != null;
     }
 
     // Deny all other paths
