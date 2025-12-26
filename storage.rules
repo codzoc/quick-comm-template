@@ -1,26 +1,12 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Helper function to get user email from token
-    function getUserEmail() {
-      return request.auth.token.email;
-    }
-    
     // Helper function to check if user is admin
     // Storage rules can access email via request.auth.token.email
     function isAdmin() {
-      // Must be authenticated
-      if (request.auth == null) {
-        return false;
-      }
-      
-      // Must have email in token
-      if (request.auth.token.email == null) {
-        return false;
-      }
-      
-      // Check if admin document exists and has admin role
-      return firestore.exists(/databases/(default)/documents/admins/$(request.auth.token.email))
+      return request.auth != null 
+        && request.auth.token.email != null
+        && firestore.exists(/databases/(default)/documents/admins/$(request.auth.token.email))
         && firestore.get(/databases/(default)/documents/admins/$(request.auth.token.email)).data.role == 'admin';
     }
 
