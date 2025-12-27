@@ -97,6 +97,10 @@ jobs:
             git reset HEAD .github/workflows/ 2>/dev/null || true
             git checkout HEAD -- .github/workflows/ 2>/dev/null || true
             echo "✅ Workflow files excluded from merge"
+            # Stage all changes except workflow files
+            git add -A
+            git reset HEAD .github/workflows/ 2>/dev/null || true
+            git checkout HEAD -- .github/workflows/ 2>/dev/null || true
             # Now commit the merge without workflow files
             git commit -m "chore: update from template repository
 
@@ -156,6 +160,7 @@ jobs:
           git checkout HEAD -- .github/workflows/ 2>/dev/null || true
           # Also resolve any workflow file conflicts by keeping HEAD version
           git checkout --ours .github/workflows/ 2>/dev/null || true
+          # Stage the resolved workflow files (keeping current version)
           git add .github/workflows/ 2>/dev/null || true
           echo "✅ Workflow files excluded from conflict commit (keeping current version)"
           echo "ℹ️ Please review and manually update workflow files if needed"
@@ -163,7 +168,13 @@ jobs:
       - name: Commit conflict markers
         if: steps.should-update.outputs.should_run == 'true' && steps.check-updates.outputs.has_updates == 'true' && steps.auto-merge.outputs.merge_success == 'false'
         run: |
-          git add .
+          # Stage all changes except workflow files (workflow files already staged with HEAD version)
+          git add -A
+          # Unstage workflow files to ensure they're not included in the commit
+          git reset HEAD .github/workflows/ 2>/dev/null || true
+          # Restore workflow files to HEAD version (already done above, but ensure it's done)
+          git checkout HEAD -- .github/workflows/ 2>/dev/null || true
+          # Commit without workflow files
           git commit -m "chore: update from template repository (conflicts to resolve)
 
           Updates from codzoc/quick-comm-template
