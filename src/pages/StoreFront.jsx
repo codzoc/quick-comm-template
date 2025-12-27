@@ -173,13 +173,22 @@ function StoreFront() {
     }
   };
 
-  // Reset cart view when cart is opened
+  // Reset cart view when cart is opened and reload address if logged in
   useEffect(() => {
     if (isCartOpen) {
       setShowCheckout(false);
       setOrderSuccess(false);
       setSubmitting(false);
+      // Reload default address when cart opens if user is logged in
+      const reloadAddress = async () => {
+        const user = getCurrentCustomer();
+        if (user) {
+          await checkCustomerAuth();
+        }
+      };
+      reloadAddress();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isCartOpen]);
 
   // Filter products based on search
@@ -400,9 +409,34 @@ function StoreFront() {
         setOrderSuccess(true);
         clearCart();
 
-        // Clear form
-        setCustomerInfo({ name: '', phone: '', email: '', address: '', pin: '' });
-        setCreateAccount(false);
+        // Clear form, but reload default address if user is logged in
+        const user = getCurrentCustomer();
+        if (user) {
+          // For logged-in users, reload default address after order
+          try {
+            const defaultAddr = await getDefaultAddress(user.uid);
+            if (defaultAddr) {
+              setCustomerInfo({
+                name: defaultAddr.name,
+                phone: defaultAddr.phone,
+                email: user.email || '',
+                address: defaultAddr.address,
+                pin: defaultAddr.pin
+              });
+            } else {
+              // No default address, clear form
+              setCustomerInfo({ name: '', phone: '', email: user.email || '', address: '', pin: '' });
+            }
+          } catch (err) {
+            console.error('Error reloading default address:', err);
+            setCustomerInfo({ name: '', phone: '', email: user.email || '', address: '', pin: '' });
+          }
+          setCreateAccount(true); // Keep checked for logged-in users
+        } else {
+          // Guest users - clear form completely
+          setCustomerInfo({ name: '', phone: '', email: '', address: '', pin: '' });
+          setCreateAccount(false);
+        }
         setRegistrationData({ password: '', confirmPassword: '' });
       } else if (selectedPaymentMethod === 'razorpay') {
         // Razorpay - Create order first, then initiate payment
@@ -431,7 +465,7 @@ function StoreFront() {
             customerEmail: customerInfo.email,
             customerName: customerInfo.name,
             customerPhone: customerInfo.phone,
-            onSuccess: (response) => {
+            onSuccess: async (response) => {
               // Payment successful - show success message
               setOrderId(order.orderId);
               setOrderItems(cartItems.map(item => ({
@@ -441,8 +475,31 @@ function StoreFront() {
               })));
               setOrderSuccess(true);
               clearCart();
-              setCustomerInfo({ name: '', phone: '', email: '', address: '', pin: '' });
-              setCreateAccount(false);
+              // Reload default address if user is logged in
+              const user = getCurrentCustomer();
+              if (user) {
+                try {
+                  const defaultAddr = await getDefaultAddress(user.uid);
+                  if (defaultAddr) {
+                    setCustomerInfo({
+                      name: defaultAddr.name,
+                      phone: defaultAddr.phone,
+                      email: user.email || '',
+                      address: defaultAddr.address,
+                      pin: defaultAddr.pin
+                    });
+                  } else {
+                    setCustomerInfo({ name: '', phone: '', email: user.email || '', address: '', pin: '' });
+                  }
+                } catch (err) {
+                  console.error('Error reloading default address:', err);
+                  setCustomerInfo({ name: '', phone: '', email: user.email || '', address: '', pin: '' });
+                }
+                setCreateAccount(true); // Keep checked for logged-in users
+              } else {
+                setCustomerInfo({ name: '', phone: '', email: '', address: '', pin: '' });
+                setCreateAccount(false);
+              }
               setRegistrationData({ password: '', confirmPassword: '' });
               setSubmitting(false);
             },
@@ -490,11 +547,15 @@ function StoreFront() {
     window.open(url, '_blank');
   };
 
-  const handleNewOrder = () => {
+  const handleNewOrder = async () => {
     setOrderSuccess(false);
     setOrderId('');
     setShowCheckout(false);
     closeCart();
+    // Reload default address when starting a new order if user is logged in
+    if (currentUser) {
+      await checkCustomerAuth();
+    }
   };
 
   // Render Loading State

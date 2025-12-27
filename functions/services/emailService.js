@@ -35,27 +35,47 @@ async function getEmailConfig() {
  * Uses storeInfo/contact collection with storeName field
  */
 async function getStoreInfo() {
-    const storeInfoDoc = await admin.firestore()
-        .collection('storeInfo')
-        .doc('contact')
-        .get();
+    try {
+        const storeInfoDoc = await admin.firestore()
+            .collection('storeInfo')
+            .doc('contact')
+            .get();
 
-    if (storeInfoDoc.exists) {
-        const data = storeInfoDoc.data();
-        const storeName = data.storeName;
-        if (storeName) {
-            return {
-                storeName: storeName,
-                currencySymbol: data.currencySymbol || '₹'
-            };
+        console.log('[getStoreInfo] Document exists:', storeInfoDoc.exists);
+        
+        if (storeInfoDoc.exists) {
+            const data = storeInfoDoc.data();
+            console.log('[getStoreInfo] Document data keys:', Object.keys(data));
+            console.log('[getStoreInfo] storeName value:', data.storeName);
+            console.log('[getStoreInfo] Full data:', JSON.stringify(data, null, 2));
+            
+            const storeName = data.storeName;
+            if (storeName) {
+                console.log('[getStoreInfo] Returning storeName:', storeName);
+                return {
+                    storeName: storeName,
+                    currencySymbol: data.currencySymbol || '₹'
+                };
+            } else {
+                console.log('[getStoreInfo] storeName field is empty or undefined');
+            }
+        } else {
+            console.log('[getStoreInfo] Document does not exist at storeInfo/contact');
         }
-    }
 
-    // Return default if nothing found
-    return {
-        storeName: 'Our Store',
-        currencySymbol: '₹'
-    };
+        // Return default if nothing found
+        console.log('[getStoreInfo] Returning default "Our Store"');
+        return {
+            storeName: 'Our Store',
+            currencySymbol: '₹'
+        };
+    } catch (error) {
+        console.error('[getStoreInfo] Error fetching store info:', error);
+        return {
+            storeName: 'Our Store',
+            currencySymbol: '₹'
+        };
+    }
 }
 
 /**
