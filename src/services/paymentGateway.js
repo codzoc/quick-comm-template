@@ -73,7 +73,7 @@ export async function initiateStripePayment({
 export async function initiateRazorpayPayment({
     keyId,
     orderId,
-    storeName = 'Our Store',
+    storeName = 'Our Store', // Default fallback - should be passed from Firestore
     amount,
     currency = 'INR',
     customerEmail,

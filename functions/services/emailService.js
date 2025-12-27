@@ -32,28 +32,9 @@ async function getEmailConfig() {
 
 /**
  * Get store information from Firestore
- * Checks multiple locations and field names for compatibility
+ * Uses storeInfo/contact collection with storeName field
  */
 async function getStoreInfo() {
-    // Try store_settings/store_info first (newer structure)
-    const storeSettingsDoc = await admin.firestore()
-        .collection('store_settings')
-        .doc('store_info')
-        .get();
-
-    if (storeSettingsDoc.exists) {
-        const data = storeSettingsDoc.data();
-        // Check both 'name' and 'storeName' fields
-        const storeName = data.name || data.storeName;
-        if (storeName) {
-            return {
-                name: storeName,
-                currencySymbol: data.currencySymbol || '₹'
-            };
-        }
-    }
-
-    // Fallback to storeInfo/contact (older structure)
     const storeInfoDoc = await admin.firestore()
         .collection('storeInfo')
         .doc('contact')
@@ -61,10 +42,10 @@ async function getStoreInfo() {
 
     if (storeInfoDoc.exists) {
         const data = storeInfoDoc.data();
-        const storeName = data.storeName || data.name;
+        const storeName = data.storeName;
         if (storeName) {
             return {
-                name: storeName,
+                storeName: storeName,
                 currencySymbol: data.currencySymbol || '₹'
             };
         }
@@ -72,7 +53,7 @@ async function getStoreInfo() {
 
     // Return default if nothing found
     return {
-        name: 'Our Store',
+        storeName: 'Our Store',
         currencySymbol: '₹'
     };
 }
@@ -176,7 +157,7 @@ async function sendOrderConfirmationEmail(orderDetails) {
         
         // Get store info if not provided
         const storeInfo = orderDetails.storeName 
-            ? { name: orderDetails.storeName, currencySymbol: orderDetails.currencySymbol || '₹' }
+            ? { storeName: orderDetails.storeName, currencySymbol: orderDetails.currencySymbol || '₹' }
             : await getStoreInfo();
 
         // Format items list (titles will be escaped by loadTemplate)
@@ -230,13 +211,13 @@ async function sendOrderConfirmationEmail(orderDetails) {
             paymentMethod: paymentMethodText,
             paymentStatus: paymentStatusText,
             shippingAddress: `${orderDetails.customer.address}, ${orderDetails.customer.pin}`,
-            storeName: storeInfo.name
+            storeName: storeInfo.storeName
         };
 
         const html = loadTemplate('orderConfirmation', templateData);
 
         const mailOptions = {
-            from: `"${storeInfo.name}" <${config.smtp.user}>`,
+            from: `"${storeInfo.storeName}" <${config.smtp.user}>`,
             to: orderDetails.to,
             subject: `Order Confirmation - ${orderDetails.orderId}`,
             html: html
@@ -271,7 +252,7 @@ async function sendPaymentConfirmationEmail(paymentDetails) {
             headerGradientEnd: '#059669',
             // Footer data
             footerMessage: 'Thank you for your purchase! If you have any questions, please contact our support team.',
-            storeName: storeInfo.name,
+            storeName: storeInfo.storeName,
             // Content data
             orderId: paymentDetails.orderId,
             transactionId: paymentDetails.transactionId,
@@ -289,7 +270,7 @@ async function sendPaymentConfirmationEmail(paymentDetails) {
         const html = loadTemplate('paymentConfirmation', templateData);
 
         const mailOptions = {
-            from: `"${storeInfo.name}" <${config.smtp.user}>`,
+            from: `"${storeInfo.storeName}" <${config.smtp.user}>`,
             to: paymentDetails.to,
             subject: `Payment Received - ${paymentDetails.orderId}`,
             html: html
@@ -314,7 +295,7 @@ async function sendWelcomeEmail(customerDetails) {
 
         // Get store info
         const storeInfo = await getStoreInfo();
-        const storeName = storeInfo.name;
+        const storeName = storeInfo.storeName;
         
         // Try to get website URL from store settings
         const storeSettingsDoc = await admin.firestore()
@@ -402,7 +383,7 @@ async function sendOrderStatusChangeEmail(statusDetails) {
             headerGradientEnd: '#764ba2',
             // Footer data
             footerMessage: 'If you have any questions about your order, please don\'t hesitate to contact us.',
-            storeName: storeInfo.name,
+            storeName: storeInfo.storeName,
             // Content data
             customerName: statusDetails.customerName,
             orderId: statusDetails.orderId,
@@ -414,7 +395,7 @@ async function sendOrderStatusChangeEmail(statusDetails) {
         const html = loadTemplate('orderStatusChange', templateData);
 
         const mailOptions = {
-            from: `"${storeInfo.name}" <${config.smtp.user}>`,
+            from: `"${storeInfo.storeName}" <${config.smtp.user}>`,
             to: statusDetails.to,
             subject: `Order Status Update - ${statusDetails.orderId}`,
             html: html
@@ -439,7 +420,7 @@ async function sendStoreOwnerNotificationEmail(orderDetails) {
 
         // Get store info
         const storeInfo = orderDetails.storeName 
-            ? { name: orderDetails.storeName, currencySymbol: orderDetails.currencySymbol || '₹' }
+            ? { storeName: orderDetails.storeName, currencySymbol: orderDetails.currencySymbol || '₹' }
             : await getStoreInfo();
 
         // Get store owner email from settings
@@ -507,13 +488,13 @@ async function sendStoreOwnerNotificationEmail(orderDetails) {
             paymentMethod: paymentMethodText,
             paymentStatus: paymentStatusText,
             shippingAddress: `${orderDetails.customer.address}, ${orderDetails.customer.pin}`,
-            storeName: storeInfo.name
+            storeName: storeInfo.storeName
         };
 
         const html = loadTemplate('storeOwnerNotification', templateData);
 
         const mailOptions = {
-            from: `"${storeInfo.name}" <${config.smtp.user}>`,
+            from: `"${storeInfo.storeName}" <${config.smtp.user}>`,
             to: storeOwnerEmail,
             subject: `New Order Received - ${orderDetails.orderId}`,
             html: html

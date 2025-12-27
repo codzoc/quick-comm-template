@@ -39,7 +39,7 @@ module.exports = async (change, context) => {
             orderId: afterData.orderId,
             previousStatus: beforeData.status || 'pending',
             newStatus: afterData.status,
-            storeName: storeInfo.name
+            storeName: storeInfo.storeName
         });
 
         console.log(`Order status change email sent for order ${orderId}: ${beforeData.status} -> ${afterData.status}`);

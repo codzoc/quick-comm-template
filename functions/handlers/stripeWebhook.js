@@ -118,7 +118,7 @@ module.exports = async (req, res) => {
                         total: orderData.total,
                         paymentMethod: orderData.paymentMethod,
                         paymentStatus: 'completed',
-                        storeName: storeInfo.name,
+                        storeName: storeInfo.storeName,
                         currencySymbol: storeInfo.currencySymbol
                     });
                 }

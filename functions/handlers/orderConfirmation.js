@@ -36,7 +36,7 @@ module.exports = async (snapshot, context) => {
                 total: orderData.total,
                 paymentMethod: orderData.paymentMethod,
                 paymentStatus: orderData.paymentStatus,
-                storeName: storeInfo.name,
+                storeName: storeInfo.storeName,
                 currencySymbol: storeInfo.currencySymbol
             });
             console.log(`Order confirmation email sent for COD order ${orderId}`);
@@ -56,7 +56,7 @@ module.exports = async (snapshot, context) => {
             total: orderData.total,
             paymentMethod: orderData.paymentMethod,
             paymentStatus: orderData.paymentStatus,
-            storeName: storeInfo.name,
+            storeName: storeInfo.storeName,
             currencySymbol: storeInfo.currencySymbol
         });
         console.log(`Store owner notification sent for order ${orderId}`);

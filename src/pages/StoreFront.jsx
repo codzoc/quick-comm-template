@@ -5,7 +5,7 @@ import { getAllProducts } from '../services/products';
 import { createOrder } from '../services/orders';
 import { getStoreInfo } from '../services/storeInfo';
 import { getPaymentSettings } from '../services/payment';
-import { getCurrentCustomer, signUpCustomer } from '../services/customerAuth';
+import { getCurrentCustomer, signUpCustomer, loginCustomer } from '../services/customerAuth';
 import { getDefaultAddress, addAddress, getCustomerAddresses } from '../services/addresses';
 import { initiateRazorpayPayment, createRazorpayOrder } from '../services/paymentGateway';
 import { functions } from '../config/firebase'; // Import functions instance
@@ -108,6 +108,15 @@ function StoreFront() {
   });
   const [registrationErrors, setRegistrationErrors] = useState({});
 
+  // Login modal state
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginFormData, setLoginFormData] = useState({
+    email: '',
+    password: ''
+  });
+  const [loginError, setLoginError] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
+
   // Load products and store info on mount
   useEffect(() => {
     loadData();
@@ -142,6 +151,25 @@ function StoreFront() {
       }
     } else {
       setCreateAccount(false); // Default to unchecked for guests
+    }
+  };
+
+  // Handle login from modal
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoginError('');
+    setLoginLoading(true);
+
+    try {
+      await loginCustomer(loginFormData.email, loginFormData.password);
+      // Refresh user data and close modal
+      await checkCustomerAuth();
+      setShowLoginModal(false);
+      setLoginFormData({ email: '', password: '' });
+    } catch (err) {
+      setLoginError(err.message);
+    } finally {
+      setLoginLoading(false);
     }
   };
 
@@ -382,6 +410,8 @@ function StoreFront() {
 
         try {
           // Create Razorpay Order from backend
+          // NOTE: This server-side call is REQUIRED and standard for Razorpay integration
+          // because creating orders requires the keySecret which must never be exposed to clients
           // ID returned will be like "order_EKwxwVidXV123"
           const razorpayOrderId = await createRazorpayOrder(
             order.id, // Pass Firestore ID for reference/receipt
@@ -389,9 +419,13 @@ function StoreFront() {
             'INR'
           );
 
+          // Get store name from Firestore store info
+          const storeName = storeInfo?.storeName || 'Our Store';
+
           await initiateRazorpayPayment({
             keyId: paymentSettings.razorpay.keyId,
             orderId: razorpayOrderId, // Use the Razorpay Order ID, NOT Firestore ID
+            storeName: storeName, // Use store name from Firestore
             amount: getCartGrandTotal(),
             currency: 'INR',
             customerEmail: customerInfo.email,
@@ -413,8 +447,16 @@ function StoreFront() {
               setSubmitting(false);
             },
             onFailure: (error) => {
-              setError('Payment failed: ' + error.message);
-              setSubmitting(false);
+              // Handle payment cancellation gracefully - just return to checkout
+              if (error.message && error.message.toLowerCase().includes('cancelled')) {
+                // User cancelled payment - just reset submitting state, stay on checkout
+                setSubmitting(false);
+                setError(''); // Clear any previous errors
+              } else {
+                // Actual payment failure - show error
+                setError('Payment failed: ' + error.message);
+                setSubmitting(false);
+              }
             }
           });
         } catch (paymentErr) {
@@ -639,7 +681,7 @@ function StoreFront() {
                         </p>
                         <button
                           type="button"
-                          onClick={() => navigate('/login', { state: { from: '/' } })}
+                          onClick={() => setShowLoginModal(true)}
                           style={{
                             padding: 'var(--spacing-sm) var(--spacing-lg)',
                             backgroundColor: 'var(--color-primary)',
@@ -986,6 +1028,112 @@ function StoreFront() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Login Modal */}
+      {showLoginModal && (
+        <div className="cart-modal-overlay" onClick={() => setShowLoginModal(false)}>
+          <div className="cart-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+            <div className="cart-header">
+              <button
+                className="back-btn"
+                onClick={() => setShowLoginModal(false)}
+              >
+                ← Back
+              </button>
+              <h2>Login</h2>
+              <button
+                className="cart-close-btn"
+                onClick={() => setShowLoginModal(false)}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ padding: 'var(--spacing-lg)' }}>
+              {loginError && (
+                <div style={{
+                  padding: 'var(--spacing-sm) var(--spacing-md)',
+                  backgroundColor: '#fee',
+                  color: '#c33',
+                  borderRadius: 'var(--border-radius-md)',
+                  marginBottom: 'var(--spacing-md)',
+                  fontSize: 'var(--font-size-sm)'
+                }}>
+                  {loginError}
+                </div>
+              )}
+
+              <form onSubmit={handleLogin}>
+                <div className="form-group">
+                  <label htmlFor="login-email">Email Address</label>
+                  <input
+                    type="email"
+                    id="login-email"
+                    value={loginFormData.email}
+                    onChange={(e) => setLoginFormData({ ...loginFormData, email: e.target.value })}
+                    required
+                    placeholder="Enter your email"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="login-password">Password</label>
+                  <input
+                    type="password"
+                    id="login-password"
+                    value={loginFormData.password}
+                    onChange={(e) => setLoginFormData({ ...loginFormData, password: e.target.value })}
+                    required
+                    placeholder="Enter your password"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={loginLoading}
+                  style={{ width: '100%', marginTop: 'var(--spacing-md)' }}
+                >
+                  {loginLoading ? 'Logging in...' : 'Login'}
+                </button>
+              </form>
+
+              <div style={{
+                marginTop: 'var(--spacing-md)',
+                paddingTop: 'var(--spacing-md)',
+                borderTop: '1px solid var(--color-border)',
+                textAlign: 'center'
+              }}>
+                <p style={{
+                  margin: '0',
+                  color: 'var(--color-text-light)',
+                  fontSize: 'var(--font-size-sm)'
+                }}>
+                  Don't have an account?{' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowLoginModal(false);
+                      setCreateAccount(true);
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--color-primary)',
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                      fontSize: 'var(--font-size-sm)'
+                    }}
+                  >
+                    Create one during checkout
+                  </button>
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       )}
