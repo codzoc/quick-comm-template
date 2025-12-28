@@ -3,7 +3,6 @@ import {
   doc,
   getDocs,
   getDoc,
-  addDoc,
   updateDoc,
   query,
   orderBy,
@@ -30,8 +29,19 @@ const COLLECTION_NAME = 'orders';
  */
 export async function createOrder(orderData) {
   try {
-    // Run as transaction to ensure stock is updated atomically
-    const orderId = await runTransaction(db, async (transaction) => {
+    // Check if email is provided and find matching customer (outside transaction)
+    let linkedCustomerId = orderData.customerId || null;
+    if (!linkedCustomerId && orderData.customer.email) {
+      const customersRef = collection(db, 'customers');
+      const emailQuery = query(customersRef, where('email', '==', orderData.customer.email));
+      const emailSnapshot = await getDocs(emailQuery);
+      if (!emailSnapshot.empty) {
+        linkedCustomerId = emailSnapshot.docs[0].id;
+      }
+    }
+
+    // Run as transaction to ensure stock is updated atomically with order creation
+    const result = await runTransaction(db, async (transaction) => {
       // Read all product data first and validate stock availability
       const productData = new Map();
 
@@ -57,24 +67,10 @@ export async function createOrder(orderData) {
         });
       }
 
-      // All reads complete - now we can do writes
-
-      // Check if email is provided and find matching customer
-      let linkedCustomerId = orderData.customerId || null;
-
-      if (!linkedCustomerId && orderData.customer.email) {
-        // Query customers collection for matching email
-        const customersRef = collection(db, 'customers');
-        const emailQuery = query(customersRef, where('email', '==', orderData.customer.email));
-        const emailSnapshot = await getDocs(emailQuery);
-
-        if (!emailSnapshot.empty) {
-          linkedCustomerId = emailSnapshot.docs[0].id;
-        }
-      }
-
-      // Create order
+      // Create order document reference (generate ID)
       const ordersRef = collection(db, COLLECTION_NAME);
+      const orderRef = doc(ordersRef);
+      
       const newOrder = {
         orderId: generateOrderId(),
         items: orderData.items.map((item) => {
@@ -108,7 +104,8 @@ export async function createOrder(orderData) {
         createdAt: serverTimestamp()
       };
 
-      const docRef = await addDoc(ordersRef, newOrder);
+      // Create order document in transaction
+      transaction.set(orderRef, newOrder);
 
       // Decrease stock for each product using previously read data
       for (const item of orderData.items) {
@@ -121,10 +118,10 @@ export async function createOrder(orderData) {
         });
       }
 
-      return { id: docRef.id, ...newOrder };
+      return { id: orderRef.id, ...newOrder };
     });
 
-    return orderId;
+    return result;
   } catch (error) {
     console.error('Error creating order:', error);
     throw new Error(error.message || 'Failed to place order. Please try again.');

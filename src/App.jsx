@@ -12,6 +12,7 @@ import StaticPage from './pages/StaticPage';
 import CustomerAuth from './pages/CustomerAuth';
 import CustomerAccount from './pages/CustomerAccount';
 import SEO from './components/SEO';
+import ErrorBoundary from './components/ErrorBoundary';
 import { AdminProtectedRoute, CustomerProtectedRoute } from './components/ProtectedRoute';
 
 /**
@@ -21,9 +22,10 @@ import { AdminProtectedRoute, CustomerProtectedRoute } from './components/Protec
  */
 function App() {
   return (
-    <BrowserRouter>
-      <SEO />
-      <Routes>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <SEO />
+        <Routes>
         {/* Public Routes */}
         <Route path="/" element={<StoreFront />} />
 
@@ -77,8 +79,9 @@ function App() {
 
         {/* 404 - Redirect to home */}
         <Route path="*" element={<StoreFront />} />
-      </Routes>
-    </BrowserRouter>
+        </Routes>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 

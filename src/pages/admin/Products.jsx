@@ -124,13 +124,11 @@ function AdminProducts() {
         tempFormData.images = [];
         tempFormData.imagePath = '';
         productId = await createProduct(tempFormData);
-        console.log('Created product with ID:', productId);
       }
       
       // Upload new images if any (now we have the real product ID)
       if (imageFiles.length > 0) {
         const uploadProductId = productId || 'temp';
-        console.log('Uploading images with product ID:', uploadProductId);
         const uploadedUrls = await uploadProductImages(imageFiles, uploadProductId);
         
         // Merge with existing images

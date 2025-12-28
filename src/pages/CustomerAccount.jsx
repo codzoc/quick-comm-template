@@ -247,7 +247,7 @@ const CustomerAccount = () => {
            I will SKIP the cancellation button for now in this refactor to be safe and focus on "View Details".
            The user asked for "View Details".
         */
-        console.log("Cancel not implemented in Account view yet");
+        // Cancel order functionality not implemented in Account view
     };
 
     if (loading) {

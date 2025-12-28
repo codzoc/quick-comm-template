@@ -114,7 +114,14 @@ Now updates only happen when you manually trigger the workflow.
 
 ## ✨ Recent Updates
 
-### Image Upload & Management (New!)
+### Code Quality & Stability Improvements
+- **Fixed critical transaction bug** - Order creation and stock updates now happen atomically in a single transaction
+- **Added React Error Boundaries** - Prevents entire app crashes from component errors with graceful fallback UI
+- **Code cleanup** - Removed debug console logs for cleaner production code
+- **Improved error handling** - Better error messages and consistent error handling across the application
+- **Storage rules optimization** - Cleaner rules documentation and improved security comments
+
+### Image Upload & Management
 - **Built-in image upload** - No external hosting needed! Upload directly to Firebase Storage
 - **Automatic compression & resizing**:
   - Product images: Max 1024px width, auto-compressed

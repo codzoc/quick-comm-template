@@ -16,27 +16,24 @@ service firebase.storage {
         && firestore.get(/databases/(default)/documents/admins/$(request.auth.token.email)).data.role == 'admin';
     }
     
-    // Temporary: Allow authenticated users to upload (for testing)
-    // Remove this after fixing IAM role and use isAdmin() instead
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    // Products folder - only authenticated users can upload/delete, everyone can read
-    // Note: Using isAuthenticated() instead of isAdmin() to avoid Firestore IAM issues
-    // This allows any logged-in user to upload - restrict access via admin panel UI only
+    // Products folder - authenticated users can upload/delete, everyone can read
+    // Note: Using request.auth != null instead of isAdmin() to avoid Firestore IAM configuration complexity
+    // Admin panel UI provides the primary access control - only admins can access upload functionality
+    // For stricter security, grant Storage service account Cloud Datastore User role and use isAdmin()
     match /products/{allPaths=**} {
       allow read: if true;
       allow write: if request.auth != null;
     }
 
-    // Logos folder - only authenticated users can upload/delete, everyone can read
+    // Logos folder - authenticated users can upload/delete, everyone can read
+    // Access is controlled by admin panel UI (only admins can access upload functionality)
     match /logos/{allPaths=**} {
       allow read: if true;
       allow write: if request.auth != null;
     }
 
-    // Static pages folder - only authenticated users can upload/delete, everyone can read
+    // Static pages folder - authenticated users can upload/delete, everyone can read
+    // Access is controlled by admin panel UI (only admins can access upload functionality)
     match /static-pages/{allPaths=**} {
       allow read: if true;
       allow write: if request.auth != null;

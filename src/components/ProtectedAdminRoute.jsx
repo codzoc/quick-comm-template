@@ -26,7 +26,7 @@ const ProtectedAdminRoute = ({ children }) => {
                 if (adminDoc.exists()) {
                     setIsAuthorized(true);
                 } else {
-                    console.warn('Unauthorized admin access attempt:', user.email);
+                    // Silently redirect non-admins (security best practice - don't reveal admin routes exist)
                     navigate('/'); // Redirect non-admins to home
                 }
             } catch (error) {
