@@ -1,6 +1,14 @@
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
+/**
+ * Email Settings Service
+ * Handles Gmail SMTP configuration for transactional emails
+ * 
+ * Note: storeName is no longer stored here - it's retrieved from storeInfo/contact collection
+ * when sending emails (handled in backend emailService.js)
+ */
+
 const EMAIL_SETTINGS_DOC = 'email_settings';
 
 export const getEmailSettings = async () => {
@@ -11,13 +19,12 @@ export const getEmailSettings = async () => {
         if (docSnap.exists()) {
             return docSnap.data();
         } else {
-            // Return default settings
+            // Return default settings (storeName removed - use storeInfo.storeName instead)
             const defaultSettings = {
                 smtp: {
                     user: '',
                     password: ''
-                },
-                storeName: ''
+                }
             };
             return defaultSettings;
         }

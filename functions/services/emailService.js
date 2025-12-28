@@ -10,6 +10,8 @@ const path = require('path');
 
 /**
  * Get email configuration from Firestore
+ * Returns SMTP credentials only (user, password)
+ * Note: storeName is NOT stored here - use getStoreInfo() to get storeName from storeInfo/contact
  */
 async function getEmailConfig() {
     const settingsDoc = await admin.firestore()
@@ -40,37 +42,25 @@ async function getStoreInfo() {
             .collection('storeInfo')
             .doc('contact')
             .get();
-
-        console.log('[getStoreInfo] Document exists:', storeInfoDoc.exists);
         
         if (storeInfoDoc.exists) {
             const data = storeInfoDoc.data();
-            console.log('[getStoreInfo] Document data keys:', Object.keys(data));
-            console.log('[getStoreInfo] storeName value:', data.storeName);
-            console.log('[getStoreInfo] Full data:', JSON.stringify(data, null, 2));
-            
             const storeName = data.storeName;
             if (storeName) {
-                console.log('[getStoreInfo] Returning storeName:', storeName);
                 return {
                     storeName: storeName,
                     currencySymbol: data.currencySymbol || '₹'
                 };
-            } else {
-                console.log('[getStoreInfo] storeName field is empty or undefined');
             }
-        } else {
-            console.log('[getStoreInfo] Document does not exist at storeInfo/contact');
         }
 
         // Return default if nothing found
-        console.log('[getStoreInfo] Returning default "Our Store"');
         return {
             storeName: 'Our Store',
             currencySymbol: '₹'
         };
     } catch (error) {
-        console.error('[getStoreInfo] Error fetching store info:', error);
+        console.error('Error fetching store info:', error);
         return {
             storeName: 'Our Store',
             currencySymbol: '₹'
@@ -239,7 +229,7 @@ async function sendOrderConfirmationEmail(orderDetails) {
         const mailOptions = {
             from: `"${storeInfo.storeName}" <${config.smtp.user}>`,
             to: orderDetails.to,
-            subject: `Order Confirmation - ${orderDetails.orderId}`,
+            subject: `Order Confirmation - ${orderDetails.orderId} - ${storeInfo.storeName}`,
             html: html
         };
 
@@ -292,7 +282,7 @@ async function sendPaymentConfirmationEmail(paymentDetails) {
         const mailOptions = {
             from: `"${storeInfo.storeName}" <${config.smtp.user}>`,
             to: paymentDetails.to,
-            subject: `Payment Received - ${paymentDetails.orderId}`,
+            subject: `Payment Received - ${paymentDetails.orderId} - ${storeInfo.storeName}`,
             html: html
         };
 
@@ -417,7 +407,7 @@ async function sendOrderStatusChangeEmail(statusDetails) {
         const mailOptions = {
             from: `"${storeInfo.storeName}" <${config.smtp.user}>`,
             to: statusDetails.to,
-            subject: `Order Status Update - ${statusDetails.orderId}`,
+            subject: `Order Status Update - ${statusDetails.orderId} - ${storeInfo.storeName}`,
             html: html
         };
 

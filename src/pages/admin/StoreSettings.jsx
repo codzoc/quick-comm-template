@@ -67,7 +67,7 @@ function AdminStoreSettings() {
 
   const [emailSettings, setEmailSettings] = useState({
     smtp: { user: '', password: '' }
-    // storeName removed as requested
+    // Note: storeName is stored in storeInfo/contact, not in email settings
   });
 
   const [staticPages, setStaticPages] = useState({

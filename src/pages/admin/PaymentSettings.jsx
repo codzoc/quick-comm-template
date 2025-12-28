@@ -11,9 +11,8 @@ import {
     Button,
     Divider
 } from '@mui/material';
-import { Save, CreditCard, Mail } from 'lucide-react';
+import { Save, CreditCard } from 'lucide-react';
 import { getPaymentSettings, updatePaymentSettings } from '../../services/payment';
-import { getEmailSettings, updateEmailSettings } from '../../services/email';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
 function PaymentSettings() {
@@ -26,10 +25,6 @@ function PaymentSettings() {
         stripe: { enabled: false, publishableKey: '', secretKey: '', webhookSecret: '' },
         razorpay: { enabled: false, keyId: '', keySecret: '', webhookSecret: '' }
     });
-    const [emailSettings, setEmailSettings] = useState({
-        smtp: { user: '', password: '' },
-        storeName: ''
-    });
 
     useEffect(() => {
         loadSettings();
@@ -37,12 +32,8 @@ function PaymentSettings() {
 
     const loadSettings = async () => {
         try {
-            const [paymentData, emailData] = await Promise.all([
-                getPaymentSettings(),
-                getEmailSettings()
-            ]);
+            const paymentData = await getPaymentSettings();
             setSettings(paymentData);
-            setEmailSettings(emailData);
         } catch (err) {
             setError('Failed to load settings.');
             console.error(err);
@@ -56,16 +47,6 @@ function PaymentSettings() {
             ...prev,
             [gateway]: {
                 ...prev[gateway],
-                [field]: value
-            }
-        }));
-    };
-
-    const handleEmailChange = (section, field, value) => {
-        setEmailSettings(prev => ({
-            ...prev,
-            [section]: {
-                ...prev[section],
                 [field]: value
             }
         }));
