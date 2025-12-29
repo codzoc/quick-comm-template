@@ -62,6 +62,7 @@ function StoreFront() {
   const [orderItems, setOrderItems] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('cod');
+  const [checkoutError, setCheckoutError] = useState('');
 
   // Customer Form State
   const [customerInfo, setCustomerInfo] = useState({
@@ -179,6 +180,7 @@ function StoreFront() {
       setShowCheckout(false);
       setOrderSuccess(false);
       setSubmitting(false);
+      setCheckoutError(''); // Clear checkout errors when cart opens
       // Reload default address when cart opens if user is logged in
       const reloadAddress = async () => {
         const user = getCurrentCustomer();
@@ -272,6 +274,7 @@ function StoreFront() {
   const handleBackToCart = () => {
     setShowCheckout(false);
     setFormErrors({});
+    setCheckoutError('');
   };
 
   const validateForm = () => {
@@ -329,6 +332,7 @@ function StoreFront() {
     }
 
     setSubmitting(true);
+    setCheckoutError(''); // Clear any previous checkout errors
 
     try {
       let finalCustomerId = currentUser?.uid || null;
@@ -508,27 +512,36 @@ function StoreFront() {
               if (error.message && error.message.toLowerCase().includes('cancelled')) {
                 // User cancelled payment - just reset submitting state, stay on checkout
                 setSubmitting(false);
-                setError(''); // Clear any previous errors
+                setCheckoutError(''); // Clear any previous errors
               } else {
-                // Actual payment failure - show error
-                setError('Payment failed: ' + error.message);
+                // Actual payment failure - show error in checkout form, not main page
+                setCheckoutError('Payment failed: ' + error.message);
                 setSubmitting(false);
               }
             }
           });
         } catch (paymentErr) {
-          setError('Payment initialization failed: ' + paymentErr.message);
-          setSubmitting(false);
+          // Handle payment cancellation gracefully - don't show error in main page
+          if (paymentErr.message && paymentErr.message.toLowerCase().includes('cancelled')) {
+            // User cancelled payment - just reset submitting state, stay on checkout
+            setSubmitting(false);
+            setCheckoutError(''); // Clear any previous errors
+          } else {
+            // Actual payment initialization failure - show error inside checkout form
+            setCheckoutError('Payment initialization failed: ' + paymentErr.message);
+            setSubmitting(false);
+          }
         }
       } else if (selectedPaymentMethod === 'stripe') {
         // Stripe - Create order and redirect to Stripe Checkout
         // Note: This requires a backend endpoint to create Stripe Checkout session
-        setError('Stripe integration requires backend setup. Please use COD or Razorpay for now.');
+        setCheckoutError('Stripe integration requires backend setup. Please use COD or Razorpay for now.');
         setSubmitting(false);
       }
 
     } catch (err) {
-      setError(err.message);
+      // Show error in checkout form, not main page
+      setCheckoutError(err.message);
       setSubmitting(false);
     }
   };
@@ -722,6 +735,20 @@ function StoreFront() {
                         ×
                       </button>
                     </div>
+
+                    {/* Checkout Error Message */}
+                    {checkoutError && (
+                      <div style={{
+                        padding: 'var(--spacing-sm) var(--spacing-md)',
+                        backgroundColor: '#fee',
+                        color: '#c33',
+                        borderRadius: 'var(--border-radius-md)',
+                        fontSize: 'var(--font-size-sm)',
+                        margin: 'var(--spacing-md) var(--spacing-lg) var(--spacing-md)'
+                      }}>
+                        {checkoutError}
+                      </div>
+                    )}
 
                     {/* Login Button for Guest Users */}
                     {!currentUser && (
