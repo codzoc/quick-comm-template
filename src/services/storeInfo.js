@@ -32,7 +32,8 @@ export async function getStoreInfo() {
         currencySymbol: data.currencySymbol || '₹',
         taxPercentage: data.taxPercentage ?? 0,
         shippingCost: data.shippingCost ?? 0,
-        logoUrl: data.logoUrl || '/images/logo.png'
+        logoUrl: data.logoUrl || '/images/logo.png',
+        productsHeading: data.productsHeading || 'Our Products'
       };
     } else {
       // Return default values if not set
@@ -49,7 +50,8 @@ export async function getStoreInfo() {
         currencySymbol: '₹',
         taxPercentage: 0,
         shippingCost: 0,
-        logoUrl: '/images/logo.png'
+        logoUrl: '/images/logo.png',
+        productsHeading: 'Our Products'
       };
     }
   } catch (error) {

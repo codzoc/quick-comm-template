@@ -62,7 +62,8 @@ function AdminStoreSettings() {
     seoKeywords: '',
     currencySymbol: '₹',
     taxPercentage: 0,
-    shippingCost: 0
+    shippingCost: 0,
+    productsHeading: 'Our Products'
   });
 
   const [emailSettings, setEmailSettings] = useState({
@@ -275,6 +276,16 @@ function AdminStoreSettings() {
                 onChange={(e) => handleStoreInfoChange('storeName', e.target.value)}
                 margin="normal"
                 required
+              />
+
+              <TextField
+                fullWidth
+                label="Products Section Title"
+                value={storeInfo.productsHeading || 'Our Products'}
+                onChange={(e) => handleStoreInfoChange('productsHeading', e.target.value)}
+                margin="normal"
+                helperText="Title displayed above the products grid on the home page"
+                placeholder="Our Products"
               />
 
               <Box sx={{ mb: 2 }}>

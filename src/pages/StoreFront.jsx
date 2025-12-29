@@ -515,6 +515,8 @@ function StoreFront() {
                 setCheckoutError(''); // Clear any previous errors
               } else {
                 // Actual payment failure - show error in checkout form, not main page
+                // Ensure cart stays open and checkout form is visible
+                setShowCheckout(true);
                 setCheckoutError('Payment failed: ' + error.message);
                 setSubmitting(false);
               }
@@ -528,6 +530,8 @@ function StoreFront() {
             setCheckoutError(''); // Clear any previous errors
           } else {
             // Actual payment initialization failure - show error inside checkout form
+            // Ensure cart stays open and checkout form is visible
+            setShowCheckout(true);
             setCheckoutError('Payment initialization failed: ' + paymentErr.message);
             setSubmitting(false);
           }
@@ -535,12 +539,16 @@ function StoreFront() {
       } else if (selectedPaymentMethod === 'stripe') {
         // Stripe - Create order and redirect to Stripe Checkout
         // Note: This requires a backend endpoint to create Stripe Checkout session
+        // Ensure cart stays open and checkout form is visible
+        setShowCheckout(true);
         setCheckoutError('Stripe integration requires backend setup. Please use COD or Razorpay for now.');
         setSubmitting(false);
       }
 
     } catch (err) {
       // Show error in checkout form, not main page
+      // Ensure cart stays open and checkout form is visible
+      setShowCheckout(true);
       setCheckoutError(err.message);
       setSubmitting(false);
     }
@@ -602,7 +610,7 @@ function StoreFront() {
           {/* Products Grid */}
           {!error && (
             <section className="products-section">
-              <h1 className="products-heading">Our Products</h1>
+              <h1 className="products-heading">{storeInfo?.productsHeading || 'Our Products'}</h1>
 
               {filteredProducts.length === 0 ? (
                 <div className="no-products">
