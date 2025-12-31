@@ -852,7 +852,7 @@ function StoreFront() {
                           placeholder="your@email.com"
                           className={formErrors.email ? 'error' : ''}
                           required
-                          disabled={currentUser}
+                          disabled={!!currentUser}
                         />
                         {formErrors.email && (
                           <span className="error-text">{formErrors.email}</span>
