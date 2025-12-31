@@ -341,7 +341,7 @@ You only need **2 secrets** for the entire setup:
 6. Open the JSON file in a text editor
 7. Copy the **entire contents** of the file
 8. Create a secret named `FIREBASE_SERVICE_ACCOUNT` and paste the entire JSON
-
+9. Enable Cloud Billing by visiting https://console.developers.google.com/apis/api/cloudbilling.googleapis.com/overview
 **Note**: If you skip step 4 or 5, the deployment may fail with permission errors. You can always add permissions later if needed.
 
 ---
