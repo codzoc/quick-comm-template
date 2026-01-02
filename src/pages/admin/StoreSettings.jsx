@@ -78,6 +78,7 @@ function AdminStoreSettings() {
   });
 
   const [selectedTemplate, setSelectedTemplate] = useState('professional');
+  const [customizingTemplate, setCustomizingTemplate] = useState(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingIcon, setUploadingIcon] = useState(false);
   const [uploadingPageImage, setUploadingPageImage] = useState({});
@@ -549,24 +550,57 @@ function AdminStoreSettings() {
               </Alert>
             )}
 
-            {selectedTemplate !== 'custom' && (
-              <Button
-                variant="contained"
-                startIcon={<Save size={18} />}
-                onClick={handleSaveTheme}
-              >
-                Apply Theme Template
-              </Button>
+            {!customizingTemplate && selectedTemplate !== 'custom' && (
+              <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+                <Button
+                  variant="contained"
+                  startIcon={<Save size={18} />}
+                  onClick={handleSaveTheme}
+                >
+                  Apply Theme Template
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={() => setCustomizingTemplate(selectedTemplate)}
+                  sx={{ ml: 'auto' }}
+                >
+                  Customize this template
+                </Button>
+              </Box>
             )}
 
-            {/* Show Theme Customizer for Custom theme */}
-            {selectedTemplate === 'custom' && (
-              <ThemeCustomizer
-                onSave={() => {
-                  showSuccess('Custom theme saved! Refreshing page...');
-                  setTimeout(() => window.location.reload(), 1500);
-                }}
-              />
+            {/* Show Theme Customizer when customizing or when custom template is selected */}
+            {(customizingTemplate || selectedTemplate === 'custom') && (
+              <Box>
+                {customizingTemplate && (
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                      Customizing: {themeOptions.find(opt => opt.value === customizingTemplate)?.label}
+                    </Typography>
+                    <Button
+                      variant="text"
+                      onClick={() => setCustomizingTemplate(null)}
+                    >
+                      Cancel
+                    </Button>
+                  </Box>
+                )}
+                {selectedTemplate === 'custom' && !customizingTemplate && (
+                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                    Custom Theme
+                  </Typography>
+                )}
+                <ThemeCustomizer
+                  baseTemplate={customizingTemplate || (selectedTemplate === 'custom' ? 'custom' : null)}
+                  onSave={() => {
+                    showSuccess('Custom theme saved! Refreshing page...');
+                    setTimeout(() => {
+                      setCustomizingTemplate(null);
+                      window.location.reload();
+                    }, 1500);
+                  }}
+                />
+              </Box>
             )}
           </CardContent>
         </TabPanel>

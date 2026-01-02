@@ -13,28 +13,41 @@ import { Save, RotateCcw } from 'lucide-react';
 import { getTheme, updateThemeTemplate } from '../services/theme';
 import { getThemeTemplate } from '../config/themeTemplates';
 
-const ThemeCustomizer = ({ onSave }) => {
+const ThemeCustomizer = ({ onSave, baseTemplate = null }) => {
     const [customTheme, setCustomTheme] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [baseTemplateKey, setBaseTemplateKey] = useState(baseTemplate);
 
     useEffect(() => {
         loadCurrentTheme();
-    }, []);
+    }, [baseTemplate]);
 
     const loadCurrentTheme = async () => {
         try {
+            // If baseTemplate is provided, use it to prefill
+            if (baseTemplate) {
+                const base = getThemeTemplate(baseTemplate);
+                setCustomTheme({ ...base });
+                setBaseTemplateKey(baseTemplate);
+                setLoading(false);
+                return;
+            }
+
+            // Otherwise, load current theme
             const theme = await getTheme();
             if (theme.templateKey === 'custom') {
                 setCustomTheme(theme);
+                setBaseTemplateKey(null);
             } else {
-                // Start with custom template as base
-                const baseCustom = getThemeTemplate('custom');
-                setCustomTheme(baseCustom);
+                // Start with current template as base for customization
+                setCustomTheme(theme);
+                setBaseTemplateKey(theme.templateKey || 'custom');
             }
         } catch (err) {
             console.error('Error loading theme:', err);
             const baseCustom = getThemeTemplate('custom');
             setCustomTheme(baseCustom);
+            setBaseTemplateKey('custom');
         } finally {
             setLoading(false);
         }
@@ -57,8 +70,19 @@ const ThemeCustomizer = ({ onSave }) => {
         });
     };
 
+    const handleBorderRadiusChange = (key, value) => {
+        setCustomTheme({
+            ...customTheme,
+            borderRadius: {
+                ...customTheme.borderRadius,
+                [key]: value
+            }
+        });
+    };
+
     const handleSave = async () => {
         try {
+            // Save as custom template with the customized values
             await updateThemeTemplate('custom', customTheme);
             if (onSave) onSave();
         } catch (err) {
@@ -67,8 +91,14 @@ const ThemeCustomizer = ({ onSave }) => {
     };
 
     const handleReset = () => {
-        const baseCustom = getThemeTemplate('custom');
-        setCustomTheme(baseCustom);
+        // Reset to the base template if available, otherwise use custom default
+        if (baseTemplateKey) {
+            const base = getThemeTemplate(baseTemplateKey);
+            setCustomTheme({ ...base });
+        } else {
+            const baseCustom = getThemeTemplate('custom');
+            setCustomTheme(baseCustom);
+        }
     };
 
     if (loading || !customTheme) {
@@ -87,7 +117,11 @@ const ThemeCustomizer = ({ onSave }) => {
             <Alert severity="info" sx={{ mb: 3 }}>
                 <Typography variant="body2">
                     <strong>Custom Theme Editor</strong><br />
-                    Customize all colors and fonts for your store. Changes will be applied after saving and refreshing the page.
+                    {baseTemplateKey && baseTemplateKey !== 'custom' ? (
+                        <>Customize the <strong>{getThemeTemplate(baseTemplateKey)?.name}</strong> template. All fields are prefilled with the template values. Modify colors, fonts, and border radius as needed.</>
+                    ) : (
+                        <>Customize all colors, fonts, and border radius for your store. Changes will be applied after saving and refreshing the page.</>
+                    )}
                 </Typography>
             </Alert>
 
@@ -152,6 +186,33 @@ const ThemeCustomizer = ({ onSave }) => {
                 ))}
             </Paper>
 
+            {/* Border Radius */}
+            <Paper sx={{ p: 3, mb: 3 }}>
+                <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
+                    Border Radius
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Control the roundness of corners for buttons, cards, and other elements.
+                </Typography>
+                <Grid container spacing={2}>
+                    {Object.entries(customTheme.borderRadius || {}).map(([key, value]) => (
+                        <Grid item xs={12} sm={6} md={3} key={key}>
+                            <TextField
+                                fullWidth
+                                label={key === 'full' ? 'Full (Circle)' : key.toUpperCase()}
+                                value={value}
+                                onChange={(e) => handleBorderRadiusChange(key, e.target.value)}
+                                size="small"
+                                helperText={key === 'full' ? 'For circular elements' : `Small: ${key === 'sm' ? 'buttons' : key === 'md' ? 'cards' : 'large cards'}`}
+                                inputProps={{
+                                    style: { fontFamily: 'monospace', fontSize: '14px' }
+                                }}
+                            />
+                        </Grid>
+                    ))}
+                </Grid>
+            </Paper>
+
             {/* Preview */}
             <Paper sx={{ p: 3, mb: 3, backgroundColor: customTheme.colors.background }}>
                 <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
@@ -163,7 +224,7 @@ const ThemeCustomizer = ({ onSave }) => {
                             p: 2,
                             backgroundColor: customTheme.colors.surface,
                             border: `1px solid ${customTheme.colors.border}`,
-                            borderRadius: '8px'
+                            borderRadius: customTheme.borderRadius?.md || '12px'
                         }}
                     >
                         <Typography
@@ -192,7 +253,8 @@ const ThemeCustomizer = ({ onSave }) => {
                             sx={{
                                 backgroundColor: customTheme.colors.primary,
                                 '&:hover': { backgroundColor: customTheme.colors.primaryHover },
-                                fontFamily: customTheme.fontFamily
+                                fontFamily: customTheme.fontFamily,
+                                borderRadius: customTheme.borderRadius?.md || '12px'
                             }}
                         >
                             Primary Button
@@ -202,7 +264,8 @@ const ThemeCustomizer = ({ onSave }) => {
                             sx={{
                                 borderColor: customTheme.colors.border,
                                 color: customTheme.colors.text,
-                                fontFamily: customTheme.fontFamily
+                                fontFamily: customTheme.fontFamily,
+                                borderRadius: customTheme.borderRadius?.md || '12px'
                             }}
                         >
                             Secondary Button
@@ -226,7 +289,7 @@ const ThemeCustomizer = ({ onSave }) => {
                     startIcon={<RotateCcw size={18} />}
                     onClick={handleReset}
                 >
-                    Reset to Default
+                    {baseTemplateKey && baseTemplateKey !== 'custom' ? 'Reset to Template' : 'Reset to Default'}
                 </Button>
             </Box>
 

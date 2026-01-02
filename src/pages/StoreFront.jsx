@@ -129,6 +129,28 @@ function StoreFront() {
     return () => window.removeEventListener('openCart', handleOpenCart);
   }, [openCart]);
 
+  // Prefill email from localStorage or logged-in user when checkout opens
+  useEffect(() => {
+    if (showCheckout) {
+      if (currentUser?.email) {
+        // Prefill from logged-in user's email
+        setCustomerInfo(prev => ({
+          ...prev,
+          email: currentUser.email || prev.email || ''
+        }));
+      } else {
+        // Prefill from localStorage for guests
+        const savedEmail = localStorage.getItem('checkoutEmail');
+        if (savedEmail && !customerInfo.email) {
+          setCustomerInfo(prev => ({
+            ...prev,
+            email: savedEmail
+          }));
+        }
+      }
+    }
+  }, [showCheckout, currentUser]);
+
   // Check if customer is logged in and load default address
   const checkCustomerAuth = async () => {
     const user = getCurrentCustomer();
@@ -146,12 +168,31 @@ function StoreFront() {
             address: defaultAddr.address,
             pin: defaultAddr.pin
           });
+        } else {
+          // If no default address, still set email from user
+          setCustomerInfo(prev => ({
+            ...prev,
+            email: user.email || prev.email || ''
+          }));
         }
       } catch (err) {
         console.error('Error loading default address:', err);
+        // Still set email from user even if address load fails
+        setCustomerInfo(prev => ({
+          ...prev,
+          email: user.email || prev.email || ''
+        }));
       }
     } else {
       setCreateAccount(false); // Default to unchecked for guests
+      // Load saved email from localStorage for guests
+      const savedEmail = localStorage.getItem('checkoutEmail');
+      if (savedEmail) {
+        setCustomerInfo(prev => ({
+          ...prev,
+          email: savedEmail
+        }));
+      }
     }
   };
 
@@ -269,6 +310,17 @@ function StoreFront() {
   const handleCheckout = () => {
     if (cartItems.length === 0) return;
     setShowCheckout(true);
+    
+    // Prefill email from localStorage if not already set and user is not logged in
+    if (!currentUser && !customerInfo.email) {
+      const savedEmail = localStorage.getItem('checkoutEmail');
+      if (savedEmail) {
+        setCustomerInfo(prev => ({
+          ...prev,
+          email: savedEmail
+        }));
+      }
+    }
   };
 
   const handleBackToCart = () => {
@@ -843,16 +895,20 @@ function StoreFront() {
                           type="email"
                           id="email"
                           value={customerInfo.email}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            const emailValue = e.target.value;
                             setCustomerInfo({
                               ...customerInfo,
-                              email: e.target.value
-                            })
-                          }
+                              email: emailValue
+                            });
+                            // Save email to localStorage for guest users
+                            if (!currentUser && emailValue) {
+                              localStorage.setItem('checkoutEmail', emailValue);
+                            }
+                          }}
                           placeholder="your@email.com"
                           className={formErrors.email ? 'error' : ''}
                           required
-                          disabled={!!currentUser}
                         />
                         {formErrors.email && (
                           <span className="error-text">{formErrors.email}</span>
