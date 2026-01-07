@@ -14,6 +14,7 @@ import CustomerAccount from './pages/CustomerAccount';
 import SEO from './components/SEO';
 import ErrorBoundary from './components/ErrorBoundary';
 import { AdminProtectedRoute, CustomerProtectedRoute } from './components/ProtectedRoute';
+import { CustomerProvider } from './context/CustomerContext';
 
 /**
  * Main App Component
@@ -23,20 +24,21 @@ import { AdminProtectedRoute, CustomerProtectedRoute } from './components/Protec
 function App() {
   return (
     <ErrorBoundary>
-      <BrowserRouter>
-        <SEO />
-        <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<StoreFront />} />
+      <CustomerProvider>
+        <BrowserRouter>
+          <SEO />
+          <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<StoreFront />} />
 
-        {/* Customer Routes */}
-        <Route path="/login" element={<CustomerAuth />} />
-        <Route path="/signup" element={<CustomerAuth />} />
-        <Route path="/account" element={
-          <CustomerProtectedRoute>
-            <CustomerAccount />
-          </CustomerProtectedRoute>
-        } />
+          {/* Customer Routes */}
+          <Route path="/login" element={<CustomerAuth />} />
+          <Route path="/signup" element={<CustomerAuth />} />
+          <Route path="/account" element={
+            <CustomerProtectedRoute>
+              <CustomerAccount />
+            </CustomerProtectedRoute>
+          } />
 
         {/* Admin Routes */}
         <Route path="/admin/login" element={<Navigate to="/admin" replace />} />
@@ -77,10 +79,11 @@ function App() {
         <Route path="/terms" element={<StaticPage pageType="terms" />} />
         <Route path="/privacy" element={<StaticPage pageType="privacy" />} />
 
-        {/* 404 - Redirect to home */}
-        <Route path="*" element={<StoreFront />} />
-        </Routes>
-      </BrowserRouter>
+          {/* 404 - Redirect to home */}
+          <Route path="*" element={<StoreFront />} />
+          </Routes>
+        </BrowserRouter>
+      </CustomerProvider>
     </ErrorBoundary>
   );
 }

@@ -132,6 +132,32 @@ img {
   }
 }
 
+/* Scale down for screens below 480px (zoom-out effect) */
+@media (max-width: 479px) {
+  html {
+    width: 480px;
+    min-width: 480px;
+    transform-origin: top center;
+    transform: scale(calc(100vw / 480));
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  body {
+    width: 480px;
+    min-width: 480px;
+    overflow-x: hidden;
+    position: relative;
+    margin: 0 auto;
+  }
+
+  #root {
+    width: 480px;
+    min-width: 480px;
+    position: relative;
+  }
+}
+
 /* Material-UI Component Overrides */
 /* Force MUI components to use theme font-family */
 .MuiTypography-root,

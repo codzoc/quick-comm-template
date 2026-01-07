@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, ShoppingCart, Search, User } from 'lucide-react';
 import { business } from '../config/business';
 import { getStoreInfo } from '../services/storeInfo';
-import { getCurrentCustomer } from '../services/customerAuth';
+import { useCustomer } from '../context/CustomerContext';
 import SearchBar from './SearchBar';
 import './Header.css';
 
@@ -23,7 +23,9 @@ function Header({ cartItemCount = 0, onSearch, showSearch = true }) {
   const [storeIcon, setStoreIcon] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
+  
+  // Get customer from global context
+  const { currentCustomer: currentUser } = useCustomer();
 
   useEffect(() => {
     // Fetch store info from Firebase
@@ -46,10 +48,6 @@ function Header({ cartItemCount = 0, onSearch, showSearch = true }) {
     };
 
     fetchStoreInfo();
-
-    // Check if user is logged in
-    const user = getCurrentCustomer();
-    setCurrentUser(user);
   }, []);
 
   const toggleMobileMenu = () => {

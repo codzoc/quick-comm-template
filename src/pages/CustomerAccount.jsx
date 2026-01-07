@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye } from 'lucide-react';
-import { getCurrentCustomer, getCustomerData, logoutCustomer, updateCustomerProfile } from '../services/customerAuth';
+import { useCustomer } from '../context/CustomerContext';
+import { getCustomerData, logoutCustomer, updateCustomerProfile } from '../services/customerAuth';
 import { getCustomerAddresses, addAddress, updateAddress, deleteAddress, setDefaultAddress } from '../services/addresses';
 import { getCustomerOrders } from '../services/orders';
 import Header from '../components/Header';
@@ -12,6 +13,7 @@ import './CustomerAccount.css';
 
 const CustomerAccount = () => {
     const navigate = useNavigate();
+    const { currentCustomer, customerProfile } = useCustomer();
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('addresses');
     const [customer, setCustomer] = useState(null);
@@ -44,23 +46,26 @@ const CustomerAccount = () => {
 
     useEffect(() => {
         checkAuth();
-    }, []);
+    }, [currentCustomer, customerProfile]);
 
     const checkAuth = async () => {
-        const user = getCurrentCustomer();
-        if (!user) {
+        if (!currentCustomer) {
             navigate('/login', { state: { from: '/account' } });
             return;
         }
 
         try {
-            const customerData = await getCustomerData(user.uid);
+            // Use customerProfile from context if available, otherwise fetch
+            let customerData = customerProfile;
+            if (!customerData) {
+                customerData = await getCustomerData(currentCustomer.uid);
+            }
 
             if (!customerData) {
                 // If auth exists but no firestore data, initialize empty form and force edit
-                setCustomer({ email: user.email, uid: user.uid });
+                setCustomer({ email: currentCustomer.email, uid: currentCustomer.uid });
                 setProfileForm({
-                    name: user.displayName || '',
+                    name: currentCustomer.displayName || '',
                     phone: ''
                 });
                 setEditingProfile(true);
@@ -73,8 +78,8 @@ const CustomerAccount = () => {
                 });
 
                 // Load addresses and orders only if profile exists
-                await loadAddresses(user.uid);
-                await loadOrders(user.uid);
+                await loadAddresses(currentCustomer.uid);
+                await loadOrders(currentCustomer.uid);
             }
         } catch (err) {
             setError('Failed to load account data');

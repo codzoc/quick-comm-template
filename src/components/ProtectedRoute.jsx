@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { getCurrentUser } from '../services/auth';
 import { getSessionType } from '../services/customerAuth';
+import { useCustomer } from '../context/CustomerContext';
 import LoadingSpinner from './LoadingSpinner';
 
 /**
@@ -57,25 +58,8 @@ export function AdminProtectedRoute({ children }) {
  * Redirects to customer login if not authenticated as customer
  */
 export function CustomerProtectedRoute({ children }) {
-  const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  useEffect(() => {
-    const checkAuth = () => {
-      const user = getCurrentUser();
-      const userType = getSessionType();
-
-      if (user && userType === 'customer') {
-        setIsAuthenticated(true);
-      } else {
-        setIsAuthenticated(false);
-      }
-
-      setLoading(false);
-    };
-
-    checkAuth();
-  }, []);
+  const { currentCustomer, loading } = useCustomer();
+  const userType = getSessionType();
 
   if (loading) {
     return (
@@ -90,7 +74,7 @@ export function CustomerProtectedRoute({ children }) {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!currentCustomer || userType !== 'customer') {
     return <Navigate to="/login" state={{ from: window.location.pathname }} replace />;
   }
 

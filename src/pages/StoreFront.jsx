@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useCustomer } from '../context/CustomerContext';
 import { getAllProducts } from '../services/products';
 import { createOrder } from '../services/orders';
 import { getStoreInfo } from '../services/storeInfo';
 import { getPaymentSettings } from '../services/payment';
-import { getCurrentCustomer, signUpCustomer, loginCustomer } from '../services/customerAuth';
+import { signUpCustomer, loginCustomer } from '../services/customerAuth';
 import { getDefaultAddress, addAddress, getCustomerAddresses } from '../services/addresses';
 import { initiateRazorpayPayment, createRazorpayOrder } from '../services/paymentGateway';
 import { functions } from '../config/firebase'; // Import functions instance
@@ -40,7 +41,9 @@ function StoreFront() {
   const [searchQuery, setSearchQuery] = useState('');
   const [storeInfo, setStoreInfo] = useState(null);
   const [paymentSettings, setPaymentSettings] = useState(null);
-  const [currentUser, setCurrentUser] = useState(null);
+  
+  // Get customer from global context
+  const { currentCustomer: currentUser, customerProfile } = useCustomer();
 
   // Cart and Checkout State
   const {
@@ -129,6 +132,13 @@ function StoreFront() {
     return () => window.removeEventListener('openCart', handleOpenCart);
   }, [openCart]);
 
+  // Update customer info when customer profile changes
+  useEffect(() => {
+    if (currentUser && customerProfile) {
+      checkCustomerAuth();
+    }
+  }, [currentUser, customerProfile]);
+
   // Prefill email from localStorage or logged-in user when checkout opens
   useEffect(() => {
     if (showCheckout) {
@@ -153,18 +163,15 @@ function StoreFront() {
 
   // Check if customer is logged in and load default address
   const checkCustomerAuth = async () => {
-    const user = getCurrentCustomer();
-    setCurrentUser(user);
-
-    if (user) {
+    if (currentUser) {
       setCreateAccount(true); // Default to saving address for logged-in users
       try {
-        const defaultAddr = await getDefaultAddress(user.uid);
+        const defaultAddr = await getDefaultAddress(currentUser.uid);
         if (defaultAddr) {
           setCustomerInfo({
             name: defaultAddr.name,
             phone: defaultAddr.phone,
-            email: user.email || '',
+            email: currentUser.email || '',
             address: defaultAddr.address,
             pin: defaultAddr.pin
           });
@@ -172,7 +179,7 @@ function StoreFront() {
           // If no default address, still set email from user
           setCustomerInfo(prev => ({
             ...prev,
-            email: user.email || prev.email || ''
+            email: currentUser.email || prev.email || ''
           }));
         }
       } catch (err) {
@@ -180,7 +187,7 @@ function StoreFront() {
         // Still set email from user even if address load fails
         setCustomerInfo(prev => ({
           ...prev,
-          email: user.email || prev.email || ''
+          email: currentUser.email || prev.email || ''
         }));
       }
     } else {
@@ -204,10 +211,10 @@ function StoreFront() {
 
     try {
       await loginCustomer(loginFormData.email, loginFormData.password);
-      // Refresh user data and close modal
-      await checkCustomerAuth();
+      // Context will automatically update, just close modal
       setShowLoginModal(false);
       setLoginFormData({ email: '', password: '' });
+      // checkCustomerAuth will be called via useEffect when currentUser changes
     } catch (err) {
       setLoginError(err.message);
     } finally {
@@ -223,16 +230,12 @@ function StoreFront() {
       setSubmitting(false);
       setCheckoutError(''); // Clear checkout errors when cart opens
       // Reload default address when cart opens if user is logged in
-      const reloadAddress = async () => {
-        const user = getCurrentCustomer();
-        if (user) {
-          await checkCustomerAuth();
-        }
-      };
-      reloadAddress();
+      if (currentUser) {
+        checkCustomerAuth();
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCartOpen]);
+  }, [isCartOpen, currentUser]);
 
   // Filter products based on search
   useEffect(() => {
@@ -466,26 +469,25 @@ function StoreFront() {
         clearCart();
 
         // Clear form, but reload default address if user is logged in
-        const user = getCurrentCustomer();
-        if (user) {
+        if (currentUser) {
           // For logged-in users, reload default address after order
           try {
-            const defaultAddr = await getDefaultAddress(user.uid);
+            const defaultAddr = await getDefaultAddress(currentUser.uid);
             if (defaultAddr) {
               setCustomerInfo({
                 name: defaultAddr.name,
                 phone: defaultAddr.phone,
-                email: user.email || '',
+                email: currentUser.email || '',
                 address: defaultAddr.address,
                 pin: defaultAddr.pin
               });
             } else {
               // No default address, clear form
-              setCustomerInfo({ name: '', phone: '', email: user.email || '', address: '', pin: '' });
+              setCustomerInfo({ name: '', phone: '', email: currentUser.email || '', address: '', pin: '' });
             }
           } catch (err) {
             console.error('Error reloading default address:', err);
-            setCustomerInfo({ name: '', phone: '', email: user.email || '', address: '', pin: '' });
+            setCustomerInfo({ name: '', phone: '', email: currentUser.email || '', address: '', pin: '' });
           }
           setCreateAccount(true); // Keep checked for logged-in users
         } else {
@@ -532,24 +534,23 @@ function StoreFront() {
               setOrderSuccess(true);
               clearCart();
               // Reload default address if user is logged in
-              const user = getCurrentCustomer();
-              if (user) {
+              if (currentUser) {
                 try {
-                  const defaultAddr = await getDefaultAddress(user.uid);
+                  const defaultAddr = await getDefaultAddress(currentUser.uid);
                   if (defaultAddr) {
                     setCustomerInfo({
                       name: defaultAddr.name,
                       phone: defaultAddr.phone,
-                      email: user.email || '',
+                      email: currentUser.email || '',
                       address: defaultAddr.address,
                       pin: defaultAddr.pin
                     });
                   } else {
-                    setCustomerInfo({ name: '', phone: '', email: user.email || '', address: '', pin: '' });
+                    setCustomerInfo({ name: '', phone: '', email: currentUser.email || '', address: '', pin: '' });
                   }
                 } catch (err) {
                   console.error('Error reloading default address:', err);
-                  setCustomerInfo({ name: '', phone: '', email: user.email || '', address: '', pin: '' });
+                  setCustomerInfo({ name: '', phone: '', email: currentUser.email || '', address: '', pin: '' });
                 }
                 setCreateAccount(true); // Keep checked for logged-in users
               } else {
