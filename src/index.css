@@ -133,28 +133,68 @@ img {
 }
 
 /* Scale down for screens below 480px (zoom-out effect) */
-@media (max-width: 479px) {
+/* This ensures normal responsive behavior until 480px, then scales down */
+@media screen and (max-width: 479px) {
   html {
-    width: 480px;
-    min-width: 480px;
-    transform-origin: top center;
-    transform: scale(calc(100vw / 480));
     overflow-x: hidden;
+    width: 100vw;
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
     position: relative;
   }
 
   body {
-    width: 480px;
-    min-width: 480px;
     overflow-x: hidden;
+    width: 100vw;
     position: relative;
-    margin: 0 auto;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
   }
 
   #root {
     width: 480px;
     min-width: 480px;
+    max-width: 480px;
+    transform-origin: top center;
+    transform: scale(calc(100vw / 480));
+    -webkit-transform: scale(calc(100vw / 480));
     position: relative;
+    flex-shrink: 0;
+    margin: 0 auto;
+  }
+}
+
+/* Support for modern viewport units on mobile */
+@supports (width: 100dvw) {
+  @media screen and (max-width: 479px) {
+    #root {
+      transform: scale(calc(100dvw / 480));
+      -webkit-transform: scale(calc(100dvw / 480));
+    }
+  }
+}
+
+/* Ensure normal responsive behavior at 480px and above */
+@media screen and (min-width: 480px) {
+  html {
+    width: 100%;
+  }
+
+  body {
+    width: 100%;
+  }
+
+  #root {
+    width: 100%;
+    max-width: none;
+    min-width: auto;
+    transform: none;
   }
 }
 
