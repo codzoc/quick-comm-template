@@ -2,15 +2,25 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!-- Viewport: Set to 480px minimum, calculate initial-scale for mobile devices -->
     <meta name="viewport" content="width=480, initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <!-- iOS Safari fix: dynamically set initial-scale for proper fit -->
     <script>
+      // Fix for iOS Safari and Android Chrome: Calculate proper initial-scale
       (function() {
         var viewport = document.querySelector('meta[name="viewport"]');
-        var width = window.screen.width || window.innerWidth;
-        if (width < 480 && viewport) {
-          var scale = width / 480;
-          viewport.setAttribute('content', 'width=480, initial-scale=' + scale + ', maximum-scale=' + scale + ', user-scalable=no');
+        if (!viewport) return;
+        
+        // Get device width (use screen.width for more accurate measurement)
+        var deviceWidth = window.screen.width || window.innerWidth || 480;
+        
+        // For devices smaller than 480px, calculate scale to fit
+        if (deviceWidth < 480) {
+          var scale = deviceWidth / 480;
+          // Round to 2 decimal places to avoid precision issues
+          scale = Math.round(scale * 100) / 100;
+          viewport.setAttribute('content', 
+            'width=480, initial-scale=' + scale + ', maximum-scale=' + scale + ', user-scalable=no'
+          );
         }
       })();
     </script>

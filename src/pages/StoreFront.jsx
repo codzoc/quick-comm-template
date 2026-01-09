@@ -6,7 +6,7 @@ import { getAllProducts } from '../services/products';
 import { createOrder } from '../services/orders';
 import { getStoreInfo } from '../services/storeInfo';
 import { getPaymentSettings } from '../services/payment';
-import { signUpCustomer, loginCustomer } from '../services/customerAuth';
+import { signUpCustomer, loginCustomer, checkEmailExists } from '../services/customerAuth';
 import { getDefaultAddress, addAddress, getCustomerAddresses } from '../services/addresses';
 import { initiateRazorpayPayment, createRazorpayOrder } from '../services/paymentGateway';
 import { functions } from '../config/firebase'; // Import functions instance
@@ -112,12 +112,12 @@ function StoreFront() {
   });
   const [registrationErrors, setRegistrationErrors] = useState({});
 
-  // Login modal state
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [loginFormData, setLoginFormData] = useState({
-    email: '',
-    password: ''
-  });
+  // Inline auth state
+  const [emailExists, setEmailExists] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [showPasswordField, setShowPasswordField] = useState(false);
+  const [loginPassword, setLoginPassword] = useState('');
+  const [checkingEmail, setCheckingEmail] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
 
@@ -161,6 +161,24 @@ function StoreFront() {
     }
   }, [showCheckout, currentUser]);
 
+  // Load saved address when user logs in while on checkout
+  useEffect(() => {
+    if (showCheckout && currentUser && customerProfile) {
+      checkCustomerAuth();
+    }
+  }, [showCheckout, currentUser, customerProfile]);
+
+  // Reset login state when user logs in
+  useEffect(() => {
+    if (currentUser) {
+      setShowLoginPrompt(false);
+      setShowPasswordField(false);
+      setEmailExists(false);
+      setLoginPassword('');
+      setLoginError('');
+    }
+  }, [currentUser]);
+
   // Check if customer is logged in and load default address
   const checkCustomerAuth = async () => {
     if (currentUser) {
@@ -203,23 +221,106 @@ function StoreFront() {
     }
   };
 
-  // Handle login from modal
-  const handleLogin = async (e) => {
+  // Handle email blur - check if email exists
+  const handleEmailBlur = async () => {
+    // Skip check if user is already logged in
+    if (currentUser) {
+      return;
+    }
+
+    // Prevent multiple simultaneous checks
+    if (checkingEmail) {
+      return;
+    }
+
+    const email = customerInfo.email?.trim();
+    
+    // Validate email format first
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setEmailExists(false);
+      setShowLoginPrompt(false);
+      setShowPasswordField(false);
+      return;
+    }
+
+    setCheckingEmail(true);
+    try {
+      const exists = await checkEmailExists(email);
+      setEmailExists(exists);
+      setShowLoginPrompt(exists);
+      // If email exists, hide password field (user needs to click Login again)
+      if (exists) {
+        setShowPasswordField(false);
+        setLoginPassword('');
+        setLoginError('');
+      }
+    } catch (err) {
+      console.error('Error checking email:', err);
+      setEmailExists(false);
+      setShowLoginPrompt(false);
+    } finally {
+      setCheckingEmail(false);
+    }
+  };
+
+  // Handle email change - reset password field if visible
+  const handleEmailChange = (e) => {
+    const emailValue = e.target.value;
+    setCustomerInfo({
+      ...customerInfo,
+      email: emailValue
+    });
+    
+    // Save email to localStorage for guests
+    if (!currentUser && emailValue) {
+      localStorage.setItem('checkoutEmail', emailValue);
+    }
+
+    // If password field is visible, hide it and reset login prompt
+    if (showPasswordField) {
+      setShowPasswordField(false);
+      setShowLoginPrompt(false);
+      setLoginPassword('');
+      setLoginError('');
+    }
+  };
+
+  // Handle inline login
+  const handleInlineLogin = async (e) => {
     e.preventDefault();
     setLoginError('');
     setLoginLoading(true);
 
     try {
-      await loginCustomer(loginFormData.email, loginFormData.password);
-      // Context will automatically update, just close modal
-      setShowLoginModal(false);
-      setLoginFormData({ email: '', password: '' });
-      // checkCustomerAuth will be called via useEffect when currentUser changes
+      await loginCustomer(customerInfo.email, loginPassword);
+      // Context will automatically update
+      setShowPasswordField(false);
+      setShowLoginPrompt(false);
+      setLoginPassword('');
+      setEmailExists(false);
+      
+      // Wait a bit for context to update, then load address if on checkout
+      setTimeout(async () => {
+        if (showCheckout) {
+          await checkCustomerAuth();
+        }
+      }, 100);
     } catch (err) {
       setLoginError(err.message);
+      // Keep password field visible on error
     } finally {
       setLoginLoading(false);
     }
+  };
+
+  // Handle "Continue as Guest" action
+  const handleContinueAsGuest = () => {
+    setShowLoginPrompt(false);
+    setShowPasswordField(false);
+    setEmailExists(false);
+    setLoginPassword('');
+    setLoginError('');
+    // Keep the email value (don't clear it)
   };
 
   // Reset cart view when cart is opened and reload address if logged in
@@ -811,45 +912,6 @@ function StoreFront() {
                       </div>
                     )}
 
-                    {/* Login Button for Guest Users */}
-                    {!currentUser && (
-                      <div style={{
-                        padding: 'var(--spacing-md)',
-                        backgroundColor: 'var(--color-surface)',
-                        borderRadius: 'var(--border-radius-md)',
-                        marginBottom: 'var(--spacing-md)',
-                        textAlign: 'center',
-                        border: '1px solid var(--color-border)'
-                      }}>
-                        <p style={{
-                          margin: '0 0 var(--spacing-sm)',
-                          color: 'var(--color-text-light)',
-                          fontSize: 'var(--font-size-sm)'
-                        }}>
-                          Have an account? Login to use saved addresses
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => setShowLoginModal(true)}
-                          style={{
-                            padding: 'var(--spacing-sm) var(--spacing-lg)',
-                            backgroundColor: 'var(--color-primary)',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: 'var(--border-radius-full)',
-                            cursor: 'pointer',
-                            fontSize: 'var(--font-size-sm)',
-                            fontWeight: 'var(--font-weight-medium)',
-                            transition: 'all 0.2s'
-                          }}
-                          onMouseOver={(e) => e.target.style.backgroundColor = 'var(--color-primary-hover)'}
-                          onMouseOut={(e) => e.target.style.backgroundColor = 'var(--color-primary)'}
-                        >
-                          Login to Account
-                        </button>
-                      </div>
-                    )}
-
                     <form onSubmit={handlePlaceOrder} className="checkout-form">
                       <div className="form-group">
                         <label htmlFor="name">Full Name *</label>
@@ -896,23 +958,87 @@ function StoreFront() {
                           type="email"
                           id="email"
                           value={customerInfo.email}
-                          onChange={(e) => {
-                            const emailValue = e.target.value;
-                            setCustomerInfo({
-                              ...customerInfo,
-                              email: emailValue
-                            });
-                            // Save email to localStorage for guest users
-                            if (!currentUser && emailValue) {
-                              localStorage.setItem('checkoutEmail', emailValue);
-                            }
-                          }}
+                          onChange={handleEmailChange}
+                          onBlur={handleEmailBlur}
+                          disabled={!!currentUser}
                           placeholder="your@email.com"
                           className={formErrors.email ? 'error' : ''}
                           required
                         />
+                        {checkingEmail && (
+                          <small style={{ display: 'block', marginTop: 'var(--spacing-xs)', color: 'var(--color-text-light)', fontSize: 'var(--font-size-xs)' }}>
+                            Checking...
+                          </small>
+                        )}
                         {formErrors.email && (
                           <span className="error-text">{formErrors.email}</span>
+                        )}
+                        {showLoginPrompt && !currentUser && (
+                          <div style={{ marginTop: 'var(--spacing-xs)' }}>
+                            <small style={{ display: 'block', color: 'var(--color-text-light)', fontSize: 'var(--font-size-xs)', marginBottom: 'var(--spacing-xs)' }}>
+                              User exists with this email. {' '}
+                              <button
+                                type="button"
+                                onClick={() => setShowPasswordField(true)}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  color: 'var(--color-primary)',
+                                  cursor: 'pointer',
+                                  textDecoration: 'underline',
+                                  fontSize: 'var(--font-size-xs)',
+                                  padding: 0
+                                }}
+                              >
+                                Login
+                              </button>
+                              {' or '}
+                              <button
+                                type="button"
+                                onClick={handleContinueAsGuest}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  color: 'var(--color-primary)',
+                                  cursor: 'pointer',
+                                  textDecoration: 'underline',
+                                  fontSize: 'var(--font-size-xs)',
+                                  padding: 0
+                                }}
+                              >
+                                Continue as Guest
+                              </button>
+                            </small>
+                          </div>
+                        )}
+                        {showPasswordField && emailExists && !currentUser && (
+                          <div style={{ marginTop: 'var(--spacing-sm)' }}>
+                            <label htmlFor="login-password" style={{ display: 'block', marginBottom: 'var(--spacing-xs)' }}>Password *</label>
+                            <input
+                              type="password"
+                              id="login-password"
+                              value={loginPassword}
+                              onChange={(e) => setLoginPassword(e.target.value)}
+                              placeholder="Enter your password"
+                              style={{ width: '100%', padding: 'var(--spacing-sm)', marginBottom: 'var(--spacing-xs)' }}
+                            />
+                            {loginError && (
+                              <span className="error-text" style={{ display: 'block', marginBottom: 'var(--spacing-xs)' }}>{loginError}</span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={handleInlineLogin}
+                              disabled={loginLoading || !loginPassword}
+                              className="btn-primary"
+                              style={{ 
+                                padding: 'var(--spacing-sm) var(--spacing-md)',
+                                fontSize: 'var(--font-size-sm)',
+                                marginTop: 'var(--spacing-xs)'
+                              }}
+                            >
+                              {loginLoading ? 'Signing in...' : 'Sign In'}
+                            </button>
+                          </div>
                         )}
                         <small style={{ display: 'block', marginTop: 'var(--spacing-xs)', color: 'var(--color-text-light)', fontSize: 'var(--font-size-xs)' }}>
                           Required for order confirmation and updates
@@ -1185,111 +1311,6 @@ function StoreFront() {
         </div>
       )}
 
-      {/* Login Modal */}
-      {showLoginModal && (
-        <div className="cart-modal-overlay" onClick={() => setShowLoginModal(false)}>
-          <div className="cart-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
-            <div className="cart-header">
-              <button
-                className="back-btn"
-                onClick={() => setShowLoginModal(false)}
-              >
-                ← Back
-              </button>
-              <h2>Login</h2>
-              <button
-                className="cart-close-btn"
-                onClick={() => setShowLoginModal(false)}
-                aria-label="Close"
-              >
-                ×
-              </button>
-            </div>
-
-            <div style={{ padding: 'var(--spacing-lg)' }}>
-              {loginError && (
-                <div style={{
-                  padding: 'var(--spacing-sm) var(--spacing-md)',
-                  backgroundColor: '#fee',
-                  color: '#c33',
-                  borderRadius: 'var(--border-radius-md)',
-                  marginBottom: 'var(--spacing-md)',
-                  fontSize: 'var(--font-size-sm)'
-                }}>
-                  {loginError}
-                </div>
-              )}
-
-              <form onSubmit={handleLogin}>
-                <div className="form-group">
-                  <label htmlFor="login-email">Email Address</label>
-                  <input
-                    type="email"
-                    id="login-email"
-                    value={loginFormData.email}
-                    onChange={(e) => setLoginFormData({ ...loginFormData, email: e.target.value })}
-                    required
-                    placeholder="Enter your email"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="login-password">Password</label>
-                  <input
-                    type="password"
-                    id="login-password"
-                    value={loginFormData.password}
-                    onChange={(e) => setLoginFormData({ ...loginFormData, password: e.target.value })}
-                    required
-                    placeholder="Enter your password"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="btn-primary"
-                  disabled={loginLoading}
-                  style={{ width: '100%', marginTop: 'var(--spacing-md)' }}
-                >
-                  {loginLoading ? 'Logging in...' : 'Login'}
-                </button>
-              </form>
-
-              <div style={{
-                marginTop: 'var(--spacing-md)',
-                paddingTop: 'var(--spacing-md)',
-                borderTop: '1px solid var(--color-border)',
-                textAlign: 'center'
-              }}>
-                <p style={{
-                  margin: '0',
-                  color: 'var(--color-text-light)',
-                  fontSize: 'var(--font-size-sm)'
-                }}>
-                  Don't have an account?{' '}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowLoginModal(false);
-                      setCreateAccount(true);
-                    }}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: 'var(--color-primary)',
-                      cursor: 'pointer',
-                      textDecoration: 'underline',
-                      fontSize: 'var(--font-size-sm)'
-                    }}
-                  >
-                    Create one during checkout
-                  </button>
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

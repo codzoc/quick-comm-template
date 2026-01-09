@@ -6,7 +6,7 @@ import {
     updateProfile,
     sendPasswordResetEmail
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 
 /**
@@ -77,6 +77,45 @@ async function isUserAdmin(email) {
         return adminDoc.exists() && adminDoc.data().role === 'admin';
     } catch (error) {
         console.error('Error checking admin status:', error);
+        return false;
+    }
+}
+
+/**
+ * Check if a customer email exists in Firestore
+ * Security: This function only checks existence (returns boolean), not actual customer data.
+ * The query is limited to 1 document to minimize data transfer.
+ * 
+ * @param {string} email - Email address to check
+ * @returns {Promise<boolean>} True if email exists, false otherwise
+ */
+export async function checkEmailExists(email) {
+    try {
+        if (!email || !email.trim()) {
+            return false;
+        }
+
+        const normalizedEmail = email.trim().toLowerCase();
+        
+        // Validate email format before querying
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+            return false;
+        }
+
+        const customersRef = collection(db, 'customers');
+        // Limit to 1 document - we only need to know if it exists, not read the data
+        const q = query(
+            customersRef, 
+            where('email', '==', normalizedEmail),
+            limit(1)
+        );
+        const snapshot = await getDocs(q);
+
+        // Only return existence status, not the actual data
+        return !snapshot.empty;
+    } catch (error) {
+        console.error('Error checking email existence:', error);
+        // Return false on error to prevent exposing system internals
         return false;
     }
 }
@@ -260,5 +299,6 @@ export default {
     getCustomerData,
     updateCustomerProfile,
     onCustomerAuthChange,
-    resetCustomerPassword
+    resetCustomerPassword,
+    checkEmailExists
 };

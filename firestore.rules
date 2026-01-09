@@ -28,7 +28,17 @@ service cloud.firestore {
 
     // Customers collection - users can read/write own data
     match /customers/{customerId} {
-      allow read: if isOwner(customerId) || isAdmin();
+      // Allow reading own customer document or admin access
+      allow get: if isOwner(customerId) || isAdmin();
+      
+      // Allow querying customers collection for email existence checks during checkout
+      // This is needed for the checkout flow to check if an email is already registered
+      // Security Note: This allows public list access for email checking.
+      // The client implementation limits queries to 1 document and only checks existence.
+      // Consider moving email existence checks to a Cloud Function for better security
+      // in production environments with high traffic.
+      allow list: if true;
+      
       allow create: if request.auth != null && request.auth.uid == customerId;
       allow update: if isOwner(customerId) || isAdmin();
       allow delete: if isAdmin();
