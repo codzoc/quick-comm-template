@@ -132,69 +132,57 @@ img {
   }
 }
 
-/* Scale down for screens below 480px (zoom-out effect) */
-/* This ensures normal responsive behavior until 480px, then scales down */
-@media screen and (max-width: 479px) {
-  html {
-    overflow-x: hidden;
-    width: 100vw;
-    -webkit-text-size-adjust: 100%;
-    -ms-text-size-adjust: 100%;
-    position: relative;
-  }
+/* Viewport scaling strategy with width=480:
+ * - Below 480px device-width: Browser automatically scales down (perfect!)
+ * - Above 480px device-width: Browser scales the 480px viewport up to fit screen
+ * 
+ * For larger screens, we ensure content is responsive within the 480px viewport.
+ * The browser's automatic scaling will make it fit the screen.
+ * CSS media queries using min-width compare against viewport (480px).
+ * CSS media queries using min-device-width compare against actual device width.
+ */
 
-  body {
-    overflow-x: hidden;
-    width: 100vw;
-    position: relative;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    min-height: 100vh;
-    -webkit-text-size-adjust: 100%;
-    -ms-text-size-adjust: 100%;
-  }
-
-  #root {
-    width: 480px;
-    min-width: 480px;
-    max-width: 480px;
-    transform-origin: top center;
-    transform: scale(calc(100vw / 480));
-    -webkit-transform: scale(calc(100vw / 480));
-    position: relative;
-    flex-shrink: 0;
-    margin: 0 auto;
-  }
+/* Default: Let viewport meta tag handle scaling for mobile (< 480px device-width) */
+html {
+  width: 100%;
+  overflow-x: hidden;
 }
 
-/* Support for modern viewport units on mobile */
-@supports (width: 100dvw) {
-  @media screen and (max-width: 479px) {
-    #root {
-      transform: scale(calc(100dvw / 480));
-      -webkit-transform: scale(calc(100dvw / 480));
-    }
-  }
+body {
+  width: 100%;
+  overflow-x: hidden;
 }
 
-/* Ensure normal responsive behavior at 480px and above */
-@media screen and (min-width: 480px) {
+#root {
+  width: 100%;
+}
+
+/* For devices >= 480px physical width */
+/* The browser scales the 480px viewport up automatically */
+/* We ensure content is responsive within that 480px viewport */
+@media screen and (min-device-width: 480px) {
   html {
     width: 100%;
+    overflow-x: hidden;
   }
 
   body {
     width: 100%;
+    overflow-x: hidden;
   }
 
   #root {
     width: 100%;
-    max-width: none;
+    max-width: 100%;
     min-width: auto;
-    transform: none;
+  }
+  
+  /* Ensure responsive containers work correctly */
+  /* Note: With width=480 viewport, min-width media queries compare against 480px */
+  /* So existing responsive breakpoints will still work */
+  .container {
+    width: 100%;
+    max-width: 1280px;
   }
 }
 
