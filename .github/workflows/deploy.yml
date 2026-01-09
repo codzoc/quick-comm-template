@@ -9,6 +9,26 @@ on:
         required: false
         default: 'false'
         type: boolean
+      skip_deploy_hosting:
+        description: 'Skip deploy hosting'
+        required: false
+        default: 'false'
+        type: boolean
+      skip_deploy_firestore:
+        description: 'Skip deploy firestore'
+        required: false
+        default: 'false'
+        type: boolean
+      skip_deploy_functions:
+        description: 'Skip deploy functions'
+        required: false
+        default: 'false'
+        type: boolean
+      skip_deploy_storage:
+        description: 'Skip deploy storage'
+        required: false
+        default: 'false'
+        type: boolean
   
   # Automatic weekly template updates every Monday at 9 AM UTC
   schedule:
@@ -309,7 +329,7 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Deploy Firestore Rules and Indexes
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.event.inputs.skip_deploy_firestore != 'true')
         uses: w9jds/firebase-action@master
         with:
           args: deploy --only firestore --project ${{ steps.firebase-config.outputs.project_id }}
@@ -355,7 +375,7 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Deploy Storage Rules
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.event.inputs.skip_deploy_storage != 'true')
         uses: w9jds/firebase-action@master
         with:
           args: deploy --only storage --project ${{ steps.firebase-config.outputs.project_id }} --non-interactive
@@ -412,7 +432,7 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Deploy Functions
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.event.inputs.skip_deploy_functions != 'true')
         uses: w9jds/firebase-action@master
         with:
           args: deploy --only functions --force --project ${{ steps.firebase-config.outputs.project_id }}
@@ -467,7 +487,7 @@ jobs:
           FIREBASE_CLI_PREVIEWS: hostingchannels
 
       - name: Deploy to Firebase Hosting (Production)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.event.inputs.skip_deploy_hosting != 'true')
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
