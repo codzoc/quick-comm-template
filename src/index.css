@@ -86,6 +86,7 @@ img {
   max-width: 1280px;
   margin: 0 auto;
   padding: 0 var(--spacing-lg);
+  min-width: 480px; /* Ensure container doesn't shrink below 480px */
 }
 
 .sr-only {
@@ -134,13 +135,23 @@ img {
  * Do NOT write styles below 480px - browser handles scaling automatically
  */
 
-/* Prevent horizontal scroll */
+/* With viewport width=480, browser handles all scaling automatically */
+/* We just need to prevent horizontal scroll and ensure layout doesn't break */
 html {
   overflow-x: hidden;
+  /* Ensure browser respects 480px minimum */
+  min-width: 480px;
 }
 
 body {
   overflow-x: hidden;
+  /* Ensure browser respects 480px minimum */
+  min-width: 480px;
+}
+
+#root {
+  /* Ensure root maintains minimum width */
+  min-width: 480px;
 }
 
 /* Responsive container adjustments */
