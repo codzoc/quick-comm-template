@@ -125,64 +125,30 @@ img {
   color: white;
 }
 
-/* Responsive */
-@media (min-width: 1024px) {
-  .container {
-    padding: 0 var(--spacing-xl);
-  }
-}
-
-/* Viewport scaling strategy with width=480:
- * - Below 480px device-width: Browser automatically scales down (perfect!)
- * - Above 480px device-width: Browser scales the 480px viewport up to fit screen
+/* Responsive styles - only up to 480px */
+/* With viewport width=480:
+ * - Browser never shrinks layout below 480px
+ * - On screens < 480px: Browser automatically scales down (no CSS needed)
+ * - On screens >= 480px: Normal responsive behavior
  * 
- * For larger screens, we ensure content is responsive within the 480px viewport.
- * The browser's automatic scaling will make it fit the screen.
- * CSS media queries using min-width compare against viewport (480px).
- * CSS media queries using min-device-width compare against actual device width.
+ * Do NOT write styles below 480px - browser handles scaling automatically
  */
 
-/* Default: Let viewport meta tag handle scaling for mobile (< 480px device-width) */
+/* Prevent horizontal scroll */
 html {
-  width: 100%;
   overflow-x: hidden;
 }
 
 body {
-  width: 100%;
   overflow-x: hidden;
 }
 
-#root {
-  width: 100%;
-}
-
-/* For devices >= 480px physical width */
-/* The browser scales the 480px viewport up automatically */
-/* We ensure content is responsive within that 480px viewport */
-@media screen and (min-device-width: 480px) {
-  html {
-    width: 100%;
-    overflow-x: hidden;
-  }
-
-  body {
-    width: 100%;
-    overflow-x: hidden;
-  }
-
-  #root {
-    width: 100%;
-    max-width: 100%;
-    min-width: auto;
-  }
-  
-  /* Ensure responsive containers work correctly */
-  /* Note: With width=480 viewport, min-width media queries compare against 480px */
-  /* So existing responsive breakpoints will still work */
+/* Responsive container adjustments */
+/* Note: With width=480 viewport, CSS always sees 480px viewport */
+/* So min-width queries compare against 480px */
+@media (min-width: 1024px) {
   .container {
-    width: 100%;
-    max-width: 1280px;
+    padding: 0 var(--spacing-xl);
   }
 }
 
