@@ -84,6 +84,7 @@ img {
 /* Utilities */
 .container {
   max-width: 1280px;
+  width: 100%;
   margin: 0 auto;
   padding: 0 var(--spacing-lg);
   min-width: 480px; /* Ensure container doesn't shrink below 480px */
