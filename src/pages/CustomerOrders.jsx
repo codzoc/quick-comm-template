@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, query, where, getDocs, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { useUser } from '../context/UserContext';
+import { useAuth } from '../context/AuthContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import LoadingSpinner from '../components/LoadingSpinner';
 import './StoreFront.css';
 
 function CustomerOrders() {
-    const { currentUser, loading: authLoading } = useUser();
+    const { currentUser, userRole, loading: authLoading } = useAuth();
     const navigate = useNavigate();
 
     const [orders, setOrders] = useState([]);
@@ -18,15 +18,15 @@ function CustomerOrders() {
     const [selectedOrder, setSelectedOrder] = useState(null);
 
     useEffect(() => {
-        if (!authLoading && !currentUser) {
+        if (!authLoading && (!currentUser || userRole !== 'customer')) {
             navigate('/');
             return;
         }
 
-        if (currentUser) {
+        if (currentUser && userRole === 'customer') {
             fetchOrders();
         }
-    }, [currentUser, authLoading, navigate]);
+    }, [currentUser, userRole, authLoading, navigate]);
 
     const fetchOrders = async () => {
         try {

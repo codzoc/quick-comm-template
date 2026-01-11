@@ -14,7 +14,7 @@ import CustomerAccount from './pages/CustomerAccount';
 import SEO from './components/SEO';
 import ErrorBoundary from './components/ErrorBoundary';
 import { AdminProtectedRoute, CustomerProtectedRoute } from './components/ProtectedRoute';
-import { CustomerProvider } from './context/CustomerContext';
+import { AuthProvider } from './context/AuthContext';
 
 /**
  * Main App Component
@@ -24,7 +24,7 @@ import { CustomerProvider } from './context/CustomerContext';
 function App() {
   return (
     <ErrorBoundary>
-      <CustomerProvider>
+      <AuthProvider>
         <BrowserRouter>
           <SEO />
           <Routes>
@@ -83,7 +83,7 @@ function App() {
           <Route path="*" element={<StoreFront />} />
           </Routes>
         </BrowserRouter>
-      </CustomerProvider>
+      </AuthProvider>
     </ErrorBoundary>
   );
 }

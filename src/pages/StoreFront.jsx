@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
-import { useCustomer } from '../context/CustomerContext';
+import { useAuth } from '../context/AuthContext';
 import { getAllProducts } from '../services/products';
 import { createOrder } from '../services/orders';
 import { getStoreInfo } from '../services/storeInfo';
@@ -42,8 +42,8 @@ function StoreFront() {
   const [storeInfo, setStoreInfo] = useState(null);
   const [paymentSettings, setPaymentSettings] = useState(null);
   
-  // Get customer from global context
-  const { currentCustomer: currentUser, customerProfile } = useCustomer();
+  // Get user from unified auth context
+  const { currentUser, userProfile, userRole, refreshUserData } = useAuth();
 
   // Cart and Checkout State
   const {
@@ -132,41 +132,43 @@ function StoreFront() {
     return () => window.removeEventListener('openCart', handleOpenCart);
   }, [openCart]);
 
-  // Update customer info when customer profile changes
+  // Load customer data and address when user logs in
   useEffect(() => {
-    if (currentUser && customerProfile) {
+    if (currentUser && userRole === 'customer' && userProfile) {
       checkCustomerAuth();
     }
-  }, [currentUser, customerProfile]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser, userRole, userProfile]);
 
-  // Prefill email from localStorage or logged-in user when checkout opens
+  // Prefill email when checkout opens
   useEffect(() => {
-    if (showCheckout) {
-      if (currentUser?.email) {
-        // Prefill from logged-in user's email
-        setCustomerInfo(prev => ({
-          ...prev,
-          email: currentUser.email || prev.email || ''
-        }));
-      } else {
-        // Prefill from localStorage for guests
-        const savedEmail = localStorage.getItem('checkoutEmail');
-        if (savedEmail && !customerInfo.email) {
-          setCustomerInfo(prev => ({
-            ...prev,
-            email: savedEmail
-          }));
-        }
-      }
-    }
-  }, [showCheckout, currentUser]);
+    if (!showCheckout) return;
 
-  // Load saved address when user logs in while on checkout
-  useEffect(() => {
-    if (showCheckout && currentUser && customerProfile) {
-      checkCustomerAuth();
+    if (currentUser?.email) {
+      // Logged in user - email will be set by checkCustomerAuth
+      return;
     }
-  }, [showCheckout, currentUser, customerProfile]);
+
+    // Guest user - prefill email from localStorage
+    const savedEmail = localStorage.getItem('checkoutEmail');
+    if (savedEmail && !customerInfo.email) {
+      setCustomerInfo(prev => ({
+        ...prev,
+        email: savedEmail
+      }));
+    }
+  }, [showCheckout, currentUser, userRole, customerInfo.email]);
+
+  // Check email existence when email changes (for guest users in checkout)
+  useEffect(() => {
+    if (currentUser || !showCheckout || checkingEmail) return;
+    
+    const email = customerInfo.email?.trim();
+    if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      checkEmailExistence(email);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customerInfo.email, showCheckout, currentUser]);
 
   // Reset login state when user logs in
   useEffect(() => {
@@ -221,8 +223,8 @@ function StoreFront() {
     }
   };
 
-  // Handle email blur - check if email exists
-  const handleEmailBlur = async () => {
+  // Check if email exists (reusable function)
+  const checkEmailExistence = async (emailToCheck) => {
     // Skip check if user is already logged in
     if (currentUser) {
       return;
@@ -233,7 +235,7 @@ function StoreFront() {
       return;
     }
 
-    const email = customerInfo.email?.trim();
+    const email = emailToCheck?.trim();
     
     // Validate email format first
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -261,6 +263,11 @@ function StoreFront() {
     } finally {
       setCheckingEmail(false);
     }
+  };
+
+  // Handle email blur - check if email exists
+  const handleEmailBlur = async () => {
+    await checkEmailExistence(customerInfo.email);
   };
 
   // Handle email change - reset password field if visible
@@ -293,18 +300,12 @@ function StoreFront() {
 
     try {
       await loginCustomer(customerInfo.email, loginPassword);
-      // Context will automatically update
+      // AuthContext will automatically update via real-time listener
+      // The useEffect above will call checkCustomerAuth when currentUser and userProfile are available
       setShowPasswordField(false);
       setShowLoginPrompt(false);
       setLoginPassword('');
       setEmailExists(false);
-      
-      // Wait a bit for context to update, then load address if on checkout
-      setTimeout(async () => {
-        if (showCheckout) {
-          await checkCustomerAuth();
-        }
-      }, 100);
     } catch (err) {
       setLoginError(err.message);
       // Keep password field visible on error
@@ -315,11 +316,12 @@ function StoreFront() {
 
   // Handle "Continue as Guest" action
   const handleContinueAsGuest = () => {
-    setShowLoginPrompt(false);
     setShowPasswordField(false);
-    setEmailExists(false);
     setLoginPassword('');
     setLoginError('');
+    // Show login prompt again (email still exists, user can login later if they want)
+    setShowLoginPrompt(true);
+    // Keep emailExists as true since the email still exists
     // Keep the email value (don't clear it)
   };
 
@@ -973,13 +975,16 @@ function StoreFront() {
                         {formErrors.email && (
                           <span className="error-text">{formErrors.email}</span>
                         )}
-                        {showLoginPrompt && !currentUser && (
+                        {showLoginPrompt && !currentUser && !showPasswordField && (
                           <div style={{ marginTop: 'var(--spacing-xs)' }}>
                             <small style={{ display: 'block', color: 'var(--color-text-light)', fontSize: 'var(--font-size-xs)', marginBottom: 'var(--spacing-xs)' }}>
                               User exists with this email. {' '}
                               <button
                                 type="button"
-                                onClick={() => setShowPasswordField(true)}
+                                onClick={() => {
+                                  setShowPasswordField(true);
+                                  setShowLoginPrompt(false);
+                                }}
                                 style={{
                                   background: 'none',
                                   border: 'none',
@@ -991,22 +996,6 @@ function StoreFront() {
                                 }}
                               >
                                 Login
-                              </button>
-                              {' or '}
-                              <button
-                                type="button"
-                                onClick={handleContinueAsGuest}
-                                style={{
-                                  background: 'none',
-                                  border: 'none',
-                                  color: 'var(--color-primary)',
-                                  cursor: 'pointer',
-                                  textDecoration: 'underline',
-                                  fontSize: 'var(--font-size-xs)',
-                                  padding: 0
-                                }}
-                              >
-                                Continue as Guest
                               </button>
                             </small>
                           </div>
@@ -1025,19 +1014,34 @@ function StoreFront() {
                             {loginError && (
                               <span className="error-text" style={{ display: 'block', marginBottom: 'var(--spacing-xs)' }}>{loginError}</span>
                             )}
-                            <button
-                              type="button"
-                              onClick={handleInlineLogin}
-                              disabled={loginLoading || !loginPassword}
-                              className="btn-primary"
-                              style={{ 
-                                padding: 'var(--spacing-sm) var(--spacing-md)',
-                                fontSize: 'var(--font-size-sm)',
-                                marginTop: 'var(--spacing-xs)'
-                              }}
-                            >
-                              {loginLoading ? 'Signing in...' : 'Sign In'}
-                            </button>
+                            <div style={{ display: 'flex', gap: 'var(--spacing-sm)', marginTop: 'var(--spacing-xs)' }}>
+                              <button
+                                type="button"
+                                onClick={handleInlineLogin}
+                                disabled={loginLoading || !loginPassword}
+                                className="btn-primary"
+                                style={{ 
+                                  padding: 'var(--spacing-sm) var(--spacing-md)',
+                                  fontSize: 'var(--font-size-sm)',
+                                  flex: 1
+                                }}
+                              >
+                                {loginLoading ? 'Signing in...' : 'Sign In'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleContinueAsGuest}
+                                className="btn-secondary"
+                                style={{ 
+                                  padding: 'var(--spacing-sm) var(--spacing-md)',
+                                  fontSize: 'var(--font-size-sm)',
+                                  flex: 1,
+                                  border: '1px solid var(--color-border)'
+                                }}
+                              >
+                                Continue as Guest
+                              </button>
+                            </div>
                           </div>
                         )}
                         <small style={{ display: 'block', marginTop: 'var(--spacing-xs)', color: 'var(--color-text-light)', fontSize: 'var(--font-size-xs)' }}>
@@ -1087,22 +1091,22 @@ function StoreFront() {
                         )}
                       </div>
 
-                      {/* Account Creation / Save Address Checkbox */}
-                      <div className="form-group" style={{ marginBottom: 'var(--spacing-md)' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)', cursor: 'pointer', fontSize: 'var(--font-size-sm)' }}>
-                          <input
-                            type="checkbox"
-                            checked={createAccount}
-                            onChange={(e) => setCreateAccount(e.target.checked)}
-                            style={{ cursor: 'pointer' }}
-                          />
-                          <span>
-                            {currentUser
-                              ? 'Save this address for future orders'
-                              : 'Create an account and save address'}
-                          </span>
-                        </label>
-                      </div>
+                      {/* Account Creation / Save Address Checkbox - Only show for guests */}
+                      {!currentUser && (
+                        <div className="form-group" style={{ marginBottom: 'var(--spacing-md)' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)', cursor: 'pointer', fontSize: 'var(--font-size-sm)' }}>
+                            <input
+                              type="checkbox"
+                              checked={createAccount}
+                              onChange={(e) => setCreateAccount(e.target.checked)}
+                              style={{ cursor: 'pointer' }}
+                            />
+                            <span>
+                              Create an account and save address
+                            </span>
+                          </label>
+                        </div>
+                      )}
 
                       {/* Registration Fields for Guests */}
                       {!currentUser && createAccount && (

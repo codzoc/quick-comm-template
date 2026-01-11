@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signIn, onAuthChange, resetPassword } from '../../services/auth';
 import { getStoreInfo } from '../../services/storeInfo';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../config/firebase';
 import ErrorMessage from '../../components/ErrorMessage';
 import './AdminStyles.css';
 
@@ -34,11 +36,17 @@ function AdminLogin() {
     fetchStoreName();
 
     // Redirect if already logged in as admin
-    const unsubscribe = onAuthChange((user) => {
+    // Note: This will be handled by AuthContext, but we keep this for immediate redirect
+    const unsubscribe = onAuthChange(async (user) => {
       if (user) {
-        const userType = localStorage.getItem('userType');
-        if (userType === 'admin') {
-          navigate('/admin/dashboard');
+        // Check if user is admin by querying Firestore
+        try {
+          const adminDoc = await getDoc(doc(db, 'admins', user.email));
+          if (adminDoc.exists() && adminDoc.data().role === 'admin') {
+            navigate('/admin/dashboard');
+          }
+        } catch (err) {
+          console.error('Error checking admin status:', err);
         }
       }
     });

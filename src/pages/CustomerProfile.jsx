@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useUser } from '../context/UserContext';
+import { useAuth } from '../context/AuthContext';
+import { loginCustomer, signUpCustomer } from '../services/customerAuth';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -8,7 +9,7 @@ import { LogIn, UserPlus } from 'lucide-react';
 import './StoreFront.css';
 
 function CustomerProfile() {
-    const { currentUser, userProfile, updateUserProfile, login, signup, loading } = useUser();
+    const { currentUser, userProfile, userRole, updateUserProfile, loading } = useAuth();
     const navigate = useNavigate();
 
     // Auth State
@@ -47,11 +48,11 @@ function CustomerProfile() {
 
         try {
             if (isLoginMode) {
-                await login(authEmail, authPassword);
+                await loginCustomer(authEmail, authPassword);
             } else {
-                await signup(authEmail, authPassword, authName);
+                await signUpCustomer(authEmail, authPassword, authName, '');
             }
-            // Success will trigger useEffect re-render with currentUser
+            // AuthContext will automatically update via real-time listener
         } catch (error) {
             console.error('Auth error:', error);
             setAuthError(error.message.replace('Firebase: ', ''));

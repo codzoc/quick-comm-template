@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, ShoppingCart, Search, User } from 'lucide-react';
 import { business } from '../config/business';
 import { getStoreInfo } from '../services/storeInfo';
-import { useCustomer } from '../context/CustomerContext';
+import { useAuth } from '../context/AuthContext';
 import SearchBar from './SearchBar';
 import './Header.css';
 
@@ -24,8 +24,8 @@ function Header({ cartItemCount = 0, onSearch, showSearch = true }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   
-  // Get customer from global context
-  const { currentCustomer: currentUser } = useCustomer();
+  // Get user from unified auth context
+  const { currentUser, userRole } = useAuth();
 
   useEffect(() => {
     // Fetch store info from Firebase
@@ -61,7 +61,7 @@ function Header({ cartItemCount = 0, onSearch, showSearch = true }) {
   };
 
   const handleUserClick = () => {
-    if (currentUser) {
+    if (currentUser && userRole === 'customer') {
       navigate('/account');
     } else {
       navigate('/login');
@@ -127,10 +127,10 @@ function Header({ cartItemCount = 0, onSearch, showSearch = true }) {
             type="button"
             className="header-user-btn"
             onClick={handleUserClick}
-            aria-label={currentUser ? "Go to account" : "Login"}
+            aria-label={currentUser && userRole === 'customer' ? "Go to account" : "Login"}
           >
             <User size={20} className="user-icon" />
-            <span className="user-text">{currentUser ? 'Account' : 'Login'}</span>
+            <span className="user-text">{currentUser && userRole === 'customer' ? 'Account' : 'Login'}</span>
           </button>
 
           {/* Cart Icon */}

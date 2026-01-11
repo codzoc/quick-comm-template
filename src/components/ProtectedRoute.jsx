@@ -1,8 +1,6 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { getCurrentUser } from '../services/auth';
-import { getSessionType } from '../services/customerAuth';
-import { useCustomer } from '../context/CustomerContext';
+import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from './LoadingSpinner';
 
 /**
@@ -10,28 +8,7 @@ import LoadingSpinner from './LoadingSpinner';
  * Redirects to admin login if not authenticated as admin
  */
 export function AdminProtectedRoute({ children }) {
-  const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isAuthorized, setIsAuthorized] = useState(false);
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      const user = getCurrentUser();
-      const userType = getSessionType();
-
-      if (user && userType === 'admin') {
-        setIsAuthenticated(true);
-        setIsAuthorized(true);
-      } else {
-        setIsAuthenticated(false);
-        setIsAuthorized(false);
-      }
-
-      setLoading(false);
-    };
-
-    checkAuth();
-  }, []);
+  const { currentUser, userRole, loading } = useAuth();
 
   if (loading) {
     return (
@@ -46,7 +23,7 @@ export function AdminProtectedRoute({ children }) {
     );
   }
 
-  if (!isAuthenticated || !isAuthorized) {
+  if (!currentUser || userRole !== 'admin') {
     return <Navigate to="/admin" replace />;
   }
 
@@ -58,8 +35,7 @@ export function AdminProtectedRoute({ children }) {
  * Redirects to customer login if not authenticated as customer
  */
 export function CustomerProtectedRoute({ children }) {
-  const { currentCustomer, loading } = useCustomer();
-  const userType = getSessionType();
+  const { currentUser, userRole, loading } = useAuth();
 
   if (loading) {
     return (
@@ -74,7 +50,7 @@ export function CustomerProtectedRoute({ children }) {
     );
   }
 
-  if (!currentCustomer || userType !== 'customer') {
+  if (!currentUser || userRole !== 'customer') {
     return <Navigate to="/login" state={{ from: window.location.pathname }} replace />;
   }
 

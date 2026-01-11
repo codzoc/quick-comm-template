@@ -48,8 +48,7 @@ export async function signUpCustomer(email, password, name, phone) {
 
         await setDoc(doc(db, 'customers', user.uid), customerData);
 
-        // Store session type
-        localStorage.setItem('userType', 'customer');
+        // AuthContext will automatically detect customer role and update state
 
         return {
             uid: user.uid,
@@ -138,10 +137,10 @@ export async function loginCustomer(email, password) {
             throw new Error('This is an admin account. Please use the admin login at /admin');
         }
 
-        // Store session type
-        localStorage.setItem('userType', 'customer');
+        // AuthContext will automatically detect customer role and update state
+        // Real-time listener will fetch customer data automatically
 
-        // Fetch customer data from Firestore
+        // Fetch customer data from Firestore (for return value, context handles state)
         const customerDoc = await getDoc(doc(db, 'customers', user.uid));
 
         if (customerDoc.exists()) {
@@ -175,8 +174,7 @@ export async function loginCustomer(email, password) {
 export async function logoutCustomer() {
     try {
         await firebaseSignOut(auth);
-        // Clear session type
-        localStorage.removeItem('userType');
+        // AuthContext will automatically update state on auth change
     } catch (error) {
         console.error('Logout error:', error);
         throw new Error('Failed to logout. Please try again.');
@@ -184,11 +182,14 @@ export async function logoutCustomer() {
 }
 
 /**
- * Get current session type
+ * Get current session type (deprecated - use AuthContext instead)
  * @returns {string|null} 'customer' or null
+ * @deprecated Use useAuth() hook from AuthContext instead
  */
 export function getSessionType() {
-    return localStorage.getItem('userType');
+    // This is kept for backward compatibility but should not be used
+    // AuthContext manages role state automatically
+    return null;
 }
 
 /**

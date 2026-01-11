@@ -44,10 +44,7 @@ export async function signIn(email, password) {
       throw new Error('Access denied. This account is not authorized as an admin.');
     }
 
-    // Store session type
-    localStorage.setItem('userType', 'admin');
-    localStorage.setItem('adminEmail', email);
-
+    // AuthContext will automatically detect admin role and update state
     return userCredential;
   } catch (error) {
     console.error('Sign in error:', error);
@@ -65,9 +62,7 @@ export async function signIn(email, password) {
 export async function signOut() {
   try {
     await firebaseSignOut(auth);
-    // Clear session type
-    localStorage.removeItem('userType');
-    localStorage.removeItem('adminEmail');
+    // AuthContext will automatically update state on auth change
   } catch (error) {
     console.error('Sign out error:', error);
     throw new Error('Failed to sign out. Please try again.');
@@ -75,11 +70,14 @@ export async function signOut() {
 }
 
 /**
- * Get current session type
+ * Get current session type (deprecated - use AuthContext instead)
  * @returns {string|null} 'admin' or null
+ * @deprecated Use useAuth() hook from AuthContext instead
  */
 export function getSessionType() {
-  return localStorage.getItem('userType');
+  // This is kept for backward compatibility but should not be used
+  // AuthContext manages role state automatically
+  return null;
 }
 
 /**

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { signUpCustomer, loginCustomer, resetCustomerPassword } from '../services/customerAuth';
+import { useAuth } from '../context/AuthContext';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -9,6 +10,7 @@ import './CustomerAuth.css';
 const CustomerAuth = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { refreshUserData } = useAuth();
     const [isLogin, setIsLogin] = useState(true);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -62,6 +64,10 @@ const CustomerAuth = () => {
                     formData.phone
                 );
             }
+
+            // AuthContext will automatically update via real-time listener
+            // Small delay to ensure state is updated
+            await new Promise(resolve => setTimeout(resolve, 100));
 
             // Redirect to account page or return to previous page
             const from = location.state?.from || '/account';

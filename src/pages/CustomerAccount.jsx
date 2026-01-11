@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye } from 'lucide-react';
-import { useCustomer } from '../context/CustomerContext';
-import { getCustomerData, logoutCustomer, updateCustomerProfile } from '../services/customerAuth';
+import { useAuth } from '../context/AuthContext';
+import { logoutCustomer, updateCustomerProfile } from '../services/customerAuth';
+import { signOut } from '../services/auth';
 import { getCustomerAddresses, addAddress, updateAddress, deleteAddress, setDefaultAddress } from '../services/addresses';
 import { getCustomerOrders } from '../services/orders';
 import Header from '../components/Header';
@@ -13,7 +14,7 @@ import './CustomerAccount.css';
 
 const CustomerAccount = () => {
     const navigate = useNavigate();
-    const { currentCustomer, customerProfile } = useCustomer();
+    const { currentUser, userProfile, userRole } = useAuth();
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('addresses');
     const [customer, setCustomer] = useState(null);
@@ -46,41 +47,37 @@ const CustomerAccount = () => {
 
     useEffect(() => {
         checkAuth();
-    }, [currentCustomer, customerProfile]);
+    }, [currentUser, userProfile, userRole]);
 
     const checkAuth = async () => {
-        if (!currentCustomer) {
+        if (!currentUser || userRole !== 'customer') {
             navigate('/login', { state: { from: '/account' } });
             return;
         }
 
         try {
-            // Use customerProfile from context if available, otherwise fetch
-            let customerData = customerProfile;
-            if (!customerData) {
-                customerData = await getCustomerData(currentCustomer.uid);
+            // Use userProfile from context (real-time listener keeps it updated)
+            if (!userProfile) {
+                // Profile is loading or doesn't exist yet
+                setLoading(true);
+                return;
             }
 
-            if (!customerData) {
-                // If auth exists but no firestore data, initialize empty form and force edit
-                setCustomer({ email: currentCustomer.email, uid: currentCustomer.uid });
-                setProfileForm({
-                    name: currentCustomer.displayName || '',
-                    phone: ''
-                });
-                setEditingProfile(true);
-                setError('Please complete your profile to continue.');
-            } else {
-                setCustomer(customerData);
-                setProfileForm({
-                    name: customerData.name || '',
-                    phone: customerData.phone || ''
-                });
+            setCustomer({
+                uid: userProfile.uid,
+                email: userProfile.email,
+                name: userProfile.name || '',
+                phone: userProfile.phone || ''
+            });
+            
+            setProfileForm({
+                name: userProfile.name || '',
+                phone: userProfile.phone || ''
+            });
 
-                // Load addresses and orders only if profile exists
-                await loadAddresses(currentCustomer.uid);
-                await loadOrders(currentCustomer.uid);
-            }
+            // Load addresses and orders
+            await loadAddresses(currentUser.uid);
+            await loadOrders(currentUser.uid);
         } catch (err) {
             setError('Failed to load account data');
         } finally {
@@ -108,7 +105,11 @@ const CustomerAccount = () => {
 
     const handleLogout = async () => {
         try {
-            await logoutCustomer();
+            if (userRole === 'customer') {
+                await logoutCustomer();
+            } else {
+                await signOut();
+            }
             navigate('/');
         } catch (err) {
             setError('Failed to logout');
@@ -190,10 +191,10 @@ const CustomerAccount = () => {
         setSuccess('');
 
         try {
-            await updateCustomerProfile(customer.uid, profileForm);
+            await updateCustomerProfile(currentUser.uid, profileForm);
             setSuccess('Profile updated successfully');
             setEditingProfile(false);
-            await checkAuth();
+            // Real-time listener will automatically update userProfile
         } catch (err) {
             setError(err.message);
         }
