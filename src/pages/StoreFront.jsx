@@ -615,7 +615,8 @@ function StoreFront() {
           );
 
           // Get store name from Firestore store info
-          const storeName = storeInfo?.storeName || 'Our Store';
+          // Only use default if document doesn't exist in Firestore
+          const storeName = storeInfo?.storeName || (!storeInfo?._documentExists ? 'Quick Commerce' : 'Our Store');
 
           await initiateRazorpayPayment({
             keyId: paymentSettings.razorpay.keyId,
@@ -766,7 +767,12 @@ function StoreFront() {
           {/* Products Grid */}
           {!error && (
             <section className="products-section">
-              <h1 className="products-heading">{storeInfo?.productsHeading || 'Our Products'}</h1>
+              <h1 className="products-heading">
+                {storeInfo === null 
+                  ? '' // Still loading
+                  : storeInfo.productsHeading || (!storeInfo._documentExists ? 'Our Products' : '') // Use default only if document doesn't exist
+                }
+              </h1>
 
               {filteredProducts.length === 0 ? (
                 <div className="no-products">

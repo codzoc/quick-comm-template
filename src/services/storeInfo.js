@@ -17,7 +17,7 @@ const SETTINGS_COLLECTION = 'settings';
 
 /**
  * Get store contact information
- * @returns {Promise<Object>}
+ * @returns {Promise<Object>} Returns store info with _documentExists flag
  */
 export async function getStoreInfo() {
   try {
@@ -26,17 +26,20 @@ export async function getStoreInfo() {
 
     if (storeSnap.exists()) {
       const data = storeSnap.data();
-      // Ensure pricing fields have defaults
+      // Ensure pricing fields have defaults (these are safe defaults for calculations)
+      // But don't set defaults for display fields like storeName, productsHeading - only if document doesn't exist
       return {
         ...data,
         currencySymbol: data.currencySymbol || '₹',
         taxPercentage: data.taxPercentage ?? 0,
         shippingCost: data.shippingCost ?? 0,
         logoUrl: data.logoUrl || '/images/logo.png',
-        productsHeading: data.productsHeading || 'Our Products'
+        // Don't set default for productsHeading if document exists - let it be empty if not set
+        productsHeading: data.productsHeading,
+        _documentExists: true // Flag to indicate document exists in Firestore
       };
     } else {
-      // Return default values if not set
+      // Return default values if document doesn't exist
       return {
         storeName: 'Quick Commerce',
         phone: '',
@@ -51,7 +54,8 @@ export async function getStoreInfo() {
         taxPercentage: 0,
         shippingCost: 0,
         logoUrl: '/images/logo.png',
-        productsHeading: 'Our Products'
+        productsHeading: 'Our Products',
+        _documentExists: false // Flag to indicate document doesn't exist - defaults are safe to use
       };
     }
   } catch (error) {

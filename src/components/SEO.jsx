@@ -4,6 +4,7 @@ import { getStoreInfo } from '../services/storeInfo';
 /**
  * SEO Component
  * Dynamically updates meta tags based on Firebase settings
+ * Updates title and meta tags as early as possible for proper link sharing
  */
 function SEO() {
   useEffect(() => {
@@ -11,11 +12,20 @@ function SEO() {
       try {
         const storeInfo = await getStoreInfo();
 
-        // Update title
-        if (storeInfo.seoTitle) {
-          document.title = storeInfo.seoTitle;
-        } else if (storeInfo.storeName) {
-          document.title = `${storeInfo.storeName} - Online Shopping`;
+        // Only use defaults if document doesn't exist in Firestore
+        const useDefaults = !storeInfo._documentExists;
+
+        // Get store name - use default only if document doesn't exist
+        const storeName = storeInfo.storeName || (useDefaults ? 'Quick Commerce' : '');
+        const seoTitle = storeInfo.seoTitle || (storeName ? `${storeName} - Online Shopping` : '');
+        const seoDescription = storeInfo.seoDescription || 
+          (useDefaults && storeName ? `Shop at ${storeName}. Best products at affordable prices.` : '');
+        const seoKeywords = storeInfo.seoKeywords || 
+          (useDefaults ? 'online shopping, ecommerce, buy products, best deals' : '');
+
+        // Update title - only if we have a value (either from Firestore or confirmed defaults)
+        if (seoTitle) {
+          document.title = seoTitle;
         }
 
         // Update or create meta description
@@ -25,8 +35,9 @@ function SEO() {
           metaDescription.name = 'description';
           document.head.appendChild(metaDescription);
         }
-        metaDescription.content = storeInfo.seoDescription ||
-          `Shop at ${storeInfo.storeName || 'Quick Commerce'}. Best products at affordable prices.`;
+        if (seoDescription) {
+          metaDescription.content = seoDescription;
+        }
 
         // Update or create meta keywords
         let metaKeywords = document.querySelector('meta[name="keywords"]');
@@ -35,29 +46,43 @@ function SEO() {
           metaKeywords.name = 'keywords';
           document.head.appendChild(metaKeywords);
         }
-        metaKeywords.content = storeInfo.seoKeywords ||
-          'online shopping, ecommerce, buy products, best deals';
+        if (seoKeywords) {
+          metaKeywords.content = seoKeywords;
+        }
 
-        // Open Graph tags for social media
-        updateOrCreateMetaTag('og:title', storeInfo.seoTitle || storeInfo.storeName || 'Quick Commerce');
-        updateOrCreateMetaTag('og:description', storeInfo.seoDescription || 'Shop the best products online');
+        // Open Graph tags for social media - only if we have values
+        if (seoTitle || storeName) {
+          updateOrCreateMetaTag('og:title', seoTitle || storeName);
+        }
+        if (seoDescription) {
+          updateOrCreateMetaTag('og:description', seoDescription);
+        }
         updateOrCreateMetaTag('og:type', 'website');
-        updateOrCreateMetaTag('og:site_name', storeInfo.storeName || 'Quick Commerce');
+        if (storeName) {
+          updateOrCreateMetaTag('og:site_name', storeName);
+        }
 
         // Twitter Card tags
         updateOrCreateMetaTag('twitter:card', 'summary_large_image', 'name');
-        updateOrCreateMetaTag('twitter:title', storeInfo.seoTitle || storeInfo.storeName || 'Quick Commerce', 'name');
-        updateOrCreateMetaTag('twitter:description', storeInfo.seoDescription || 'Shop the best products online', 'name');
+        if (seoTitle || storeName) {
+          updateOrCreateMetaTag('twitter:title', seoTitle || storeName, 'name');
+        }
+        if (seoDescription) {
+          updateOrCreateMetaTag('twitter:description', seoDescription, 'name');
+        }
 
         // Additional SEO tags
         updateOrCreateMetaTag('robots', 'index, follow', 'name');
-        updateOrCreateMetaTag('author', storeInfo.storeName || 'Quick Commerce', 'name');
+        if (storeName) {
+          updateOrCreateMetaTag('author', storeName, 'name');
+        }
 
       } catch (error) {
         console.error('Error loading SEO meta tags:', error);
       }
     };
 
+    // Load immediately, don't wait
     updateMetaTags();
   }, []);
 

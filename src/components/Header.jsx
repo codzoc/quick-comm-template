@@ -18,7 +18,7 @@ import './Header.css';
  */
 function Header({ cartItemCount = 0, onSearch, showSearch = true }) {
   const navigate = useNavigate();
-  const [storeName, setStoreName] = useState('Quick Commerce');
+  const [storeName, setStoreName] = useState(null); // null = loading, empty string = no data, string = loaded
   const [logoUrl, setLogoUrl] = useState(business.logoPath);
   const [storeIcon, setStoreIcon] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -32,9 +32,20 @@ function Header({ cartItemCount = 0, onSearch, showSearch = true }) {
     const fetchStoreInfo = async () => {
       try {
         const storeInfo = await getStoreInfo();
+        
+        // Only use defaults if document doesn't exist in Firestore
+        const useDefaults = !storeInfo._documentExists;
+        
+        // Set store name - use default only if document doesn't exist
         if (storeInfo.storeName) {
           setStoreName(storeInfo.storeName);
+        } else if (useDefaults) {
+          setStoreName('Quick Commerce');
+        } else {
+          // Document exists but storeName is empty - don't show anything
+          setStoreName('');
         }
+        
         if (storeInfo.logoUrl) {
           setLogoUrl(storeInfo.logoUrl);
         }
@@ -43,7 +54,8 @@ function Header({ cartItemCount = 0, onSearch, showSearch = true }) {
         }
       } catch (error) {
         console.error('Error fetching store info:', error);
-        // Keep default values on error
+        // On error, don't show store name (null stays null, which means loading)
+        setStoreName(null);
       }
     };
 
@@ -85,9 +97,9 @@ function Header({ cartItemCount = 0, onSearch, showSearch = true }) {
         <Link to="/" className="header-logo" onClick={() => setMobileMenuOpen(false)}>
           {logoUrl && logoUrl !== '/images/logo.png' ? (
             // Show logo image only
-            <img src={logoUrl} alt={storeName} />
+            <img src={logoUrl} alt={storeName || 'Store'} />
           ) : (
-            // Show icon + text
+            // Show icon + text (only if storeName is loaded, not null)
             <>
               {storeIcon && (
                 <img
@@ -96,7 +108,9 @@ function Header({ cartItemCount = 0, onSearch, showSearch = true }) {
                   style={{ width: '32px', height: '32px', objectFit: 'contain' }}
                 />
               )}
-              <span className="header-store-name">{storeName}</span>
+              {storeName !== null && (
+                <span className="header-store-name">{storeName}</span>
+              )}
             </>
           )}
         </Link>

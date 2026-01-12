@@ -10,7 +10,7 @@ import './Footer.css';
  * Shows store contact info, static pages, and attribution
  */
 function Footer() {
-  const [storeInfo, setStoreInfo] = useState(null);
+  const [storeInfo, setStoreInfo] = useState(null); // null = loading
   const [staticPages, setStaticPages] = useState({
     about: false,
     terms: false,
@@ -36,6 +36,8 @@ function Footer() {
       });
     } catch (error) {
       console.error('Error loading footer data:', error);
+      // On error, set to empty object so we don't show defaults
+      setStoreInfo({});
     }
   };
 
@@ -132,7 +134,11 @@ function Footer() {
 
       {/* Copyright */}
       <div className="footer-bottom">
-        <p>&copy; {new Date().getFullYear()} {storeInfo?.storeName || 'Quick Commerce'}. All rights reserved. <a
+        <p>&copy; {new Date().getFullYear()} {
+          storeInfo === null 
+            ? '' // Loading - don't show anything
+            : storeInfo.storeName || (!storeInfo._documentExists ? 'Quick Commerce' : '') // Show default only if document doesn't exist
+        }. All rights reserved. <a
               href={business.attribution.youtube}
               target="_blank"
               rel="noopener noreferrer"
