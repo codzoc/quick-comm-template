@@ -14,9 +14,12 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  Divider
+  Divider,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails
 } from '@mui/material';
-import { Save, Upload, X } from 'lucide-react';
+import { Save, Upload, X, ChevronDown } from 'lucide-react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { onAuthChange } from '../../services/auth';
@@ -25,6 +28,7 @@ import { getEmailSettings, updateEmailSettings } from '../../services/email';
 import { getCurrentTemplate, updateThemeTemplate } from '../../services/theme';
 import { getThemeTemplateOptions } from '../../config/themeTemplates';
 import { uploadLogoImage, uploadStaticPageImage } from '../../services/imageUpload';
+import { getDefaultPageContent } from '../../utils/defaultPageContent';
 import AdminLayout from '../../components/AdminLayout';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ThemeCustomizer from '../../components/ThemeCustomizer';
@@ -74,7 +78,10 @@ function AdminStoreSettings() {
   const [staticPages, setStaticPages] = useState({
     about: { content: '', imagePath: '' },
     terms: { content: '', imagePath: '' },
-    privacy: { content: '', imagePath: '' }
+    privacy: { content: '', imagePath: '' },
+    shipping: { content: '', imagePath: '' },
+    cancellation: { content: '', imagePath: '' },
+    contact: { content: '', imagePath: '' }
   });
 
   const [selectedTemplate, setSelectedTemplate] = useState('professional');
@@ -101,7 +108,30 @@ function AdminStoreSettings() {
         getEmailSettings()
       ]);
       setStoreInfo(info);
-      setStaticPages(pages);
+      
+      // Populate default content for pages that are empty
+      const pagesWithDefaults = {
+        about: pages.about?.content?.trim() 
+          ? pages.about 
+          : { content: getDefaultPageContent('about'), imagePath: pages.about?.imagePath || '' },
+        terms: pages.terms?.content?.trim() 
+          ? pages.terms 
+          : { content: getDefaultPageContent('terms'), imagePath: pages.terms?.imagePath || '' },
+        privacy: pages.privacy?.content?.trim() 
+          ? pages.privacy 
+          : { content: getDefaultPageContent('privacy'), imagePath: pages.privacy?.imagePath || '' },
+        shipping: pages.shipping?.content?.trim() 
+          ? pages.shipping 
+          : { content: getDefaultPageContent('shipping'), imagePath: pages.shipping?.imagePath || '' },
+        cancellation: pages.cancellation?.content?.trim() 
+          ? pages.cancellation 
+          : { content: getDefaultPageContent('cancellation'), imagePath: pages.cancellation?.imagePath || '' },
+        contact: pages.contact?.content?.trim() 
+          ? pages.contact 
+          : { content: getDefaultPageContent('contact'), imagePath: pages.contact?.imagePath || '' }
+      };
+      
+      setStaticPages(pagesWithDefaults);
       setSelectedTemplate(currentTemplate);
       if (emailData) {
         setEmailSettings(prev => ({ ...prev, ...emailData }));
@@ -608,142 +638,253 @@ function AdminStoreSettings() {
         {/* Tab 3: Pages */}
         <TabPanel value={tabValue} index={2}>
           <CardContent>
-            {/* About Page */}
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
-              About Page
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
+              Manage Static Pages
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Edit your static pages using the WYSIWYG editor below. Pages will appear in the footer if they have content.
             </Typography>
 
-            <div style={{ marginBottom: '16px' }}>
-              <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-                About Page Content
-              </Typography>
-              <ReactQuill
-                theme="snow"
-                value={staticPages.about?.content || ''}
-                onChange={(value) => handlePageContentChange('about', 'content', value)}
-                style={{ height: '300px', marginBottom: '50px' }}
-              />
-            </div>
-
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-                About Page Image
-              </Typography>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => handleStaticPageImageUpload(e, 'about')}
-                style={{ display: 'none' }}
-                id="about-image-upload"
-                disabled={uploadingPageImage.about}
-              />
-              <label htmlFor="about-image-upload">
-                <Button
-                  component="span"
-                  variant="outlined"
-                  startIcon={<Upload size={18} />}
-                  disabled={uploadingPageImage.about}
-                  sx={{ mb: 1 }}
-                >
-                  {uploadingPageImage.about ? 'Uploading...' : 'Upload Image'}
-                </Button>
-              </label>
-              {staticPages.about?.imagePath && (
-                <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Box
-                    component="img"
-                    src={staticPages.about.imagePath}
-                    alt="About page preview"
-                    sx={{
-                      maxHeight: 200,
-                      maxWidth: 300,
-                      objectFit: 'contain',
-                      border: '1px solid',
-                      borderColor: 'divider',
-                      borderRadius: 1,
-                      p: 1
-                    }}
-                    onError={(e) => {
-                      e.target.src = '/images/placeholder.png';
-                    }}
+            {/* About Page */}
+            <Accordion defaultExpanded sx={{ mb: 2 }}>
+              <AccordionSummary expandIcon={<ChevronDown size={20} />}>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  About Us
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <div style={{ marginBottom: '16px' }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                    About Us Page Content
+                  </Typography>
+                  <ReactQuill
+                    theme="snow"
+                    value={staticPages.about?.content || ''}
+                    onChange={(value) => handlePageContentChange('about', 'content', value)}
+                    style={{ height: '300px', marginBottom: '20px' }}
                   />
-                  <Button
-                    size="small"
-                    variant="text"
-                    color="error"
-                    startIcon={<X size={16} />}
-                    onClick={() => handlePageContentChange('about', 'imagePath', '')}
-                  >
-                    Remove
-                  </Button>
+                </div>
+
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
+                    About Page Image (Optional)
+                  </Typography>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleStaticPageImageUpload(e, 'about')}
+                    style={{ display: 'none' }}
+                    id="about-image-upload"
+                    disabled={uploadingPageImage.about}
+                  />
+                  <label htmlFor="about-image-upload">
+                    <Button
+                      component="span"
+                      variant="outlined"
+                      startIcon={<Upload size={18} />}
+                      disabled={uploadingPageImage.about}
+                      sx={{ mb: 1 }}
+                    >
+                      {uploadingPageImage.about ? 'Uploading...' : 'Upload Image'}
+                    </Button>
+                  </label>
+                  {staticPages.about?.imagePath && (
+                    <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Box
+                        component="img"
+                        src={staticPages.about.imagePath}
+                        alt="About page preview"
+                        sx={{
+                          maxHeight: 200,
+                          maxWidth: 300,
+                          objectFit: 'contain',
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          borderRadius: 1,
+                          p: 1
+                        }}
+                        onError={(e) => {
+                          e.target.src = '/images/placeholder.png';
+                        }}
+                      />
+                      <Button
+                        size="small"
+                        variant="text"
+                        color="error"
+                        startIcon={<X size={16} />}
+                        onClick={() => handlePageContentChange('about', 'imagePath', '')}
+                      >
+                        Remove
+                      </Button>
+                    </Box>
+                  )}
                 </Box>
-              )}
-            </Box>
 
-            <Button
-              variant="contained"
-              startIcon={<Save size={18} />}
-              onClick={() => handleSaveStaticPage('about')}
-              sx={{ mt: 2, mb: 4 }}
-            >
-              Save About Page
-            </Button>
-
-            <Divider sx={{ my: 3 }} />
+                <Button
+                  variant="contained"
+                  startIcon={<Save size={18} />}
+                  onClick={() => handleSaveStaticPage('about')}
+                  sx={{ mt: 2 }}
+                >
+                  Save About Us Page
+                </Button>
+              </AccordionDetails>
+            </Accordion>
 
             {/* Terms Page */}
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
-              Terms & Conditions Page
-            </Typography>
+            <Accordion sx={{ mb: 2 }}>
+              <AccordionSummary expandIcon={<ChevronDown size={20} />}>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Terms & Conditions
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <div style={{ marginBottom: '16px' }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                    Terms & Conditions Content
+                  </Typography>
+                  <ReactQuill
+                    theme="snow"
+                    value={staticPages.terms?.content || ''}
+                    onChange={(value) => handlePageContentChange('terms', 'content', value)}
+                    style={{ height: '300px', marginBottom: '20px' }}
+                  />
+                </div>
 
-            <div style={{ marginBottom: '16px' }}>
-              <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-                Terms Content
-              </Typography>
-              <ReactQuill
-                theme="snow"
-                value={staticPages.terms?.content || ''}
-                onChange={(value) => handlePageContentChange('terms', 'content', value)}
-                style={{ height: '300px', marginBottom: '50px' }}
-              />
-            </div>
-
-            <Button
-              variant="contained"
-              startIcon={<Save size={18} />}
-              onClick={() => handleSaveStaticPage('terms')}
-              sx={{ mt: 2, mb: 4 }}
-            >
-              Save Terms Page
-            </Button>
-
-            <Divider sx={{ my: 3 }} />
+                <Button
+                  variant="contained"
+                  startIcon={<Save size={18} />}
+                  onClick={() => handleSaveStaticPage('terms')}
+                  sx={{ mt: 2 }}
+                >
+                  Save Terms & Conditions Page
+                </Button>
+              </AccordionDetails>
+            </Accordion>
 
             {/* Privacy Page */}
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
-              Privacy Policy Page
-            </Typography>
+            <Accordion sx={{ mb: 2 }}>
+              <AccordionSummary expandIcon={<ChevronDown size={20} />}>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Privacy Policy
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <div style={{ marginBottom: '16px' }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                    Privacy Policy Content
+                  </Typography>
+                  <ReactQuill
+                    theme="snow"
+                    value={staticPages.privacy?.content || ''}
+                    onChange={(value) => handlePageContentChange('privacy', 'content', value)}
+                    style={{ height: '300px', marginBottom: '20px' }}
+                  />
+                </div>
 
-            <div style={{ marginBottom: '16px' }}>
-              <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-                Privacy Content
-              </Typography>
-              <ReactQuill
-                theme="snow"
-                value={staticPages.privacy?.content || ''}
-                onChange={(value) => handlePageContentChange('privacy', 'content', value)}
-                style={{ height: '300px', marginBottom: '50px' }}
-              />
-            </div>
+                <Button
+                  variant="contained"
+                  startIcon={<Save size={18} />}
+                  onClick={() => handleSaveStaticPage('privacy')}
+                  sx={{ mt: 2 }}
+                >
+                  Save Privacy Policy Page
+                </Button>
+              </AccordionDetails>
+            </Accordion>
 
-            <Button
-              variant="contained"
-              startIcon={<Save size={18} />}
-              onClick={() => handleSaveStaticPage('privacy')}
-              sx={{ mt: 2 }}
-            >
-              Save Privacy Page
-            </Button>
+            {/* Shipping Page */}
+            <Accordion sx={{ mb: 2 }}>
+              <AccordionSummary expandIcon={<ChevronDown size={20} />}>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Shipping Policy
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <div style={{ marginBottom: '16px' }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                    Shipping Policy Content
+                  </Typography>
+                  <ReactQuill
+                    theme="snow"
+                    value={staticPages.shipping?.content || ''}
+                    onChange={(value) => handlePageContentChange('shipping', 'content', value)}
+                    style={{ height: '300px', marginBottom: '20px' }}
+                  />
+                </div>
+
+                <Button
+                  variant="contained"
+                  startIcon={<Save size={18} />}
+                  onClick={() => handleSaveStaticPage('shipping')}
+                  sx={{ mt: 2 }}
+                >
+                  Save Shipping Policy Page
+                </Button>
+              </AccordionDetails>
+            </Accordion>
+
+            {/* Cancellation Page */}
+            <Accordion sx={{ mb: 2 }}>
+              <AccordionSummary expandIcon={<ChevronDown size={20} />}>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Cancellation & Refund Policy
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <div style={{ marginBottom: '16px' }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                    Cancellation & Refund Policy Content
+                  </Typography>
+                  <ReactQuill
+                    theme="snow"
+                    value={staticPages.cancellation?.content || ''}
+                    onChange={(value) => handlePageContentChange('cancellation', 'content', value)}
+                    style={{ height: '300px', marginBottom: '20px' }}
+                  />
+                </div>
+
+                <Button
+                  variant="contained"
+                  startIcon={<Save size={18} />}
+                  onClick={() => handleSaveStaticPage('cancellation')}
+                  sx={{ mt: 2 }}
+                >
+                  Save Cancellation & Refund Policy Page
+                </Button>
+              </AccordionDetails>
+            </Accordion>
+
+            {/* Contact Page */}
+            <Accordion sx={{ mb: 2 }}>
+              <AccordionSummary expandIcon={<ChevronDown size={20} />}>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Contact Us
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <div style={{ marginBottom: '16px' }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                    Contact Us Page Content
+                  </Typography>
+                  <ReactQuill
+                    theme="snow"
+                    value={staticPages.contact?.content || ''}
+                    onChange={(value) => handlePageContentChange('contact', 'content', value)}
+                    style={{ height: '300px', marginBottom: '20px' }}
+                  />
+                </div>
+
+                <Button
+                  variant="contained"
+                  startIcon={<Save size={18} />}
+                  onClick={() => handleSaveStaticPage('contact')}
+                  sx={{ mt: 2 }}
+                >
+                  Save Contact Us Page
+                </Button>
+              </AccordionDetails>
+            </Accordion>
           </CardContent>
         </TabPanel>
 

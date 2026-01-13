@@ -10,7 +10,7 @@ const COLLECTION_NAME = 'settings';
 
 /**
  * Get static page content
- * @param {string} pageType - 'about' | 'terms' | 'privacy'
+ * @param {string} pageType - 'about' | 'terms' | 'privacy' | 'shipping' | 'cancellation' | 'contact'
  * @returns {Promise<string>} Page content
  */
 export async function getStaticPageContent(pageType) {
@@ -32,7 +32,7 @@ export async function getStaticPageContent(pageType) {
 
 /**
  * Update static page content (admin only)
- * @param {string} pageType - 'about' | 'terms' | 'privacy'
+ * @param {string} pageType - 'about' | 'terms' | 'privacy' | 'shipping' | 'cancellation' | 'contact'
  * @param {string} content - Page content
  * @returns {Promise<void>}
  */

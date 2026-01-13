@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Phone, MessageCircle } from 'lucide-react';
+import { Phone, MessageCircle, Contact } from 'lucide-react';
 import { business } from '../config/business';
-import { getStoreInfo } from '../services/storeInfo';
+import { getStoreInfo, getAllStaticPages } from '../services/storeInfo';
 import './Footer.css';
 
 /**
@@ -14,7 +14,10 @@ function Footer() {
   const [staticPages, setStaticPages] = useState({
     about: false,
     terms: false,
-    privacy: false
+    privacy: false,
+    shipping: false,
+    cancellation: false,
+    contact: false
   });
 
   useEffect(() => {
@@ -23,16 +26,20 @@ function Footer() {
 
   const loadFooterData = async () => {
     try {
-      const info = await getStoreInfo();
+      const [info, pages] = await Promise.all([
+        getStoreInfo(),
+        getAllStaticPages()
+      ]);
       setStoreInfo(info);
 
-      // Check which static pages exist
-      // This will be implemented when we create the settings service
-      // For now, we'll show the links regardless
+      // Check which static pages have content (exist)
       setStaticPages({
-        about: true,
-        terms: true,
-        privacy: true
+        about: !!(pages.about?.content && pages.about.content.trim()),
+        terms: !!(pages.terms?.content && pages.terms.content.trim()),
+        privacy: !!(pages.privacy?.content && pages.privacy.content.trim()),
+        shipping: !!(pages.shipping?.content && pages.shipping.content.trim()),
+        cancellation: !!(pages.cancellation?.content && pages.cancellation.content.trim()),
+        contact: !!(pages.contact?.content && pages.contact.content.trim())
       });
     } catch (error) {
       console.error('Error loading footer data:', error);
@@ -66,19 +73,26 @@ function Footer() {
                   <span>WhatsApp</span>
                 </a>
               )}
+
+              {/* Static Pages */}
+              {(staticPages.contact) && (<Link to="/contact" className="footer-link"><Contact size={16} /> Contact Us</Link>)}
             </div>
           </div>
         )}
 
         {/* Static Pages */}
-        <div className="footer-section">
-          <h3 className="footer-heading">Information</h3>
-          <div className="footer-links">
-            {staticPages.about && <Link to="/about" className="footer-link">About Us</Link>}
-            {staticPages.terms && <Link to="/terms" className="footer-link">Terms & Conditions</Link>}
-            {staticPages.privacy && <Link to="/privacy" className="footer-link">Privacy Policy</Link>}
+        {(staticPages.about || staticPages.terms || staticPages.privacy || staticPages.shipping || staticPages.cancellation) && (
+          <div className="footer-section">
+            <h3 className="footer-heading">Information</h3>
+            <div className="footer-links">
+              {staticPages.about && <Link to="/about" className="footer-link">About Us</Link>}
+              {staticPages.terms && <Link to="/terms" className="footer-link">Terms & Conditions</Link>}
+              {staticPages.privacy && <Link to="/privacy" className="footer-link">Privacy Policy</Link>}
+              {staticPages.shipping && <Link to="/shipping" className="footer-link">Shipping</Link>}
+              {staticPages.cancellation && <Link to="/cancellation" className="footer-link">Cancellation & Refund</Link>}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Attribution (Required) */}
         <div className="footer-section">

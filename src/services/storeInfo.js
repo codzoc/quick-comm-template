@@ -87,8 +87,8 @@ export async function updateStoreInfo(storeData) {
 }
 
 /**
- * Get static page content (About, Terms, Privacy)
- * @param {string} pageType - 'about' | 'terms' | 'privacy'
+ * Get static page content (About, Terms, Privacy, Shipping, Cancellation, Contact)
+ * @param {string} pageType - 'about' | 'terms' | 'privacy' | 'shipping' | 'cancellation' | 'contact'
  * @returns {Promise<Object>}
  */
 export async function getStaticPage(pageType) {
@@ -112,12 +112,12 @@ export async function getStaticPage(pageType) {
 
 /**
  * Update static page content
- * @param {string} pageType - 'about' | 'terms' | 'privacy'
+ * @param {string} pageType - 'about' | 'terms' | 'privacy' | 'shipping' | 'cancellation' | 'contact'
  * @param {Object} pageData - {content, imagePath}
  * @returns {Promise<void>}
  */
 export async function updateStaticPage(pageType, pageData) {
-  const validPages = ['about', 'terms', 'privacy'];
+  const validPages = ['about', 'terms', 'privacy', 'shipping', 'cancellation', 'contact'];
 
   if (!validPages.includes(pageType)) {
     throw new Error('Invalid page type');
@@ -141,25 +141,34 @@ export async function updateStaticPage(pageType, pageData) {
 
 /**
  * Get all static pages
- * @returns {Promise<Object>} Object with about, terms, privacy keys
+ * @returns {Promise<Object>} Object with about, terms, privacy, shipping, cancellation, contact keys
  */
 export async function getAllStaticPages() {
   try {
     const about = await getStaticPage('about');
     const terms = await getStaticPage('terms');
     const privacy = await getStaticPage('privacy');
+    const shipping = await getStaticPage('shipping');
+    const cancellation = await getStaticPage('cancellation');
+    const contact = await getStaticPage('contact');
 
     return {
       about,
       terms,
-      privacy
+      privacy,
+      shipping,
+      cancellation,
+      contact
     };
   } catch (error) {
     console.error('Error fetching static pages:', error);
     return {
       about: { content: '', imagePath: null },
       terms: { content: '', imagePath: null },
-      privacy: { content: '', imagePath: null }
+      privacy: { content: '', imagePath: null },
+      shipping: { content: '', imagePath: null },
+      cancellation: { content: '', imagePath: null },
+      contact: { content: '', imagePath: null }
     };
   }
 }

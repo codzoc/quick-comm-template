@@ -78,6 +78,9 @@ function App() {
         <Route path="/about" element={<StaticPage pageType="about" />} />
         <Route path="/terms" element={<StaticPage pageType="terms" />} />
         <Route path="/privacy" element={<StaticPage pageType="privacy" />} />
+        <Route path="/shipping" element={<StaticPage pageType="shipping" />} />
+        <Route path="/cancellation" element={<StaticPage pageType="cancellation" />} />
+        <Route path="/contact" element={<StaticPage pageType="contact" />} />
 
           {/* 404 - Redirect to home */}
           <Route path="*" element={<StoreFront />} />
