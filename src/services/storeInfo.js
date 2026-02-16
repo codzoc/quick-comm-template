@@ -6,6 +6,7 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { getCurrencyCode } from '../utils/currency';
 
 const COLLECTION_NAME = 'storeInfo';
 const SETTINGS_COLLECTION = 'settings';
@@ -31,7 +32,7 @@ export async function getStoreInfo() {
       return {
         ...data,
         currencySymbol: data.currencySymbol || '₹',
-        currencyCode: data.currencyCode || 'INR',
+        currencyCode: data.currencyCode || getCurrencyCode(data.currencySymbol || '₹'),
         taxPercentage: data.taxPercentage ?? 0,
         shippingCost: data.shippingCost ?? 0,
         logoUrl: data.logoUrl || '/images/logo.png',

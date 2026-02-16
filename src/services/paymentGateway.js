@@ -74,6 +74,8 @@ export async function initiateRazorpayPayment({
     keyId,
     orderId,
     storeName = 'Our Store', // Default fallback - should be passed from Firestore
+    storeImage = '',
+    themeColor = '#667eea',
     amount,
     currency = 'INR',
     customerEmail,
@@ -103,10 +105,11 @@ export async function initiateRazorpayPayment({
             function openRazorpayCheckout() {
                 const options = {
                     key: keyId,
-                    amount: Math.round(amount * 100), // Convert to paise
+                    amount: Math.round(amount * 100), // Convert to smallest currency unit
                     currency: currency,
                     name: storeName,
                     description: `Order ${orderId}`,
+                    image: storeImage || undefined,
                     order_id: orderId, // This MUST be the Razorpay Order ID (starting with order_)
                     prefill: {
                         name: customerName,
@@ -114,7 +117,7 @@ export async function initiateRazorpayPayment({
                         contact: customerPhone
                     },
                     theme: {
-                        color: '#667eea'
+                        color: themeColor
                     },
                     handler: function (response) {
                         // Payment successful

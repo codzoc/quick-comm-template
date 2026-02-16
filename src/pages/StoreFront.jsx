@@ -617,11 +617,15 @@ function StoreFront() {
           // Get store name from Firestore store info
           // Only use default if document doesn't exist in Firestore
           const storeName = storeInfo?.storeName || (!storeInfo?._documentExists ? 'Quick Commerce' : 'Our Store');
+          // Get theme primary color from CSS variable (set by main.jsx from Firestore theme)
+          const themeColor = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#667eea';
 
           await initiateRazorpayPayment({
             keyId: paymentSettings.razorpay.keyId,
             orderId: razorpayOrderId, // Use the Razorpay Order ID, NOT Firestore ID
             storeName: storeName, // Use store name from Firestore
+            storeImage: storeInfo?.storeIcon || storeInfo?.logoUrl || '',
+            themeColor: themeColor,
             amount: getCartGrandTotal(),
             currency: storeInfo?.currencyCode || 'INR',
             customerEmail: customerInfo.email,
