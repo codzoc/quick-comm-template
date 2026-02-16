@@ -988,8 +988,8 @@ function AdminStoreSettings() {
                 value={storeInfo.taxPercentage || 0}
                 onChange={(e) => handleStoreInfoChange('taxPercentage', parseFloat(e.target.value) || 0)}
                 margin="normal"
-                inputProps={{ min: 0, max: 100, step: 0.01 }}
-                helperText="Tax percentage to be added to cart total (0 = no tax). Supports up to 2 decimal places."
+                inputProps={{ min: 0, max: 100, step: 'any' }}
+                helperText="Tax percentage to be added to cart total (0 = no tax)"
               />
 
               <TextField
