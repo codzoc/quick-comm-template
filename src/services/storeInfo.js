@@ -31,6 +31,7 @@ export async function getStoreInfo() {
       return {
         ...data,
         currencySymbol: data.currencySymbol || '₹',
+        currencyCode: data.currencyCode || 'INR',
         taxPercentage: data.taxPercentage ?? 0,
         shippingCost: data.shippingCost ?? 0,
         logoUrl: data.logoUrl || '/images/logo.png',
@@ -51,6 +52,7 @@ export async function getStoreInfo() {
         seoDescription: '',
         seoKeywords: '',
         currencySymbol: '₹',
+        currencyCode: 'INR',
         taxPercentage: 0,
         shippingCost: 0,
         logoUrl: '/images/logo.png',

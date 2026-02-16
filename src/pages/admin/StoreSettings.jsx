@@ -29,6 +29,7 @@ import { getCurrentTemplate, updateThemeTemplate } from '../../services/theme';
 import { getThemeTemplateOptions } from '../../config/themeTemplates';
 import { uploadLogoImage, uploadStaticPageImage } from '../../services/imageUpload';
 import { getDefaultPageContent } from '../../utils/defaultPageContent';
+import { getCurrencyCode } from '../../utils/currency';
 import AdminLayout from '../../components/AdminLayout';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ThemeCustomizer from '../../components/ThemeCustomizer';
@@ -65,6 +66,7 @@ function AdminStoreSettings() {
     seoDescription: '',
     seoKeywords: '',
     currencySymbol: '₹',
+    currencyCode: 'INR',
     taxPercentage: 0,
     shippingCost: 0,
     productsHeading: 'Our Products'
@@ -959,7 +961,14 @@ function AdminStoreSettings() {
                 <InputLabel>Currency Symbol</InputLabel>
                 <Select
                   value={storeInfo.currencySymbol || '₹'}
-                  onChange={(e) => handleStoreInfoChange('currencySymbol', e.target.value)}
+                  onChange={(e) => {
+                    const symbol = e.target.value;
+                    setStoreInfo(prev => ({
+                      ...prev,
+                      currencySymbol: symbol,
+                      currencyCode: getCurrencyCode(symbol)
+                    }));
+                  }}
                   label="Currency Symbol"
                 >
                   <MenuItem value="₹">₹ (Indian Rupee)</MenuItem>
@@ -979,8 +988,8 @@ function AdminStoreSettings() {
                 value={storeInfo.taxPercentage || 0}
                 onChange={(e) => handleStoreInfoChange('taxPercentage', parseFloat(e.target.value) || 0)}
                 margin="normal"
-                inputProps={{ min: 0, max: 100, step: 0.1 }}
-                helperText="Tax percentage to be added to cart total (0 = no tax)"
+                inputProps={{ min: 0, max: 100, step: 0.01 }}
+                helperText="Tax percentage to be added to cart total (0 = no tax). Supports up to 2 decimal places."
               />
 
               <TextField

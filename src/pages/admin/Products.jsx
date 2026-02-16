@@ -24,6 +24,7 @@ import { Edit, Trash2, Plus, X, Upload, Trash } from 'lucide-react';
 import { onAuthChange } from '../../services/auth';
 import { getAllProducts, createProduct, updateProduct, deleteProduct } from '../../services/products';
 import { uploadProductImages, deleteImage } from '../../services/imageUpload';
+import { getStoreInfo } from '../../services/storeInfo';
 import AdminLayout from '../../components/AdminLayout';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ErrorMessage from '../../components/ErrorMessage';
@@ -31,6 +32,7 @@ import './AdminStyles.css';
 
 function AdminProducts() {
   const [products, setProducts] = useState([]);
+  const [storeInfo, setStoreInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -59,8 +61,12 @@ function AdminProducts() {
 
   const loadProducts = async () => {
     try {
-      const data = await getAllProducts();
+      const [data, storeData] = await Promise.all([
+        getAllProducts(),
+        getStoreInfo()
+      ]);
       setProducts(data);
+      setStoreInfo(storeData);
       setError('');
     } catch (err) {
       setError(err.message);
@@ -276,19 +282,19 @@ function AdminProducts() {
                         {product.discountedPrice ? (
                           <>
                             <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                              ₹{product.discountedPrice}
+                              {storeInfo?.currencySymbol || '₹'}{product.discountedPrice}
                             </Typography>
                             <Typography
                               variant="caption"
                               color="text.secondary"
                               sx={{ textDecoration: 'line-through' }}
                             >
-                              ₹{product.price}
+                              {storeInfo?.currencySymbol || '₹'}{product.price}
                             </Typography>
                           </>
                         ) : (
                           <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                            ₹{product.price}
+                            {storeInfo?.currencySymbol || '₹'}{product.price}
                           </Typography>
                         )}
                       </Box>

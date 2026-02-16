@@ -4,6 +4,7 @@ import { Eye } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { logoutCustomer, updateCustomerProfile } from '../services/customerAuth';
 import { signOut } from '../services/auth';
+import { getStoreInfo } from '../services/storeInfo';
 import { getCustomerAddresses, addAddress, updateAddress, deleteAddress, setDefaultAddress } from '../services/addresses';
 import { getCustomerOrders } from '../services/orders';
 import Header from '../components/Header';
@@ -20,6 +21,7 @@ const CustomerAccount = () => {
     const [customer, setCustomer] = useState(null);
     const [addresses, setAddresses] = useState([]);
     const [orders, setOrders] = useState([]);
+    const [storeInfo, setStoreInfo] = useState(null);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
@@ -75,9 +77,10 @@ const CustomerAccount = () => {
                 phone: userProfile.phone || ''
             });
 
-            // Load addresses and orders
+            // Load addresses, orders, and store info
             await loadAddresses(currentUser.uid);
             await loadOrders(currentUser.uid);
+            getStoreInfo().then(data => setStoreInfo(data)).catch(() => {});
         } catch (err) {
             setError('Failed to load account data');
         } finally {
@@ -201,7 +204,7 @@ const CustomerAccount = () => {
     };
 
     const formatCurrency = (amount) => {
-        return `₹${amount.toFixed(2)}`;
+        return `${storeInfo?.currencySymbol || '₹'}${amount.toFixed(2)}`;
     };
 
     const formatDate = (date) => {

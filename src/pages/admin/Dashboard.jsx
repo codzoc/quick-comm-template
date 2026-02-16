@@ -5,6 +5,7 @@ import { TrendingUp, ShoppingCart, Package, AlertTriangle, Clock, CheckCircle } 
 import { onAuthChange } from '../../services/auth';
 import { getOrderStats } from '../../services/orders';
 import { getAllProducts } from '../../services/products';
+import { getStoreInfo } from '../../services/storeInfo';
 import AdminLayout from '../../components/AdminLayout';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import './AdminStyles.css';
@@ -23,6 +24,7 @@ function AdminDashboard() {
     codRevenue: 0
   });
   const [lowStockProducts, setLowStockProducts] = useState([]);
+  const [storeInfo, setStoreInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -39,11 +41,13 @@ function AdminDashboard() {
 
   const loadDashboardData = async () => {
     try {
-      const [orderStats, products] = await Promise.all([
+      const [orderStats, products, storeData] = await Promise.all([
         getOrderStats(),
-        getAllProducts()
+        getAllProducts(),
+        getStoreInfo()
       ]);
       setStats(orderStats);
+      setStoreInfo(storeData);
       const lowStock = products.filter((p) => p.stock < 5);
       setLowStockProducts(lowStock);
     } catch (error) {
@@ -60,6 +64,8 @@ function AdminDashboard() {
       </AdminLayout>
     );
   }
+
+  const currencySymbol = storeInfo?.currencySymbol || '₹';
 
   const statCards = [
     {
@@ -100,19 +106,19 @@ function AdminDashboard() {
     },
     {
       title: 'Total Revenue',
-      value: `₹${stats.totalRevenue.toLocaleString()}`,
+      value: `${currencySymbol}${stats.totalRevenue.toLocaleString()}`,
       icon: TrendingUp,
       color: '#10b981'
     },
     {
       title: 'Online Revenue',
-      value: `₹${(stats.onlineRevenue || 0).toLocaleString()}`,
+      value: `${currencySymbol}${(stats.onlineRevenue || 0).toLocaleString()}`,
       icon: TrendingUp,
       color: '#8b5cf6'
     },
     {
       title: 'COD Revenue',
-      value: `₹${(stats.codRevenue || 0).toLocaleString()}`,
+      value: `${currencySymbol}${(stats.codRevenue || 0).toLocaleString()}`,
       icon: TrendingUp,
       color: '#f59e0b'
     }

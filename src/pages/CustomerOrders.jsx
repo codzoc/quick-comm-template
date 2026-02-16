@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { collection, query, where, getDocs, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
+import { getStoreInfo } from '../services/storeInfo';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -13,6 +14,7 @@ function CustomerOrders() {
     const navigate = useNavigate();
 
     const [orders, setOrders] = useState([]);
+    const [storeInfo, setStoreInfo] = useState(null);
     const [loading, setLoading] = useState(true);
     const [cancelling, setCancelling] = useState(null);
     const [selectedOrder, setSelectedOrder] = useState(null);
@@ -30,6 +32,9 @@ function CustomerOrders() {
 
     const fetchOrders = async () => {
         try {
+            // Load store info for currency symbol
+            getStoreInfo().then(data => setStoreInfo(data)).catch(() => {});
+
             // Query orders where customer.email matches current user email
             // Note: In a real app, we should probably store uid in the order, 
             // but for now we'll match by email since the original order structure uses customer object
@@ -154,7 +159,7 @@ function CustomerOrders() {
                                                 {order.createdAt?.toLocaleDateString()} • {order.items.length} Items
                                             </div>
                                             <div style={{ fontSize: '0.9rem', marginTop: '0.25rem', fontWeight: 500 }}>
-                                                ₹{order.total?.toFixed(2)}
+                                                {storeInfo?.currencySymbol || '₹'}{order.total?.toFixed(2)}
                                             </div>
                                         </div>
 
@@ -295,7 +300,7 @@ function CustomerOrders() {
                                                                     <div style={{ fontSize: '0.85rem', color: 'var(--color-text-light)' }}>Qty: {item.quantity}</div>
                                                                 </div>
                                                             </div>
-                                                            <div style={{ fontWeight: 500 }}>₹{(item.price * item.quantity).toFixed(2)}</div>
+                                                            <div style={{ fontWeight: 500 }}>{storeInfo?.currencySymbol || '₹'}{(item.price * item.quantity).toFixed(2)}</div>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -303,23 +308,23 @@ function CustomerOrders() {
                                                 <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '1rem' }}>
                                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
                                                         <span>Subtotal</span>
-                                                        <span>₹{selectedOrder.subtotal?.toFixed(2) || (selectedOrder.total).toFixed(2)}</span>
+                                                        <span>{storeInfo?.currencySymbol || '₹'}{selectedOrder.subtotal?.toFixed(2) || (selectedOrder.total).toFixed(2)}</span>
                                                     </div>
                                                     {selectedOrder.tax > 0 && (
                                                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
                                                             <span>Tax</span>
-                                                            <span>₹{selectedOrder.tax.toFixed(2)}</span>
+                                                            <span>{storeInfo?.currencySymbol || '₹'}{selectedOrder.tax.toFixed(2)}</span>
                                                         </div>
                                                     )}
                                                     {selectedOrder.shipping > 0 && (
                                                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
                                                             <span>Shipping</span>
-                                                            <span>₹{selectedOrder.shipping.toFixed(2)}</span>
+                                                            <span>{storeInfo?.currencySymbol || '₹'}{selectedOrder.shipping.toFixed(2)}</span>
                                                         </div>
                                                     )}
                                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem', fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--color-primary)' }}>
                                                         <span>Total</span>
-                                                        <span>₹{selectedOrder.total?.toFixed(2)}</span>
+                                                        <span>{storeInfo?.currencySymbol || '₹'}{selectedOrder.total?.toFixed(2)}</span>
                                                     </div>
                                                 </div>
                                             </div>

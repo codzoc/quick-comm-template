@@ -611,7 +611,7 @@ function StoreFront() {
           const razorpayOrderId = await createRazorpayOrder(
             order.id, // Pass Firestore ID for reference/receipt
             getCartGrandTotal(),
-            'INR'
+            storeInfo?.currencyCode || 'INR'
           );
 
           // Get store name from Firestore store info
@@ -623,7 +623,7 @@ function StoreFront() {
             orderId: razorpayOrderId, // Use the Razorpay Order ID, NOT Firestore ID
             storeName: storeName, // Use store name from Firestore
             amount: getCartGrandTotal(),
-            currency: 'INR',
+            currency: storeInfo?.currencyCode || 'INR',
             customerEmail: customerInfo.email,
             customerName: customerInfo.name,
             customerPhone: customerInfo.phone,
@@ -716,8 +716,9 @@ function StoreFront() {
     const phone = storeInfo.whatsapp.replace(/[^0-9]/g, '');
 
     // Build items list
+    const cs = storeInfo?.currencySymbol || '₹';
     const itemsList = orderItems.map(item =>
-      `${item.quantity}x ${item.title} - ₹${item.price * item.quantity}`
+      `${item.quantity}x ${item.title} - ${cs}${item.price * item.quantity}`
     ).join('\n');
 
     const message = `Hi, my order ID is *${orderId}*\n\n*Order Items:*\n${itemsList}\n\nThank you!`;

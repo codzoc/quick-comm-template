@@ -25,6 +25,7 @@ import { Search, X, Eye } from 'lucide-react';
 import { getAllCustomers } from '../../services/adminAccounts';
 import { getCustomerOrders } from '../../services/orders';
 import { onAuthChange } from '../../services/auth';
+import { getStoreInfo } from '../../services/storeInfo';
 import AdminLayout from '../../components/AdminLayout';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ErrorMessage from '../../components/ErrorMessage';
@@ -32,6 +33,7 @@ import './AdminStyles.css';
 
 function Customers() {
     const [customers, setCustomers] = useState([]);
+    const [storeInfo, setStoreInfo] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
@@ -54,8 +56,12 @@ function Customers() {
     const loadCustomers = async () => {
         try {
             setLoading(true);
-            const customersData = await getAllCustomers();
+            const [customersData, storeData] = await Promise.all([
+                getAllCustomers(),
+                getStoreInfo()
+            ]);
             setCustomers(customersData);
+            setStoreInfo(storeData);
             setError('');
         } catch (err) {
             setError(err.message);
@@ -243,7 +249,7 @@ function Customers() {
                                                         : 'N/A'}
                                                 </TableCell>
                                                 <TableCell>{order.items?.length || 0}</TableCell>
-                                                <TableCell>₹{order.total?.toFixed(2)}</TableCell>
+                                                <TableCell>{storeInfo?.currencySymbol || '₹'}{order.total?.toFixed(2)}</TableCell>
                                                 <TableCell>
                                                     <Chip
                                                         label={order.status}
