@@ -120,6 +120,11 @@ Now updates only happen when you manually trigger the workflow.
 - **Code cleanup** - Removed debug console logs for cleaner production code
 - **Improved error handling** - Better error messages and consistent error handling across the application
 - **Storage rules optimization** - Cleaner rules documentation and improved security comments
+- **Product configurations support** - Products can now have attribute-based configuration rows (for example color/size/material)
+- **Configurable product modal** - Storefront shows option selection popup and color dots when color configurations exist
+- **Configuration-aware order flow** - Selected configurations now appear in cart, admin/customer order views, and order emails
+- **Transparent color defaults** - New configuration rows start with no color selected; colors only appear when explicitly chosen
+- **Single-configuration auto-select** - If a product has one configuration, it is preselected in the popup for faster checkout
 
 ### Image Upload & Management
 - **Built-in image upload** - No external hosting needed! Upload directly to Firebase Storage
@@ -556,8 +561,14 @@ After merging to `main`, GitHub Actions will deploy to production:
 3. Fill in details:
    - **Title**: Product name
    - **Description**: Short description
-   - **Price**: Regular price (in your selected currency)
-   - **Discounted Price** (optional): Sale price - shows % OFF badge
+   - **Does this product have configurations?** (default: No)
+     - **No**: Use simple **Price** and **Discounted Price** fields
+     - **Yes**: Use configuration table with variant rows
+       - Default columns: **Color** (picker), **Image**, **Price**, **Discounted Price**, **Stock**
+       - Color starts transparent by default; pick only if this variant has a color
+       - **Add Configuration** adds a new row (new variant)
+       - **Add Attribute** adds a new text attribute column
+       - Duplicate variant combinations are blocked before save
    - **Product Images**: 
      - Click "Upload Images" to select one or more images
      - Images are automatically compressed and resized (max 1024px width)
@@ -672,6 +683,13 @@ After merging to `main`, GitHub Actions will deploy to production:
 - **Search functionality**: Real-time search across product titles and descriptions
 - **Stock indicators**: "Out of Stock" badges and "Only X left" warnings
 - **Discount badges**: Automatic percentage OFF calculation
+- **Configurable products**:
+  - Color dots appear on product cards only for non-transparent configured colors
+  - Dots are shown on the product image area to keep card height consistent
+  - "Add to Cart" becomes "View Product" for configurable products
+  - Customers pick configuration options in a popup before adding to cart
+  - Color options in popup are shown as selectable circles (no radio text/hex)
+  - If there is only one configuration, it is preselected automatically
 - **Responsive images**: Optimized for all screen sizes
 - **Placeholder handling**: Graceful fallback for missing images
 
@@ -690,6 +708,10 @@ The main customer-facing page is in `src/pages/StoreFront.jsx`. This file is des
 ---
 
 ## Troubleshooting
+
+### Local Quality Checks
+- `npm run build` is available and recommended before deploying
+- `npm run lint` is currently **not configured** in this template (no `lint` script in `package.json`)
 
 ### Build Fails in GitHub Actions
 - Check that both secrets are set correctly:

@@ -20,8 +20,7 @@ import {
   Chip,
   Grid,
   FormControlLabel,
-  Switch,
-  MenuItem
+  Switch
 } from '@mui/material';
 import { Edit, Trash2, Plus, X, Upload, Trash } from 'lucide-react';
 import { onAuthChange } from '../../services/auth';
@@ -37,7 +36,7 @@ function AdminProducts() {
   const DEFAULT_CONFIGURATION_ATTRIBUTES = [{ id: 'color', name: 'Color', type: 'color' }];
   const createConfigurationRow = (index = 0, existingValues = {}) => ({
     id: `cfg_${Date.now()}_${index}`,
-    values: { color: '#000000', ...existingValues },
+    values: { color: '', ...existingValues },
     image: '',
     price: '',
     discountedPrice: '',
@@ -49,7 +48,7 @@ function AdminProducts() {
       const values = {};
       attributes.forEach((attr) => {
         if (attr.type === 'color') {
-          values[attr.id] = row.values?.[attr.id] || '#000000';
+          values[attr.id] = row.values?.[attr.id] || '';
         } else {
           values[attr.id] = row.values?.[attr.id] || '';
         }
@@ -89,12 +88,12 @@ function AdminProducts() {
   const [configurationImageFiles, setConfigurationImageFiles] = useState({});
   const [configurationImagePreviews, setConfigurationImagePreviews] = useState({});
   const [showAttributeDialog, setShowAttributeDialog] = useState(false);
-  const [attributeDraft, setAttributeDraft] = useState({ name: '', type: 'text' });
+  const [attributeDraft, setAttributeDraft] = useState({ name: '' });
   const [uploadingImages, setUploadingImages] = useState(false);
   const navigate = useNavigate();
 
   const resetAttributeDialog = () => {
-    setAttributeDraft({ name: '', type: 'text' });
+    setAttributeDraft({ name: '' });
     setShowAttributeDialog(false);
   };
 
@@ -253,7 +252,7 @@ function AdminProducts() {
 
   const saveNewAttribute = () => {
     const name = attributeDraft.name.trim();
-    const type = attributeDraft.type;
+    const type = 'text';
     if (!name) {
       alert('Attribute name is required.');
       return;
@@ -274,7 +273,7 @@ function AdminProducts() {
         ...row,
         values: {
           ...row.values,
-          [attributeId]: type === 'color' ? '#000000' : ''
+          [attributeId]: ''
         }
       }));
 
@@ -807,12 +806,32 @@ function AdminProducts() {
                               {formData.configurationAttributes.map((attribute) => (
                                 <TableCell key={`${row.id}_${attribute.id}`}>
                                   {attribute.type === 'color' ? (
-                                    <input
-                                      type="color"
-                                      value={row.values?.[attribute.id] || '#000000'}
-                                      onChange={(e) => handleConfigurationValueChange(row.id, attribute.id, e.target.value)}
-                                      style={{ width: 48, height: 32, border: 'none', background: 'transparent' }}
-                                    />
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                      <input
+                                        type="color"
+                                        value={row.values?.[attribute.id] || '#ffffff'}
+                                        onChange={(e) => handleConfigurationValueChange(row.id, attribute.id, e.target.value)}
+                                        style={{
+                                          width: 30,
+                                          height: 30,
+                                          borderRadius: '50%',
+                                          border: '1px solid #d0d0d0',
+                                          padding: 0,
+                                          overflow: 'hidden',
+                                          cursor: 'pointer',
+                                          background: 'transparent',
+                                          opacity: row.values?.[attribute.id] ? 1 : 0.35
+                                        }}
+                                      />
+                                      <Button
+                                        variant="text"
+                                        size="small"
+                                        onClick={() => handleConfigurationValueChange(row.id, attribute.id, '')}
+                                        sx={{ minWidth: 0, px: 0.5 }}
+                                      >
+                                        Clear
+                                      </Button>
+                                    </Box>
                                   ) : (
                                     <TextField
                                       size="small"
@@ -826,10 +845,22 @@ function AdminProducts() {
                               ))}
                               <TableCell>
                                 <input
+                                  id={`config-image-${row.id}`}
                                   type="file"
                                   accept="image/*"
                                   onChange={(e) => handleConfigurationImageChange(row.id, e.target.files?.[0])}
+                                  style={{ display: 'none' }}
                                 />
+                                <label htmlFor={`config-image-${row.id}`}>
+                                  <Button
+                                    component="span"
+                                    size="small"
+                                    variant="outlined"
+                                    startIcon={<Upload size={14} />}
+                                  >
+                                    Upload
+                                  </Button>
+                                </label>
                                 {(configurationImagePreviews[row.id] || row.image) && (
                                   <Box
                                     component="img"
@@ -1092,19 +1123,7 @@ function AdminProducts() {
             value={attributeDraft.name}
             onChange={(e) => setAttributeDraft((prev) => ({ ...prev, name: e.target.value }))}
             placeholder="e.g. Size"
-            sx={{ mb: 2 }}
           />
-          <TextField
-            select
-            fullWidth
-            label="Attribute Type"
-            value={attributeDraft.type}
-            onChange={(e) => setAttributeDraft((prev) => ({ ...prev, type: e.target.value }))}
-          >
-            <MenuItem value="text">Text</MenuItem>
-            <MenuItem value="number">Number</MenuItem>
-            <MenuItem value="color">Color</MenuItem>
-          </TextField>
         </DialogContent>
         <DialogActions>
           <Button onClick={resetAttributeDialog}>Cancel</Button>

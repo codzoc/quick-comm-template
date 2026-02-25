@@ -136,14 +136,16 @@
 }
 
 .product-color-swatches {
+  position: absolute;
+  left: var(--spacing-sm);
+  bottom: var(--spacing-sm);
   display: flex;
   gap: 0.35rem;
-  margin-top: 0.5rem;
 }
 
 .product-color-swatch {
-  width: 0.8rem;
-  height: 0.8rem;
+  width: 0.7rem;
+  height: 0.7rem;
   border-radius: 50%;
   border: 1px solid #d1d5db;
 }

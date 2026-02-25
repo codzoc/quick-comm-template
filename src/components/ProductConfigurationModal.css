@@ -14,10 +14,12 @@
   border-radius: var(--border-radius-lg);
   width: min(900px, 100%);
   max-height: 90vh;
-  overflow: auto;
+  overflow: hidden;
   display: grid;
   grid-template-columns: 1fr 1fr;
   position: relative;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .product-config-close {
@@ -32,6 +34,7 @@
 
 .product-config-left {
   padding: 1rem;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.04));
 }
 
 .product-config-image {
@@ -43,7 +46,11 @@
 }
 
 .product-config-right {
-  padding: 1rem 1rem 1.25rem;
+  padding: 1.25rem 1.1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.45rem;
 }
 
 .product-config-right h3 {
@@ -53,10 +60,11 @@
 .product-config-right p {
   color: var(--color-text-light);
   margin: 0 0 0.75rem;
+  line-height: 1.45;
 }
 
 .product-config-attribute {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.6rem;
 }
 
 .product-config-attribute-label {
@@ -75,6 +83,10 @@
   align-items: center;
   gap: 0.35rem;
   font-size: 0.9rem;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
 }
 
 .product-config-color-option {
@@ -88,6 +100,25 @@
   height: 0.85rem;
   border-radius: 50%;
   border: 1px solid #ddd;
+}
+
+.product-config-color-choice {
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 50%;
+  border: 1px solid #cfcfcf;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.15s ease;
+}
+
+.product-config-color-choice:hover {
+  transform: scale(1.08);
+}
+
+.product-config-color-choice.selected {
+  border: 2px solid var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.08), 0 0 0 4px rgba(0, 0, 0, 0.04);
 }
 
 .product-config-footer {

@@ -21,10 +21,16 @@ function ProductCard({ product, onAddToCart, currencySymbol = '₹' }) {
   const [showConfigurationModal, setShowConfigurationModal] = useState(false);
   const hasConfigurations = Boolean(product.hasConfigurations && product.configurations?.length > 0);
 
+  const isVisibleColor = (value) => {
+    if (!value) return false;
+    const normalized = String(value).trim().toLowerCase();
+    return normalized !== 'transparent' && normalized !== 'rgba(0,0,0,0)' && normalized !== '#00000000';
+  };
+
   const colorAttribute = product.configurationAttributes?.find((attribute) => attribute.name?.toLowerCase() === 'color')
     || product.configurationAttributes?.find((attribute) => attribute.type === 'color');
   const colorSwatches = hasConfigurations && colorAttribute
-    ? [...new Set(product.configurations.map((row) => row.values?.[colorAttribute.id]).filter(Boolean))]
+    ? [...new Set(product.configurations.map((row) => row.values?.[colorAttribute.id]).filter(isVisibleColor))]
     : [];
 
   // Support both new format (images array) and legacy (imagePath)
@@ -78,6 +84,13 @@ function ProductCard({ product, onAddToCart, currencySymbol = '₹' }) {
             {Math.round(((price - discountedPrice) / price) * 100)}% OFF
           </div>
         )}
+        {colorSwatches.length > 0 && (
+          <div className="product-color-swatches">
+            {colorSwatches.map((swatch) => (
+              <span key={swatch} className="product-color-swatch" style={{ backgroundColor: swatch }} />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Image Slider Modal */}
@@ -104,14 +117,6 @@ function ProductCard({ product, onAddToCart, currencySymbol = '₹' }) {
             <span className="product-price">{currencySymbol}{price}</span>
           )}
         </div>
-
-        {colorSwatches.length > 0 && (
-          <div className="product-color-swatches">
-            {colorSwatches.map((swatch) => (
-              <span key={swatch} className="product-color-swatch" style={{ backgroundColor: swatch }} />
-            ))}
-          </div>
-        )}
 
         {/* Add to Cart Button */}
         <button
