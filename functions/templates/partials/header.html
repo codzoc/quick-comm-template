@@ -4,18 +4,57 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{emailTitle}}</title>
+  <style>
+    .email-outer {
+      padding: 20px;
+    }
+    .email-card {
+      width: 100%;
+      max-width: 600px;
+    }
+    .email-header-cell {
+      padding: 40px 30px;
+    }
+    .email-header-title {
+      font-size: 28px;
+      line-height: 1.2;
+    }
+    .email-header-subtitle {
+      font-size: 16px;
+      line-height: 1.4;
+    }
+
+    @media only screen and (max-width: 620px) {
+      .email-outer {
+        padding: 12px !important;
+      }
+      .email-card {
+        border-radius: 6px !important;
+      }
+      .email-header-cell {
+        padding: 28px 18px !important;
+      }
+      .email-header-title {
+        font-size: 24px !important;
+      }
+      .email-header-subtitle {
+        margin-top: 8px !important;
+        font-size: 14px !important;
+      }
+    }
+  </style>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #ffffff;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #ffffff; padding: 20px;">
+  <table width="100%" cellpadding="0" cellspacing="0" class="email-outer" style="background-color: #ffffff; padding: 20px;">
     <tr>
       <td align="center">
         {{storeLogoBlockHtml}}
-        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; border: 1px solid #eef2f7; box-shadow: 0 6px 18px rgba(15, 23, 42, 0.1);">
+        <table width="100%" cellpadding="0" cellspacing="0" class="email-card" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; border: 1px solid #eef2f7; box-shadow: 0 6px 18px rgba(15, 23, 42, 0.1); width: 100%; max-width: 600px;">
           <!-- Header -->
           <tr>
-            <td style="background: linear-gradient(135deg, {{headerGradientStart}} 0%, {{headerGradientEnd}} 100%); padding: 40px 30px; text-align: center;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;">{{headerTitle}}</h1>
-              <p style="margin: 10px 0 0; color: #ffffff; opacity: 0.9; font-size: 16px;">{{headerSubtitle}}</p>
+            <td class="email-header-cell" style="background: linear-gradient(135deg, {{headerGradientStart}} 0%, {{headerGradientEnd}} 100%); padding: 40px 30px; text-align: center;">
+              <h1 class="email-header-title" style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; line-height: 1.2;">{{headerTitle}}</h1>
+              <p class="email-header-subtitle" style="margin: 10px 0 0; color: #ffffff; opacity: 0.9; font-size: 16px; line-height: 1.4;">{{headerSubtitle}}</p>
             </td>
           </tr>
 
