@@ -105,6 +105,57 @@ function isColorValue(value) {
     return /^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/.test(normalized) || /^rgb(a?)\(/i.test(normalized);
 }
 
+const templateHeaderColors = {
+    flat: { start: '#0066ff', end: '#0052cc' },
+    minimal: { start: '#000000', end: '#1a1a1a' },
+    soft: { start: '#a855f7', end: '#9333ea' },
+    modern: { start: '#0066ff', end: '#0052cc' },
+    sharp: { start: '#dc2626', end: '#b91c1c' },
+    professional: { start: '#1e40af', end: '#1e3a8a' },
+    glassmorphism: { start: '#a855f7', end: '#9333ea' },
+    custom: { start: '#0066ff', end: '#0052cc' }
+};
+
+async function getEmailHeaderColors() {
+    try {
+        const themeDoc = await admin.firestore()
+            .collection('settings')
+            .doc('theme')
+            .get();
+
+        if (!themeDoc.exists) {
+            return templateHeaderColors.professional;
+        }
+
+        const data = themeDoc.data() || {};
+        const themePrimary = data.theme?.colors?.primary;
+        const themePrimaryHover = data.theme?.colors?.primaryHover;
+        if (themePrimary || themePrimaryHover) {
+            return {
+                start: themePrimary || '#1e40af',
+                end: themePrimaryHover || themePrimary || '#1e3a8a'
+            };
+        }
+
+        const overridePrimary = data.customOverrides?.colors?.primary;
+        const overridePrimaryHover = data.customOverrides?.colors?.primaryHover;
+        if (overridePrimary || overridePrimaryHover) {
+            return {
+                start: overridePrimary || '#1e40af',
+                end: overridePrimaryHover || overridePrimary || '#1e3a8a'
+            };
+        }
+
+        if (data.templateKey && templateHeaderColors[data.templateKey]) {
+            return templateHeaderColors[data.templateKey];
+        }
+
+        return templateHeaderColors.professional;
+    } catch (error) {
+        return templateHeaderColors.professional;
+    }
+}
+
 function getItemDisplayImage(item) {
     if (item.images && item.images.length > 0) return item.images[0];
     if (item.imagePath) return item.imagePath;
@@ -122,7 +173,6 @@ function renderSelectedAttributesHtml(selectedAttributes = []) {
             return `<span style="display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; margin-top: 3px;">
   <span>${name}:</span>
   <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 1px solid #d1d5db; background-color: ${escapeHtml(value)};"></span>
-  <span>${escapeHtml(value)}</span>
 </span>`;
         }
 
@@ -132,10 +182,10 @@ function renderSelectedAttributesHtml(selectedAttributes = []) {
     return `<div style="font-size: 12px; color: #6b7280; margin-top: 4px;">${parts.join('')}</div>`;
 }
 
-function renderStoreLogoHtml(logoUrl, storeName) {
+function renderStoreLogoBlockHtml(logoUrl, storeName) {
     if (!logoUrl) return '';
-    return `<div style="margin-bottom: 14px;">
-  <img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(storeName || 'Store logo')}" style="max-height: 46px; max-width: 170px; object-fit: contain; display: inline-block;" />
+    return `<div style="text-align: center; margin: 0 0 12px;">
+  <img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(storeName || 'Store logo')}" style="max-height: 52px; max-width: 190px; object-fit: contain; display: inline-block;" />
 </div>`;
 }
 
@@ -149,7 +199,7 @@ function loadPartial(partialName, data) {
     // Replace placeholders in partial
     Object.keys(data).forEach(key => {
         const regex = new RegExp(`{{${key}}}`, 'g');
-        const htmlFields = ['itemsHtml', 'paymentStatus', 'newStatusBadge', 'statusMessage', 'storeLogoHtml'];
+        const htmlFields = ['itemsHtml', 'paymentStatus', 'newStatusBadge', 'statusMessage', 'storeLogoBlockHtml'];
         const value = htmlFields.includes(key)
             ? (data[key] || '')
             : escapeHtml(String(data[key] || ''));
@@ -174,7 +224,7 @@ function loadTemplate(templateName, data) {
             headerSubtitle: data.headerSubtitle || '',
             headerGradientStart: data.headerGradientStart || '#667eea',
             headerGradientEnd: data.headerGradientEnd || '#764ba2',
-            storeLogoHtml: data.storeLogoHtml || ''
+            storeLogoBlockHtml: data.storeLogoBlockHtml || ''
         };
         template = template.replace('{{header}}', loadPartial('header', headerData));
     }
@@ -191,7 +241,7 @@ function loadTemplate(templateName, data) {
     Object.keys(data).forEach(key => {
         const regex = new RegExp(`{{${key}}}`, 'g');
         // Don't escape HTML content (itemsHtml, paymentStatus, newStatusBadge, statusMessage)
-        const htmlFields = ['itemsHtml', 'paymentStatus', 'newStatusBadge', 'statusMessage', 'storeLogoHtml'];
+        const htmlFields = ['itemsHtml', 'paymentStatus', 'newStatusBadge', 'statusMessage', 'storeLogoBlockHtml'];
         const value = htmlFields.includes(key)
             ? (data[key] || '')
             : escapeHtml(String(data[key] || ''));
@@ -210,7 +260,10 @@ async function sendOrderConfirmationEmail(orderDetails) {
         const config = await getEmailConfig();
         
         // Always fetch latest store info so logo and branding stay current.
-        const liveStoreInfo = await getStoreInfo();
+        const [liveStoreInfo, headerColors] = await Promise.all([
+            getStoreInfo(),
+            getEmailHeaderColors()
+        ]);
         const storeInfo = {
             ...liveStoreInfo,
             storeName: orderDetails.storeName || liveStoreInfo.storeName,
@@ -258,9 +311,9 @@ async function sendOrderConfirmationEmail(orderDetails) {
             emailTitle: `Order Confirmation - ${orderDetails.orderId}`,
             headerTitle: 'Order Confirmed!',
             headerSubtitle: 'Thank you for your order',
-            headerGradientStart: '#667eea',
-            headerGradientEnd: '#764ba2',
-            storeLogoHtml: renderStoreLogoHtml(storeInfo.logoUrl, storeInfo.storeName),
+            headerGradientStart: headerColors.start,
+            headerGradientEnd: headerColors.end,
+            storeLogoBlockHtml: renderStoreLogoBlockHtml(storeInfo.logoUrl, storeInfo.storeName),
             // Footer data
             footerMessage: 'If you have any questions about your order, please don\'t hesitate to contact us.',
             // Content data
@@ -309,15 +362,19 @@ async function sendPaymentConfirmationEmail(paymentDetails) {
         const config = await getEmailConfig();
 
         // Get store info
-        const storeInfo = await getStoreInfo();
+        const [storeInfo, headerColors] = await Promise.all([
+            getStoreInfo(),
+            getEmailHeaderColors()
+        ]);
 
         const templateData = {
             // Header data
             emailTitle: `Payment Received - ${paymentDetails.orderId}`,
             headerTitle: 'Payment Received!',
             headerSubtitle: 'Your payment has been successfully processed',
-            headerGradientStart: '#10B981',
-            headerGradientEnd: '#059669',
+            headerGradientStart: headerColors.start,
+            headerGradientEnd: headerColors.end,
+            storeLogoBlockHtml: renderStoreLogoBlockHtml(storeInfo.logoUrl, storeInfo.storeName),
             // Footer data
             footerMessage: 'Thank you for your purchase! If you have any questions, please contact our support team.',
             storeName: storeInfo.storeName,
@@ -362,7 +419,10 @@ async function sendWelcomeEmail(customerDetails) {
         const config = await getEmailConfig();
 
         // Get store info
-        const storeInfo = await getStoreInfo();
+        const [storeInfo, headerColors] = await Promise.all([
+            getStoreInfo(),
+            getEmailHeaderColors()
+        ]);
         const storeName = storeInfo.storeName;
         
         // Try to get website URL from store settings
@@ -378,8 +438,9 @@ async function sendWelcomeEmail(customerDetails) {
             emailTitle: `Welcome to ${storeName}!`,
             headerTitle: `Welcome to ${storeName}!`,
             headerSubtitle: 'We\'re excited to have you',
-            headerGradientStart: '#667eea',
-            headerGradientEnd: '#764ba2',
+            headerGradientStart: headerColors.start,
+            headerGradientEnd: headerColors.end,
+            storeLogoBlockHtml: renderStoreLogoBlockHtml(storeInfo.logoUrl, storeInfo.storeName),
             // Footer data
             footerMessage: 'If you have any questions, feel free to reach out to us. We\'re here to help!',
             storeName: storeName,
@@ -415,7 +476,10 @@ async function sendOrderStatusChangeEmail(statusDetails) {
         const config = await getEmailConfig();
 
         // Get store info
-        const storeInfo = await getStoreInfo();
+        const [storeInfo, headerColors] = await Promise.all([
+            getStoreInfo(),
+            getEmailHeaderColors()
+        ]);
 
         // Format status badge
         const statusColors = {
@@ -447,8 +511,9 @@ async function sendOrderStatusChangeEmail(statusDetails) {
             emailTitle: `Order Status Update - ${statusDetails.orderId}`,
             headerTitle: 'Order Status Update',
             headerSubtitle: 'Your order status has been updated',
-            headerGradientStart: '#667eea',
-            headerGradientEnd: '#764ba2',
+            headerGradientStart: headerColors.start,
+            headerGradientEnd: headerColors.end,
+            storeLogoBlockHtml: renderStoreLogoBlockHtml(storeInfo.logoUrl, storeInfo.storeName),
             // Footer data
             footerMessage: 'If you have any questions about your order, please don\'t hesitate to contact us.',
             storeName: storeInfo.storeName,
@@ -487,7 +552,10 @@ async function sendStoreOwnerNotificationEmail(orderDetails) {
         const config = await getEmailConfig();
 
         // Always fetch latest store info so logo and branding stay current.
-        const liveStoreInfo = await getStoreInfo();
+        const [liveStoreInfo, headerColors] = await Promise.all([
+            getStoreInfo(),
+            getEmailHeaderColors()
+        ]);
         const storeInfo = {
             ...liveStoreInfo,
             storeName: orderDetails.storeName || liveStoreInfo.storeName,
@@ -544,9 +612,9 @@ async function sendStoreOwnerNotificationEmail(orderDetails) {
             emailTitle: `New Order Received - ${orderDetails.orderId}`,
             headerTitle: 'New Order Received!',
             headerSubtitle: 'You have a new order to process',
-            headerGradientStart: '#F59E0B',
-            headerGradientEnd: '#D97706',
-            storeLogoHtml: renderStoreLogoHtml(storeInfo.logoUrl, storeInfo.storeName),
+            headerGradientStart: headerColors.start,
+            headerGradientEnd: headerColors.end,
+            storeLogoBlockHtml: renderStoreLogoBlockHtml(storeInfo.logoUrl, storeInfo.storeName),
             // Footer data
             footerMessage: 'Please log in to your admin panel to process this order.',
             storeName: orderDetails.storeName,
