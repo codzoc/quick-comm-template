@@ -381,8 +381,35 @@ function StoreFront() {
     }
   };
 
-  const handleAddToCart = (product) => {
-    const result = addToCart(product);
+  const getConfigurationLabel = (product) => {
+    if (!product.selectedAttributes || product.selectedAttributes.length === 0) return '';
+    return product.selectedAttributes.map((entry) => `${entry.name}: ${entry.value}`).join(', ');
+  };
+
+  const handleAddToCart = (product, selectedConfiguration = null, attributes = [], selectedValues = {}) => {
+    const cartProduct = selectedConfiguration
+      ? {
+          ...product,
+          id: `${product.id}__${selectedConfiguration.id}`,
+          originalProductId: product.id,
+          selectedConfigurationId: selectedConfiguration.id,
+          selectedAttributes: attributes.map((attribute) => ({
+            id: attribute.id,
+            name: attribute.name,
+            value: selectedValues[attribute.id] || '',
+            type: attribute.type
+          })),
+          stock: selectedConfiguration.stock,
+          price: selectedConfiguration.price,
+          discountedPrice: selectedConfiguration.discountedPrice,
+          images: selectedConfiguration.image
+            ? [selectedConfiguration.image, ...(product.images || [])]
+            : (product.images || []),
+          imagePath: selectedConfiguration.image || product.imagePath || ''
+        }
+      : product;
+
+    const result = addToCart(cartProduct);
     if (!result.success) {
       alert(result.error);
     } else {
@@ -566,7 +593,8 @@ function StoreFront() {
         setOrderItems(cartItems.map(item => ({
           title: item.product.title,
           quantity: item.quantity,
-          price: item.product.discountedPrice || item.product.price
+          price: item.product.discountedPrice || item.product.price,
+          configurationLabel: getConfigurationLabel(item.product)
         })));
         setOrderSuccess(true);
         clearCart();
@@ -637,7 +665,8 @@ function StoreFront() {
               setOrderItems(cartItems.map(item => ({
                 title: item.product.title,
                 quantity: item.quantity,
-                price: item.product.discountedPrice || item.product.price
+                price: item.product.discountedPrice || item.product.price,
+                configurationLabel: getConfigurationLabel(item.product)
               })));
               setOrderSuccess(true);
               clearCart();
@@ -722,7 +751,7 @@ function StoreFront() {
     // Build items list
     const cs = storeInfo?.currencySymbol || '₹';
     const itemsList = orderItems.map(item =>
-      `${item.quantity}x ${item.title} - ${cs}${item.price * item.quantity}`
+      `${item.quantity}x ${item.title}${item.configurationLabel ? ` (${item.configurationLabel})` : ''} - ${cs}${item.price * item.quantity}`
     ).join('\n');
 
     const message = `Hi, my order ID is *${orderId}*\n\n*Order Items:*\n${itemsList}\n\nThank you!`;

@@ -14,7 +14,7 @@ import './CartItem.css';
  */
 function CartItem({ item, onUpdateQuantity, onRemove, currencySymbol = '₹' }) {
   const { product, quantity } = item;
-  const { id, title, imagePath, images, price, discountedPrice } = product;
+  const { id, title, imagePath, images, price, discountedPrice, selectedAttributes } = product;
   // Support both new format (images array) and legacy (imagePath)
   const displayImage = (images && images.length > 0) ? images[0] : (imagePath || '/images/placeholder.png');
   const finalPrice = discountedPrice || price;
@@ -61,6 +61,11 @@ function CartItem({ item, onUpdateQuantity, onRemove, currencySymbol = '₹' }) 
       {/* Product Details */}
       <div className="cart-item-details">
         <h4 className="cart-item-title">{title}</h4>
+        {selectedAttributes?.length > 0 && (
+          <p className="cart-item-price">
+            {selectedAttributes.map((entry) => `${entry.name}: ${entry.value}`).join(', ')}
+          </p>
+        )}
         <p className="cart-item-price">{currencySymbol}{finalPrice} each</p>
 
         {/* Quantity Controls */}

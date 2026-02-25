@@ -13,7 +13,6 @@ import {
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '../config/firebase';
 import { generateOrderId } from '../utils/orderIdGenerator';
-import { decreaseStock } from './products';
 
 const COLLECTION_NAME = 'orders';
 
@@ -46,24 +45,40 @@ export async function createOrder(orderData) {
       const productData = new Map();
 
       for (const item of orderData.items) {
-        const productRef = doc(db, 'products', item.product.id);
+        const baseProductId = item.product.originalProductId || item.product.id.split('__')[0];
+        const selectedConfigurationId = item.product.selectedConfigurationId || null;
+        const productRef = doc(db, 'products', baseProductId);
         const productSnap = await transaction.get(productRef);
 
         if (!productSnap.exists()) {
           throw new Error(`Product ${item.product.title} not found`);
         }
 
-        const currentStock = productSnap.data().stock || 0;
-        if (currentStock < item.quantity) {
-          throw new Error(
-            `Insufficient stock for ${item.product.title}. Only ${currentStock} available.`
-          );
+        const productRecord = productSnap.data();
+        const currentStock = productRecord.stock || 0;
+
+        if (selectedConfigurationId) {
+          const configurations = productRecord.configurations || [];
+          const selectedConfiguration = configurations.find((row) => row.id === selectedConfigurationId);
+          if (!selectedConfiguration) {
+            throw new Error(`Selected configuration is no longer available for ${item.product.title}.`);
+          }
+          if ((selectedConfiguration.stock || 0) < item.quantity) {
+            throw new Error(
+              `Insufficient stock for ${item.product.title}. Only ${selectedConfiguration.stock || 0} available for selected configuration.`
+            );
+          }
+        } else if (currentStock < item.quantity) {
+          throw new Error(`Insufficient stock for ${item.product.title}. Only ${currentStock} available.`);
         }
 
         // Store product data for later use
         productData.set(item.product.id, {
           ref: productRef,
-          currentStock: currentStock
+          currentStock,
+          baseProductId,
+          selectedConfigurationId,
+          configurations: productRecord.configurations || []
         });
       }
 
@@ -79,12 +94,14 @@ export async function createOrder(orderData) {
             ? item.product.images[0] 
             : (item.product.imagePath || '/images/placeholder.png');
           return {
-            productId: item.product.id,
+            productId: item.product.originalProductId || item.product.id.split('__')[0],
             title: item.product.title,
             price: item.product.discountedPrice || item.product.price,
             quantity: item.quantity,
             imagePath: productImage, // Store first image for backward compatibility
             images: item.product.images || (item.product.imagePath ? [item.product.imagePath] : []),
+            configurationId: item.product.selectedConfigurationId || null,
+            selectedAttributes: item.product.selectedAttributes || [],
             subtotal:
               (item.product.discountedPrice || item.product.price) * item.quantity
           };
@@ -109,11 +126,28 @@ export async function createOrder(orderData) {
 
       // Decrease stock for each product using previously read data
       for (const item of orderData.items) {
-        const { ref: productRef, currentStock } = productData.get(item.product.id);
+        const { ref: productRef, currentStock, selectedConfigurationId, configurations } = productData.get(item.product.id);
         const newStock = Math.max(0, currentStock - item.quantity);
+
+        if (!selectedConfigurationId) {
+          transaction.update(productRef, {
+            stock: newStock,
+            updatedAt: serverTimestamp()
+          });
+          continue;
+        }
+
+        const updatedConfigurations = configurations.map((row) => {
+          if (row.id !== selectedConfigurationId) return row;
+          return {
+            ...row,
+            stock: Math.max(0, (row.stock || 0) - item.quantity)
+          };
+        });
 
         transaction.update(productRef, {
           stock: newStock,
+          configurations: updatedConfigurations,
           updatedAt: serverTimestamp()
         });
       }

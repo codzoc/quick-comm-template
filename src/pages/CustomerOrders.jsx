@@ -297,6 +297,11 @@ function CustomerOrders() {
                                                                 }}></div>
                                                                 <div>
                                                                     <div style={{ fontWeight: 500, fontSize: '0.95rem' }}>{item.product?.title || item.title}</div>
+                                                                    {item.selectedAttributes?.length > 0 && (
+                                                                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-light)' }}>
+                                                                            {item.selectedAttributes.map((entry) => `${entry.name}: ${entry.value}`).join(', ')}
+                                                                        </div>
+                                                                    )}
                                                                     <div style={{ fontSize: '0.85rem', color: 'var(--color-text-light)' }}>Qty: {item.quantity}</div>
                                                                 </div>
                                                             </div>

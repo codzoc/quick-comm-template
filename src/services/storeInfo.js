@@ -32,7 +32,7 @@ export async function getStoreInfo() {
       return {
         ...data,
         currencySymbol: data.currencySymbol || '₹',
-        currencyCode: data.currencyCode || getCurrencyCode(data.currencySymbol || '₹'),
+        currencyCode: getCurrencyCode(data.currencySymbol || '₹'),
         taxPercentage: data.taxPercentage ?? 0,
         shippingCost: data.shippingCost ?? 0,
         logoUrl: data.logoUrl || '/images/logo.png',

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ShoppingBag, AlertCircle } from 'lucide-react';
 import ProductImageSlider from './ProductImageSlider';
+import ProductConfigurationModal from './ProductConfigurationModal';
 import './ProductCard.css';
 
 /**
@@ -17,15 +18,32 @@ function ProductCard({ product, onAddToCart, currencySymbol = '₹' }) {
   const isOutOfStock = stock === 0;
   const hasDiscount = discountedPrice && discountedPrice < price;
   const [showSlider, setShowSlider] = useState(false);
+  const [showConfigurationModal, setShowConfigurationModal] = useState(false);
+  const hasConfigurations = Boolean(product.hasConfigurations && product.configurations?.length > 0);
+
+  const colorAttribute = product.configurationAttributes?.find((attribute) => attribute.name?.toLowerCase() === 'color')
+    || product.configurationAttributes?.find((attribute) => attribute.type === 'color');
+  const colorSwatches = hasConfigurations && colorAttribute
+    ? [...new Set(product.configurations.map((row) => row.values?.[colorAttribute.id]).filter(Boolean))]
+    : [];
 
   // Support both new format (images array) and legacy (imagePath)
   const productImages = images && images.length > 0 ? images : (imagePath ? [imagePath] : ['/images/placeholder.png']);
   const mainImage = productImages[0];
 
   const handleAddToCart = () => {
+    if (hasConfigurations) {
+      setShowConfigurationModal(true);
+      return;
+    }
     if (!isOutOfStock && onAddToCart) {
       onAddToCart(product);
     }
+  };
+
+  const handleConfigurationAddToCart = (selectedConfiguration, attributes, selectedValues) => {
+    if (!onAddToCart) return;
+    onAddToCart(product, selectedConfiguration, attributes, selectedValues);
   };
 
   const handleImageClick = () => {
@@ -87,14 +105,22 @@ function ProductCard({ product, onAddToCart, currencySymbol = '₹' }) {
           )}
         </div>
 
+        {colorSwatches.length > 0 && (
+          <div className="product-color-swatches">
+            {colorSwatches.map((swatch) => (
+              <span key={swatch} className="product-color-swatch" style={{ backgroundColor: swatch }} />
+            ))}
+          </div>
+        )}
+
         {/* Add to Cart Button */}
         <button
           className="add-to-cart-btn"
           onClick={handleAddToCart}
-          disabled={isOutOfStock}
+          disabled={isOutOfStock && !hasConfigurations}
         >
           <ShoppingBag size={18} />
-          <span>{isOutOfStock ? 'Out of Stock' : 'Add to Cart'}</span>
+          <span>{isOutOfStock && !hasConfigurations ? 'Out of Stock' : hasConfigurations ? 'View Product' : 'Add to Cart'}</span>
         </button>
 
         {/* Low Stock Warning */}
@@ -105,6 +131,13 @@ function ProductCard({ product, onAddToCart, currencySymbol = '₹' }) {
           </p>
         )}
       </div>
+      <ProductConfigurationModal
+        product={product}
+        isOpen={showConfigurationModal}
+        onClose={() => setShowConfigurationModal(false)}
+        onAddToCart={handleConfigurationAddToCart}
+        currencySymbol={currencySymbol}
+      />
     </div>
   );
 }

@@ -175,6 +175,9 @@ async function sendOrderConfirmationEmail(orderDetails) {
       <tr>
         <td style="padding: 10px; border-bottom: 1px solid #eee;">
           <strong>${escapeHtml(item.title)}</strong><br>
+          ${item.selectedAttributes && item.selectedAttributes.length > 0
+            ? `<small>${escapeHtml(item.selectedAttributes.map((entry) => `${entry.name}: ${entry.value}`).join(', '))}</small><br>`
+            : ''}
           <small>Quantity: ${item.quantity}</small>
         </td>
         <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">
@@ -447,6 +450,9 @@ async function sendStoreOwnerNotificationEmail(orderDetails) {
       <tr>
         <td style="padding: 10px; border-bottom: 1px solid #eee;">
           <strong>${escapeHtml(item.title)}</strong><br>
+          ${item.selectedAttributes && item.selectedAttributes.length > 0
+            ? `<small>${escapeHtml(item.selectedAttributes.map((entry) => `${entry.name}: ${entry.value}`).join(', '))}</small><br>`
+            : ''}
           <small>Quantity: ${item.quantity}</small>
         </td>
         <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">

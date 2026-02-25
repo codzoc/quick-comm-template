@@ -18,12 +18,15 @@ import {
   TableRow,
   Paper,
   Chip,
-  Grid
+  Grid,
+  FormControlLabel,
+  Switch,
+  MenuItem
 } from '@mui/material';
 import { Edit, Trash2, Plus, X, Upload, Trash } from 'lucide-react';
 import { onAuthChange } from '../../services/auth';
 import { getAllProducts, createProduct, updateProduct, deleteProduct } from '../../services/products';
-import { uploadProductImages, deleteImage } from '../../services/imageUpload';
+import { uploadProductImages } from '../../services/imageUpload';
 import { getStoreInfo } from '../../services/storeInfo';
 import AdminLayout from '../../components/AdminLayout';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -31,6 +34,38 @@ import ErrorMessage from '../../components/ErrorMessage';
 import './AdminStyles.css';
 
 function AdminProducts() {
+  const DEFAULT_CONFIGURATION_ATTRIBUTES = [{ id: 'color', name: 'Color', type: 'color' }];
+  const createConfigurationRow = (index = 0, existingValues = {}) => ({
+    id: `cfg_${Date.now()}_${index}`,
+    values: { color: '#000000', ...existingValues },
+    image: '',
+    price: '',
+    discountedPrice: '',
+    stock: ''
+  });
+
+  const normalizeConfigurations = (rows = [], attributes = DEFAULT_CONFIGURATION_ATTRIBUTES) => {
+    return rows.map((row, index) => {
+      const values = {};
+      attributes.forEach((attr) => {
+        if (attr.type === 'color') {
+          values[attr.id] = row.values?.[attr.id] || '#000000';
+        } else {
+          values[attr.id] = row.values?.[attr.id] || '';
+        }
+      });
+
+      return {
+        id: row.id || `cfg_${Date.now()}_${index}`,
+        values,
+        image: row.image || '',
+        price: row.price ?? '',
+        discountedPrice: row.discountedPrice ?? '',
+        stock: row.stock ?? ''
+      };
+    });
+  };
+
   const [products, setProducts] = useState([]);
   const [storeInfo, setStoreInfo] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -45,11 +80,35 @@ function AdminProducts() {
     images: [], // Array of image URLs
     imagePath: '', // Legacy support
     stock: '',
-    tags: ''
+    tags: '',
+    hasConfigurations: false,
+    configurationAttributes: DEFAULT_CONFIGURATION_ATTRIBUTES,
+    configurations: []
   });
   const [imageFiles, setImageFiles] = useState([]);
+  const [configurationImageFiles, setConfigurationImageFiles] = useState({});
+  const [configurationImagePreviews, setConfigurationImagePreviews] = useState({});
+  const [showAttributeDialog, setShowAttributeDialog] = useState(false);
+  const [attributeDraft, setAttributeDraft] = useState({ name: '', type: 'text' });
   const [uploadingImages, setUploadingImages] = useState(false);
   const navigate = useNavigate();
+
+  const resetAttributeDialog = () => {
+    setAttributeDraft({ name: '', type: 'text' });
+    setShowAttributeDialog(false);
+  };
+
+  const clearConfigurationImagePreviews = (previews) => {
+    Object.values(previews).forEach((url) => {
+      if (url) URL.revokeObjectURL(url);
+    });
+  };
+
+  useEffect(() => {
+    return () => {
+      clearConfigurationImagePreviews(configurationImagePreviews);
+    };
+  }, [configurationImagePreviews]);
 
   useEffect(() => {
     const unsubscribe = onAuthChange((user) => {
@@ -76,6 +135,7 @@ function AdminProducts() {
   };
 
   const handleAdd = () => {
+    clearConfigurationImagePreviews(configurationImagePreviews);
     setEditingProduct(null);
     setFormData({
       title: '',
@@ -85,24 +145,43 @@ function AdminProducts() {
       images: [],
       imagePath: '',
       stock: '',
-      tags: ''
+      tags: '',
+      hasConfigurations: false,
+      configurationAttributes: DEFAULT_CONFIGURATION_ATTRIBUTES,
+      configurations: []
     });
     setImageFiles([]);
+    setConfigurationImageFiles({});
+    setConfigurationImagePreviews({});
     setShowModal(true);
   };
 
   const handleEdit = (product) => {
+    clearConfigurationImagePreviews(configurationImagePreviews);
     setEditingProduct(product);
     // Support both new format (images array) and legacy (imagePath)
     const images = product.images || (product.imagePath ? [product.imagePath] : []);
+    const hasConfigurations = Boolean(product.hasConfigurations && Array.isArray(product.configurations) && product.configurations.length > 0);
+    const configurationAttributes = (product.configurationAttributes && product.configurationAttributes.length > 0)
+      ? product.configurationAttributes
+      : DEFAULT_CONFIGURATION_ATTRIBUTES;
+    const configurations = hasConfigurations
+      ? normalizeConfigurations(product.configurations, configurationAttributes)
+      : [];
+
     setFormData({
       ...product,
       images: images,
       imagePath: product.imagePath || '',
       discountedPrice: product.discountedPrice || '',
-      tags: product.tags || ''
+      tags: product.tags || '',
+      hasConfigurations,
+      configurationAttributes,
+      configurations
     });
     setImageFiles([]);
+    setConfigurationImageFiles({});
+    setConfigurationImagePreviews({});
     setShowModal(true);
   };
 
@@ -116,12 +195,218 @@ function AdminProducts() {
     }
   };
 
+  const handleHasConfigurationsToggle = (enabled) => {
+    setFormData((prev) => {
+      if (!enabled) {
+        return {
+          ...prev,
+          hasConfigurations: false,
+          configurationAttributes: DEFAULT_CONFIGURATION_ATTRIBUTES,
+          configurations: []
+        };
+      }
+
+      const attributes = prev.configurationAttributes?.length > 0
+        ? prev.configurationAttributes
+        : DEFAULT_CONFIGURATION_ATTRIBUTES;
+      const configs = prev.configurations?.length > 0
+        ? normalizeConfigurations(prev.configurations, attributes)
+        : [createConfigurationRow(0)];
+
+      return {
+        ...prev,
+        hasConfigurations: true,
+        configurationAttributes: attributes,
+        configurations: configs
+      };
+    });
+  };
+
+  const handleAddConfigurationRow = () => {
+    setFormData((prev) => ({
+      ...prev,
+      configurations: [...prev.configurations, createConfigurationRow(prev.configurations.length)]
+    }));
+  };
+
+  const handleRemoveConfigurationRow = (rowId) => {
+    setFormData((prev) => ({
+      ...prev,
+      configurations: prev.configurations.filter((row) => row.id !== rowId)
+    }));
+    setConfigurationImageFiles((prev) => {
+      const updated = { ...prev };
+      delete updated[rowId];
+      return updated;
+    });
+    setConfigurationImagePreviews((prev) => {
+      const updated = { ...prev };
+      if (updated[rowId]) URL.revokeObjectURL(updated[rowId]);
+      delete updated[rowId];
+      return updated;
+    });
+  };
+
+  const handleAddAttribute = () => {
+    setShowAttributeDialog(true);
+  };
+
+  const saveNewAttribute = () => {
+    const name = attributeDraft.name.trim();
+    const type = attributeDraft.type;
+    if (!name) {
+      alert('Attribute name is required.');
+      return;
+    }
+
+    const baseId = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || `attr_${Date.now()}`;
+    const attributeId = `${baseId}_${Date.now()}`;
+
+    setFormData((prev) => {
+      const exists = prev.configurationAttributes.some((attr) => attr.name.toLowerCase() === name.toLowerCase());
+      if (exists) {
+        alert('An attribute with this name already exists.');
+        return prev;
+      }
+
+      const updatedAttributes = [...prev.configurationAttributes, { id: attributeId, name, type }];
+      const updatedConfigurations = prev.configurations.map((row) => ({
+        ...row,
+        values: {
+          ...row.values,
+          [attributeId]: type === 'color' ? '#000000' : ''
+        }
+      }));
+
+      return {
+        ...prev,
+        configurationAttributes: updatedAttributes,
+        configurations: updatedConfigurations
+      };
+    });
+
+    resetAttributeDialog();
+  };
+
+  const getConfigurationSignature = (row, attributes) => {
+    return attributes
+      .map((attribute) => {
+        const rawValue = row.values?.[attribute.id];
+        if (rawValue === null || rawValue === undefined) return '';
+        return String(rawValue).trim().toLowerCase();
+      })
+      .join('||');
+  };
+
+  const findDuplicateConfigurationRowIds = (rows, attributes) => {
+    const signatureToRowIds = rows.reduce((acc, row) => {
+      const signature = getConfigurationSignature(row, attributes);
+      if (!signature) return acc;
+      if (!acc[signature]) acc[signature] = [];
+      acc[signature].push(row.id);
+      return acc;
+    }, {});
+
+    return Object.values(signatureToRowIds)
+      .filter((ids) => ids.length > 1)
+      .flat();
+  };
+
+  const handleConfigurationValueChange = (rowId, attrId, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      configurations: prev.configurations.map((row) => (
+        row.id === rowId
+          ? { ...row, values: { ...row.values, [attrId]: value } }
+          : row
+      ))
+    }));
+  };
+
+  const handleConfigurationFieldChange = (rowId, field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      configurations: prev.configurations.map((row) => (
+        row.id === rowId ? { ...row, [field]: value } : row
+      ))
+    }));
+  };
+
+  const handleConfigurationImageChange = (rowId, file) => {
+    if (!file) return;
+    setConfigurationImageFiles((prev) => ({ ...prev, [rowId]: file }));
+    setConfigurationImagePreviews((prev) => {
+      const updated = { ...prev };
+      if (updated[rowId]) {
+        URL.revokeObjectURL(updated[rowId]);
+      }
+      updated[rowId] = URL.createObjectURL(file);
+      return updated;
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setUploadingImages(true);
     try {
       let finalFormData = { ...formData };
       let productId = editingProduct?.id;
+
+      if (finalFormData.hasConfigurations) {
+        if (!finalFormData.configurations || finalFormData.configurations.length === 0) {
+          throw new Error('Please add at least one configuration row.');
+        }
+
+        const duplicateRowIds = findDuplicateConfigurationRowIds(
+          finalFormData.configurations,
+          finalFormData.configurationAttributes || []
+        );
+        if (duplicateRowIds.length > 0) {
+          throw new Error('Duplicate configuration combinations found. Please make each configuration unique.');
+        }
+
+        const normalized = finalFormData.configurations.map((row) => {
+          const price = parseFloat(row.price);
+          if (Number.isNaN(price)) {
+            throw new Error('Each configuration must have a valid price.');
+          }
+          const discounted = row.discountedPrice !== '' && row.discountedPrice !== null && row.discountedPrice !== undefined
+            ? parseFloat(row.discountedPrice)
+            : null;
+          const stock = parseInt(row.stock, 10);
+          if (Number.isNaN(stock)) {
+            throw new Error('Each configuration must have a valid stock.');
+          }
+
+          return {
+            id: row.id,
+            values: row.values || {},
+            image: row.image || '',
+            price,
+            discountedPrice: Number.isNaN(discounted) ? null : discounted,
+            stock
+          };
+        });
+
+        const totalStock = normalized.reduce((sum, row) => sum + (row.stock || 0), 0);
+        const minBasePrice = normalized.reduce((min, row) => Math.min(min, row.price), Number.POSITIVE_INFINITY);
+        const discountedRows = normalized.filter((row) => row.discountedPrice !== null && row.discountedPrice < row.price);
+        const minDiscountedPrice = discountedRows.length > 0
+          ? discountedRows.reduce((min, row) => Math.min(min, row.discountedPrice), Number.POSITIVE_INFINITY)
+          : null;
+
+        finalFormData = {
+          ...finalFormData,
+          price: Number.isFinite(minBasePrice) ? minBasePrice : 0,
+          discountedPrice: Number.isFinite(minDiscountedPrice) ? minDiscountedPrice : null,
+          stock: totalStock,
+          configurations: normalized
+        };
+      } else {
+        finalFormData.hasConfigurations = false;
+        finalFormData.configurationAttributes = [];
+        finalFormData.configurations = [];
+      }
       
       // For new products, create product first to get the ID, then upload images
       if (!editingProduct) {
@@ -149,6 +434,17 @@ function AdminProducts() {
         // Ensure imagePath is set for backward compatibility
         finalFormData.imagePath = finalFormData.images[0];
       }
+
+      if (finalFormData.hasConfigurations && finalFormData.configurations.length > 0) {
+        const uploadTasks = Object.entries(configurationImageFiles).map(async ([rowId, file]) => {
+          if (!file) return;
+          const [uploadedImage] = await uploadProductImages([file], `${productId}_cfg_${rowId}`);
+          finalFormData.configurations = finalFormData.configurations.map((row) => (
+            row.id === rowId ? { ...row, image: uploadedImage } : row
+          ));
+        });
+        await Promise.all(uploadTasks);
+      }
       
       // Remove imageFiles from formData before saving
       delete finalFormData.imageFiles;
@@ -163,6 +459,9 @@ function AdminProducts() {
       
       setShowModal(false);
       setImageFiles([]);
+      setConfigurationImageFiles({});
+      clearConfigurationImagePreviews(configurationImagePreviews);
+      setConfigurationImagePreviews({});
       loadProducts();
     } catch (err) {
       console.error('Error in handleSubmit:', err);
@@ -200,6 +499,21 @@ function AdminProducts() {
     }
     return product.imagePath || '/images/placeholder.png';
   };
+
+  const getProductPriceSummary = (product) => {
+    if (product.hasConfigurations && Array.isArray(product.configurations) && product.configurations.length > 0) {
+      const prices = product.configurations.map((row) => row.discountedPrice || row.price).filter((value) => typeof value === 'number');
+      if (prices.length > 0) {
+        return { label: `From ${storeInfo?.currencySymbol || '₹'}${Math.min(...prices)}`, isRange: true };
+      }
+    }
+    return { label: `${storeInfo?.currencySymbol || '₹'}${product.discountedPrice || product.price}`, isRange: false };
+  };
+
+  const duplicateConfigurationRowIds = findDuplicateConfigurationRowIds(
+    formData.configurations || [],
+    formData.configurationAttributes || []
+  );
 
   if (loading) {
     return (
@@ -242,6 +556,7 @@ function AdminProducts() {
             <TableBody>
               {products.map((product) => {
                 const stockStatus = getStockStatus(product.stock);
+                const priceSummary = getProductPriceSummary(product);
                 return (
                   <TableRow key={product.id} hover>
                     <TableCell>
@@ -279,7 +594,16 @@ function AdminProducts() {
                     </TableCell>
                     <TableCell>
                       <Box>
-                        {product.discountedPrice ? (
+                        {product.hasConfigurations ? (
+                          <>
+                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                              {priceSummary.label}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {product.configurations?.length || 0} configurations
+                            </Typography>
+                          </>
+                        ) : product.discountedPrice ? (
                           <>
                             <Typography variant="body2" sx={{ fontWeight: 600 }}>
                               {storeInfo?.currencySymbol || '₹'}{product.discountedPrice}
@@ -303,6 +627,11 @@ function AdminProducts() {
                       <Typography variant="body2" sx={{ fontWeight: 500 }}>
                         {product.stock}
                       </Typography>
+                      {product.hasConfigurations && (
+                        <Typography variant="caption" color="text.secondary">
+                          Combined stock
+                        </Typography>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Chip
@@ -389,30 +718,190 @@ function AdminProducts() {
                   placeholder="Enter product description"
                 />
               </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="Price"
-                  type="number"
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                  required
-                  placeholder="0"
-                  inputProps={{ min: 0, step: 0.01 }}
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={(
+                    <Switch
+                      checked={formData.hasConfigurations}
+                      onChange={(e) => handleHasConfigurationsToggle(e.target.checked)}
+                    />
+                  )}
+                  label="Does this product have configurations?"
                 />
               </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  fullWidth
-                  label="Discounted Price (Optional)"
-                  type="number"
-                  value={formData.discountedPrice}
-                  onChange={(e) => setFormData({ ...formData, discountedPrice: e.target.value })}
-                  placeholder="0"
-                  inputProps={{ min: 0, step: 0.01 }}
-                  helperText="Leave empty if no discount"
-                />
-              </Grid>
+              {!formData.hasConfigurations ? (
+                <>
+                  <Grid item xs={6}>
+                    <TextField
+                      fullWidth
+                      label="Price"
+                      type="number"
+                      value={formData.price}
+                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                      required
+                      placeholder="0"
+                      inputProps={{ min: 0, step: 0.01 }}
+                    />
+                  </Grid>
+                  <Grid item xs={6}>
+                    <TextField
+                      fullWidth
+                      label="Discounted Price (Optional)"
+                      type="number"
+                      value={formData.discountedPrice}
+                      onChange={(e) => setFormData({ ...formData, discountedPrice: e.target.value })}
+                      placeholder="0"
+                      inputProps={{ min: 0, step: 0.01 }}
+                      helperText="Leave empty if no discount"
+                    />
+                  </Grid>
+                </>
+              ) : (
+                <Grid item xs={12}>
+                  <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, p: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                        Product Configurations
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button variant="outlined" size="small" onClick={handleAddAttribute}>
+                          Add Attribute
+                        </Button>
+                        <Button variant="contained" size="small" onClick={handleAddConfigurationRow}>
+                          Add Configuration
+                        </Button>
+                      </Box>
+                    </Box>
+                    {duplicateConfigurationRowIds.length > 0 && (
+                      <Typography variant="caption" color="error" sx={{ display: 'block', mb: 1.5 }}>
+                        Duplicate configuration combinations found. Each row must have a unique attribute combination.
+                      </Typography>
+                    )}
+                    <TableContainer component={Paper} variant="outlined">
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            {formData.configurationAttributes.map((attribute) => (
+                              <TableCell key={attribute.id}>{attribute.name}</TableCell>
+                            ))}
+                            <TableCell>Image</TableCell>
+                            <TableCell>Price</TableCell>
+                            <TableCell>Discounted Price</TableCell>
+                            <TableCell>Stock</TableCell>
+                            <TableCell align="center">Action</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {formData.configurations.length === 0 && (
+                            <TableRow>
+                              <TableCell colSpan={formData.configurationAttributes.length + 5} align="center">
+                                Add a configuration row to begin.
+                              </TableCell>
+                            </TableRow>
+                          )}
+                          {formData.configurations.map((row) => (
+                            <TableRow
+                              key={row.id}
+                              sx={duplicateConfigurationRowIds.includes(row.id) ? { backgroundColor: 'rgba(211, 47, 47, 0.06)' } : {}}
+                            >
+                              {formData.configurationAttributes.map((attribute) => (
+                                <TableCell key={`${row.id}_${attribute.id}`}>
+                                  {attribute.type === 'color' ? (
+                                    <input
+                                      type="color"
+                                      value={row.values?.[attribute.id] || '#000000'}
+                                      onChange={(e) => handleConfigurationValueChange(row.id, attribute.id, e.target.value)}
+                                      style={{ width: 48, height: 32, border: 'none', background: 'transparent' }}
+                                    />
+                                  ) : (
+                                    <TextField
+                                      size="small"
+                                      type={attribute.type === 'number' ? 'number' : 'text'}
+                                      value={row.values?.[attribute.id] || ''}
+                                      onChange={(e) => handleConfigurationValueChange(row.id, attribute.id, e.target.value)}
+                                      placeholder={attribute.name}
+                                    />
+                                  )}
+                                </TableCell>
+                              ))}
+                              <TableCell>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) => handleConfigurationImageChange(row.id, e.target.files?.[0])}
+                                />
+                                {(configurationImagePreviews[row.id] || row.image) && (
+                                  <Box
+                                    component="img"
+                                    src={configurationImagePreviews[row.id] || row.image}
+                                    alt="Configuration preview"
+                                    sx={{
+                                      width: 40,
+                                      height: 40,
+                                      borderRadius: 1,
+                                      objectFit: 'cover',
+                                      border: '1px solid',
+                                      borderColor: 'divider',
+                                      mt: 0.75
+                                    }}
+                                    onError={(e) => {
+                                      e.target.src = '/images/placeholder.png';
+                                    }}
+                                  />
+                                )}
+                                {(row.image || configurationImageFiles[row.id]) && (
+                                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                                    {configurationImageFiles[row.id] ? 'New image selected' : 'Image uploaded'}
+                                  </Typography>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <TextField
+                                  size="small"
+                                  type="number"
+                                  value={row.price}
+                                  onChange={(e) => handleConfigurationFieldChange(row.id, 'price', e.target.value)}
+                                  inputProps={{ min: 0, step: 0.01 }}
+                                  required
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <TextField
+                                  size="small"
+                                  type="number"
+                                  value={row.discountedPrice}
+                                  onChange={(e) => handleConfigurationFieldChange(row.id, 'discountedPrice', e.target.value)}
+                                  inputProps={{ min: 0, step: 0.01 }}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <TextField
+                                  size="small"
+                                  type="number"
+                                  value={row.stock}
+                                  onChange={(e) => handleConfigurationFieldChange(row.id, 'stock', e.target.value)}
+                                  inputProps={{ min: 0 }}
+                                  required
+                                />
+                              </TableCell>
+                              <TableCell align="center">
+                                <IconButton
+                                  size="small"
+                                  color="error"
+                                  onClick={() => handleRemoveConfigurationRow(row.id)}
+                                  disabled={formData.configurations.length <= 1}
+                                >
+                                  <Trash size={16} />
+                                </IconButton>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Box>
+                </Grid>
+              )}
               <Grid item xs={12}>
                 <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
                   Product Images *
@@ -561,9 +1050,11 @@ function AdminProducts() {
                   type="number"
                   value={formData.stock}
                   onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                  required
+                  required={!formData.hasConfigurations}
                   placeholder="0"
                   inputProps={{ min: 0 }}
+                  helperText={formData.hasConfigurations ? 'Auto-calculated from all configurations' : ''}
+                  disabled={formData.hasConfigurations}
                 />
               </Grid>
               <Grid item xs={12}>
@@ -582,11 +1073,43 @@ function AdminProducts() {
             <Button onClick={() => setShowModal(false)}>
               Cancel
             </Button>
-            <Button type="submit" variant="contained" disabled={uploadingImages}>
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={uploadingImages || (formData.hasConfigurations && duplicateConfigurationRowIds.length > 0)}
+            >
               {uploadingImages ? 'Uploading Images...' : editingProduct ? 'Update Product' : 'Add Product'}
             </Button>
           </DialogActions>
         </form>
+      </Dialog>
+      <Dialog open={showAttributeDialog} onClose={resetAttributeDialog} maxWidth="xs" fullWidth>
+        <DialogTitle>Add Configuration Attribute</DialogTitle>
+        <DialogContent dividers>
+          <TextField
+            fullWidth
+            label="Attribute Name"
+            value={attributeDraft.name}
+            onChange={(e) => setAttributeDraft((prev) => ({ ...prev, name: e.target.value }))}
+            placeholder="e.g. Size"
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            select
+            fullWidth
+            label="Attribute Type"
+            value={attributeDraft.type}
+            onChange={(e) => setAttributeDraft((prev) => ({ ...prev, type: e.target.value }))}
+          >
+            <MenuItem value="text">Text</MenuItem>
+            <MenuItem value="number">Number</MenuItem>
+            <MenuItem value="color">Color</MenuItem>
+          </TextField>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={resetAttributeDialog}>Cancel</Button>
+          <Button onClick={saveNewAttribute} variant="contained">Add Attribute</Button>
+        </DialogActions>
       </Dialog>
     </AdminLayout>
   );

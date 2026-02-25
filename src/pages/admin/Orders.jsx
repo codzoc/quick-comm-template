@@ -156,7 +156,7 @@ function AdminOrders() {
 
     const currencySymbol = storeInfo?.currencySymbol || '₹';
     const itemsList = order.items.map(item =>
-      `${item.quantity}x ${item.title} - ${currencySymbol}${item.subtotal?.toFixed(2) || item.subtotal}`
+      `${item.quantity}x ${item.title}${item.selectedAttributes?.length ? ` (${item.selectedAttributes.map((entry) => `${entry.name}: ${entry.value}`).join(', ')})` : ''} - ${currencySymbol}${item.subtotal?.toFixed(2) || item.subtotal}`
     ).join('\n');
 
     // Build breakdown if available
@@ -516,6 +516,11 @@ Thank you for shopping with us!
                             <Typography variant="body2" sx={{ fontWeight: 500 }}>
                               {item.title}
                             </Typography>
+                            {item.selectedAttributes?.length > 0 && (
+                              <Typography variant="caption" color="text.secondary">
+                                {item.selectedAttributes.map((entry) => `${entry.name}: ${entry.value}`).join(', ')}
+                              </Typography>
+                            )}
                           </TableCell>
                           <TableCell align="center">
                             <Typography variant="body2">

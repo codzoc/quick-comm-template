@@ -135,6 +135,19 @@
   text-decoration: line-through;
 }
 
+.product-color-swatches {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.product-color-swatch {
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 50%;
+  border: 1px solid #d1d5db;
+}
+
 /* Add to Cart Button */
 .add-to-cart-btn {
   margin-top: var(--spacing-md);

@@ -76,10 +76,25 @@ export async function getProductById(productId) {
 export async function createProduct(productData) {
   try {
     const productsRef = collection(db, COLLECTION_NAME);
+    const hasConfigurations = Boolean(productData.hasConfigurations);
+    const parsedConfigurations = hasConfigurations
+      ? (productData.configurations || []).map((row) => ({
+          ...row,
+          price: parseFloat(row.price),
+          discountedPrice: row.discountedPrice !== null && row.discountedPrice !== undefined && row.discountedPrice !== ''
+            ? parseFloat(row.discountedPrice)
+            : null,
+          stock: parseInt(row.stock, 10) || 0
+        }))
+      : [];
+
     const newProduct = {
       ...productData,
-      stock: parseInt(productData.stock) || 0,
-      price: parseFloat(productData.price),
+      hasConfigurations,
+      configurationAttributes: hasConfigurations ? (productData.configurationAttributes || []) : [],
+      configurations: parsedConfigurations,
+      stock: hasConfigurations ? (parseInt(productData.stock, 10) || 0) : (parseInt(productData.stock, 10) || 0),
+      price: hasConfigurations ? (parseFloat(productData.price) || 0) : parseFloat(productData.price),
       discountedPrice: productData.discountedPrice
         ? parseFloat(productData.discountedPrice)
         : null,
@@ -120,6 +135,20 @@ export async function updateProduct(productId, updates) {
       updatedData.discountedPrice = updates.discountedPrice
         ? parseFloat(updates.discountedPrice)
         : null;
+    }
+    if (updates.hasConfigurations !== undefined) {
+      updatedData.hasConfigurations = Boolean(updates.hasConfigurations);
+      updatedData.configurationAttributes = updatedData.hasConfigurations ? (updates.configurationAttributes || []) : [];
+      updatedData.configurations = updatedData.hasConfigurations
+        ? (updates.configurations || []).map((row) => ({
+            ...row,
+            price: parseFloat(row.price),
+            discountedPrice: row.discountedPrice !== null && row.discountedPrice !== undefined && row.discountedPrice !== ''
+              ? parseFloat(row.discountedPrice)
+              : null,
+            stock: parseInt(row.stock, 10) || 0
+          }))
+        : [];
     }
 
     await updateDoc(productRef, updatedData);
