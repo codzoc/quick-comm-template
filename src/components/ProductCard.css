@@ -148,6 +148,13 @@
   height: 0.7rem;
   border-radius: 50%;
   border: 1px solid #d1d5db;
+  padding: 0;
+  cursor: pointer;
+  outline: none;
+}
+
+.product-color-swatch.selected {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.95), 0 0 0 4px var(--color-primary);
 }
 
 /* Add to Cart Button */

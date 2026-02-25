@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ShoppingBag, AlertCircle } from 'lucide-react';
 import ProductImageSlider from './ProductImageSlider';
 import ProductConfigurationModal from './ProductConfigurationModal';
@@ -19,6 +19,7 @@ function ProductCard({ product, onAddToCart, currencySymbol = '₹' }) {
   const hasDiscount = discountedPrice && discountedPrice < price;
   const [showSlider, setShowSlider] = useState(false);
   const [showConfigurationModal, setShowConfigurationModal] = useState(false);
+  const [selectedSwatch, setSelectedSwatch] = useState('');
   const hasConfigurations = Boolean(product.hasConfigurations && product.configurations?.length > 0);
 
   const isVisibleColor = (value) => {
@@ -36,6 +37,16 @@ function ProductCard({ product, onAddToCart, currencySymbol = '₹' }) {
   // Support both new format (images array) and legacy (imagePath)
   const productImages = images && images.length > 0 ? images : (imagePath ? [imagePath] : ['/images/placeholder.png']);
   const mainImage = productImages[0];
+
+  const selectedSwatchImage = useMemo(() => {
+    if (!selectedSwatch || !hasConfigurations || !colorAttribute) return '';
+    const firstMatchingConfiguration = (product.configurations || []).find((row) => (
+      row.values?.[colorAttribute.id] === selectedSwatch
+    ));
+    return firstMatchingConfiguration?.image || '';
+  }, [selectedSwatch, hasConfigurations, colorAttribute, product.configurations]);
+
+  const displayImage = selectedSwatchImage || mainImage;
 
   const handleAddToCart = () => {
     if (hasConfigurations) {
@@ -57,12 +68,17 @@ function ProductCard({ product, onAddToCart, currencySymbol = '₹' }) {
     setShowSlider(true);
   };
 
+  const handleColorSwatchClick = (event, swatch) => {
+    event.stopPropagation();
+    setSelectedSwatch((prev) => (prev === swatch ? '' : swatch));
+  };
+
   return (
     <div className="product-card">
       {/* Product Image */}
       <div className="product-image-container" onClick={handleImageClick} style={{ cursor: 'pointer' }}>
         <img
-          src={mainImage}
+          src={displayImage}
           alt={title}
           className="product-image"
           loading="lazy"
@@ -87,7 +103,14 @@ function ProductCard({ product, onAddToCart, currencySymbol = '₹' }) {
         {colorSwatches.length > 0 && (
           <div className="product-color-swatches">
             {colorSwatches.map((swatch) => (
-              <span key={swatch} className="product-color-swatch" style={{ backgroundColor: swatch }} />
+              <button
+                key={swatch}
+                type="button"
+                className={`product-color-swatch ${selectedSwatch === swatch ? 'selected' : ''}`}
+                style={{ backgroundColor: swatch }}
+                aria-label={`Preview ${title} in ${swatch}`}
+                onClick={(event) => handleColorSwatchClick(event, swatch)}
+              />
             ))}
           </div>
         )}
