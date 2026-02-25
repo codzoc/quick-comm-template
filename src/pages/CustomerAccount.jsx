@@ -232,6 +232,13 @@ const CustomerAccount = () => {
         }
     };
 
+    const isColorValue = (value) => {
+        if (!value) return false;
+        const normalized = String(value).trim();
+        return /^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/.test(normalized)
+            || /^rgb(a?)\(/i.test(normalized);
+    };
+
     const handleCancelOrder = async (orderId) => {
         // Since we don't have direct access to firestore in this component (it uses services),
         // we might need to export the cancel logic to a service or import firestore here.
@@ -587,6 +594,29 @@ const CustomerAccount = () => {
                                                                 }}></div>
                                                                 <div>
                                                                     <div style={{ fontWeight: 500, fontSize: '0.9rem' }}>{item.product?.title || item.title}</div>
+                                                                    {item.selectedAttributes?.length > 0 && (
+                                                                        <div style={{ fontSize: '0.78rem', color: '#6b7280', display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.2rem' }}>
+                                                                            {item.selectedAttributes.map((entry, attrIdx) => (
+                                                                                <span key={`${entry.id || entry.name}_${attrIdx}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                                                                                    <span>{entry.name}:</span>
+                                                                                    {isColorValue(entry.value) ? (
+                                                                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                                                                                            <span style={{
+                                                                                                width: '10px',
+                                                                                                height: '10px',
+                                                                                                borderRadius: '50%',
+                                                                                                border: '1px solid #d1d5db',
+                                                                                                backgroundColor: entry.value
+                                                                                            }} />
+                                                                                            <span>{entry.value}</span>
+                                                                                        </span>
+                                                                                    ) : (
+                                                                                        <span>{entry.value}</span>
+                                                                                    )}
+                                                                                </span>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
                                                                     <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>Qty: {item.quantity}</div>
                                                                 </div>
                                                             </div>

@@ -84,6 +84,13 @@ function AdminOrders() {
     return colors[status] || 'default';
   };
 
+  const isColorValue = (value) => {
+    if (!value) return false;
+    const normalized = String(value).trim();
+    return /^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/.test(normalized)
+      || /^rgb(a?)\(/i.test(normalized);
+  };
+
   const handleViewDetails = (order) => {
     setSelectedOrder(order);
   };
@@ -517,9 +524,36 @@ Thank you for shopping with us!
                               {item.title}
                             </Typography>
                             {item.selectedAttributes?.length > 0 && (
-                              <Typography variant="caption" color="text.secondary">
-                                {item.selectedAttributes.map((entry) => `${entry.name}: ${entry.value}`).join(', ')}
-                              </Typography>
+                              <Box sx={{ mt: 0.5, display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                                {item.selectedAttributes.map((entry, idx) => (
+                                  <Box key={`${entry.id || entry.name}_${idx}`} sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                                    <Typography variant="caption" color="text.secondary">
+                                      {entry.name}:
+                                    </Typography>
+                                    {isColorValue(entry.value) ? (
+                                      <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                                        <Box
+                                          sx={{
+                                            width: 10,
+                                            height: 10,
+                                            borderRadius: '50%',
+                                            border: '1px solid',
+                                            borderColor: 'divider',
+                                            backgroundColor: entry.value
+                                          }}
+                                        />
+                                        <Typography variant="caption" color="text.secondary">
+                                          {entry.value}
+                                        </Typography>
+                                      </Box>
+                                    ) : (
+                                      <Typography variant="caption" color="text.secondary">
+                                        {entry.value}
+                                      </Typography>
+                                    )}
+                                  </Box>
+                                ))}
+                              </Box>
                             )}
                           </TableCell>
                           <TableCell align="center">

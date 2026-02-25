@@ -110,6 +110,13 @@ function CustomerOrders() {
         }
     };
 
+    const isColorValue = (value) => {
+        if (!value) return false;
+        const normalized = String(value).trim();
+        return /^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/.test(normalized)
+            || /^rgb(a?)\(/i.test(normalized);
+    };
+
     if (authLoading || loading) {
         return <LoadingSpinner />;
     }
@@ -298,8 +305,26 @@ function CustomerOrders() {
                                                                 <div>
                                                                     <div style={{ fontWeight: 500, fontSize: '0.95rem' }}>{item.product?.title || item.title}</div>
                                                                     {item.selectedAttributes?.length > 0 && (
-                                                                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-light)' }}>
-                                                                            {item.selectedAttributes.map((entry) => `${entry.name}: ${entry.value}`).join(', ')}
+                                                                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-light)', display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                                                                            {item.selectedAttributes.map((entry, attrIdx) => (
+                                                                                <span key={`${entry.id || entry.name}_${attrIdx}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                                                                                    <span>{entry.name}:</span>
+                                                                                    {isColorValue(entry.value) ? (
+                                                                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                                                                                            <span style={{
+                                                                                                width: '10px',
+                                                                                                height: '10px',
+                                                                                                borderRadius: '50%',
+                                                                                                border: '1px solid var(--color-border)',
+                                                                                                backgroundColor: entry.value
+                                                                                            }} />
+                                                                                            <span>{entry.value}</span>
+                                                                                        </span>
+                                                                                    ) : (
+                                                                                        <span>{entry.value}</span>
+                                                                                    )}
+                                                                                </span>
+                                                                            ))}
                                                                         </div>
                                                                     )}
                                                                     <div style={{ fontSize: '0.85rem', color: 'var(--color-text-light)' }}>Qty: {item.quantity}</div>
