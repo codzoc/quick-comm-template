@@ -49,7 +49,8 @@ async function getStoreInfo() {
             if (storeName) {
                 return {
                     storeName: storeName,
-                    currencySymbol: data.currencySymbol || '₹'
+                    currencySymbol: data.currencySymbol || '₹',
+                    logoUrl: data.logoUrl || data.storeIcon || ''
                 };
             }
         }
@@ -57,13 +58,15 @@ async function getStoreInfo() {
         // Return default if nothing found
         return {
             storeName: 'Our Store',
-            currencySymbol: '₹'
+            currencySymbol: '₹',
+            logoUrl: ''
         };
     } catch (error) {
         console.error('Error fetching store info:', error);
         return {
             storeName: 'Our Store',
-            currencySymbol: '₹'
+            currencySymbol: '₹',
+            logoUrl: ''
         };
     }
 }
@@ -96,6 +99,46 @@ function escapeHtml(text) {
         .replace(/'/g, '&#039;');
 }
 
+function isColorValue(value) {
+    if (!value) return false;
+    const normalized = String(value).trim();
+    return /^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/.test(normalized) || /^rgb(a?)\(/i.test(normalized);
+}
+
+function getItemDisplayImage(item) {
+    if (item.images && item.images.length > 0) return item.images[0];
+    if (item.imagePath) return item.imagePath;
+    return '/images/placeholder.png';
+}
+
+function renderSelectedAttributesHtml(selectedAttributes = []) {
+    if (!selectedAttributes || selectedAttributes.length === 0) return '';
+
+    const parts = selectedAttributes.map((entry) => {
+        const name = escapeHtml(entry.name || 'Option');
+        const value = entry.value || '';
+
+        if (isColorValue(value)) {
+            return `<span style="display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; margin-top: 3px;">
+  <span>${name}:</span>
+  <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 1px solid #d1d5db; background-color: ${escapeHtml(value)};"></span>
+  <span>${escapeHtml(value)}</span>
+</span>`;
+        }
+
+        return `<span style="display: inline-block; margin-right: 10px; margin-top: 3px;">${name}: ${escapeHtml(value)}</span>`;
+    });
+
+    return `<div style="font-size: 12px; color: #6b7280; margin-top: 4px;">${parts.join('')}</div>`;
+}
+
+function renderStoreLogoHtml(logoUrl, storeName) {
+    if (!logoUrl) return '';
+    return `<div style="margin-bottom: 14px;">
+  <img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(storeName || 'Store logo')}" style="max-height: 46px; max-width: 170px; object-fit: contain; display: inline-block;" />
+</div>`;
+}
+
 /**
  * Load partial template
  */
@@ -106,7 +149,7 @@ function loadPartial(partialName, data) {
     // Replace placeholders in partial
     Object.keys(data).forEach(key => {
         const regex = new RegExp(`{{${key}}}`, 'g');
-        const htmlFields = ['itemsHtml', 'paymentStatus', 'newStatusBadge', 'statusMessage'];
+        const htmlFields = ['itemsHtml', 'paymentStatus', 'newStatusBadge', 'statusMessage', 'storeLogoHtml'];
         const value = htmlFields.includes(key)
             ? (data[key] || '')
             : escapeHtml(String(data[key] || ''));
@@ -130,7 +173,8 @@ function loadTemplate(templateName, data) {
             headerTitle: data.headerTitle || '',
             headerSubtitle: data.headerSubtitle || '',
             headerGradientStart: data.headerGradientStart || '#667eea',
-            headerGradientEnd: data.headerGradientEnd || '#764ba2'
+            headerGradientEnd: data.headerGradientEnd || '#764ba2',
+            storeLogoHtml: data.storeLogoHtml || ''
         };
         template = template.replace('{{header}}', loadPartial('header', headerData));
     }
@@ -147,7 +191,7 @@ function loadTemplate(templateName, data) {
     Object.keys(data).forEach(key => {
         const regex = new RegExp(`{{${key}}}`, 'g');
         // Don't escape HTML content (itemsHtml, paymentStatus, newStatusBadge, statusMessage)
-        const htmlFields = ['itemsHtml', 'paymentStatus', 'newStatusBadge', 'statusMessage'];
+        const htmlFields = ['itemsHtml', 'paymentStatus', 'newStatusBadge', 'statusMessage', 'storeLogoHtml'];
         const value = htmlFields.includes(key)
             ? (data[key] || '')
             : escapeHtml(String(data[key] || ''));
@@ -165,20 +209,30 @@ async function sendOrderConfirmationEmail(orderDetails) {
         const transporter = await createTransporter();
         const config = await getEmailConfig();
         
-        // Get store info if not provided
-        const storeInfo = orderDetails.storeName 
-            ? { storeName: orderDetails.storeName, currencySymbol: orderDetails.currencySymbol || '₹' }
-            : await getStoreInfo();
+        // Always fetch latest store info so logo and branding stay current.
+        const liveStoreInfo = await getStoreInfo();
+        const storeInfo = {
+            ...liveStoreInfo,
+            storeName: orderDetails.storeName || liveStoreInfo.storeName,
+            currencySymbol: orderDetails.currencySymbol || liveStoreInfo.currencySymbol
+        };
 
         // Format items list (titles will be escaped by loadTemplate)
         const itemsHtml = orderDetails.items.map(item => `
       <tr>
         <td style="padding: 10px; border-bottom: 1px solid #eee;">
-          <strong>${escapeHtml(item.title)}</strong><br>
-          ${item.selectedAttributes && item.selectedAttributes.length > 0
-            ? `<small>${escapeHtml(item.selectedAttributes.map((entry) => `${entry.name}: ${entry.value}`).join(', '))}</small><br>`
-            : ''}
-          <small>Quantity: ${item.quantity}</small>
+          <table cellpadding="0" cellspacing="0" width="100%">
+            <tr>
+              <td style="width: 46px; vertical-align: top; padding-right: 8px;">
+                <img src="${escapeHtml(getItemDisplayImage(item))}" alt="${escapeHtml(item.title)}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 6px; border: 1px solid #e5e7eb;" />
+              </td>
+              <td style="vertical-align: top;">
+                <strong>${escapeHtml(item.title)}</strong><br>
+                ${renderSelectedAttributesHtml(item.selectedAttributes)}
+                <small style="color: #6b7280;">Quantity: ${item.quantity}</small>
+              </td>
+            </tr>
+          </table>
         </td>
         <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">
           ${escapeHtml(orderDetails.currencySymbol)}${item.subtotal.toFixed(2)}
@@ -206,6 +260,7 @@ async function sendOrderConfirmationEmail(orderDetails) {
             headerSubtitle: 'Thank you for your order',
             headerGradientStart: '#667eea',
             headerGradientEnd: '#764ba2',
+            storeLogoHtml: renderStoreLogoHtml(storeInfo.logoUrl, storeInfo.storeName),
             // Footer data
             footerMessage: 'If you have any questions about your order, please don\'t hesitate to contact us.',
             // Content data
@@ -431,10 +486,13 @@ async function sendStoreOwnerNotificationEmail(orderDetails) {
         const transporter = await createTransporter();
         const config = await getEmailConfig();
 
-        // Get store info
-        const storeInfo = orderDetails.storeName 
-            ? { storeName: orderDetails.storeName, currencySymbol: orderDetails.currencySymbol || '₹' }
-            : await getStoreInfo();
+        // Always fetch latest store info so logo and branding stay current.
+        const liveStoreInfo = await getStoreInfo();
+        const storeInfo = {
+            ...liveStoreInfo,
+            storeName: orderDetails.storeName || liveStoreInfo.storeName,
+            currencySymbol: orderDetails.currencySymbol || liveStoreInfo.currencySymbol
+        };
 
         // Get store owner email from settings
         const emailSettingsDoc = await admin.firestore()
@@ -449,11 +507,18 @@ async function sendStoreOwnerNotificationEmail(orderDetails) {
         const itemsHtml = orderDetails.items.map(item => `
       <tr>
         <td style="padding: 10px; border-bottom: 1px solid #eee;">
-          <strong>${escapeHtml(item.title)}</strong><br>
-          ${item.selectedAttributes && item.selectedAttributes.length > 0
-            ? `<small>${escapeHtml(item.selectedAttributes.map((entry) => `${entry.name}: ${entry.value}`).join(', '))}</small><br>`
-            : ''}
-          <small>Quantity: ${item.quantity}</small>
+          <table cellpadding="0" cellspacing="0" width="100%">
+            <tr>
+              <td style="width: 46px; vertical-align: top; padding-right: 8px;">
+                <img src="${escapeHtml(getItemDisplayImage(item))}" alt="${escapeHtml(item.title)}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 6px; border: 1px solid #e5e7eb;" />
+              </td>
+              <td style="vertical-align: top;">
+                <strong>${escapeHtml(item.title)}</strong><br>
+                ${renderSelectedAttributesHtml(item.selectedAttributes)}
+                <small style="color: #6b7280;">Quantity: ${item.quantity}</small>
+              </td>
+            </tr>
+          </table>
         </td>
         <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">
           ${escapeHtml(orderDetails.currencySymbol)}${item.subtotal.toFixed(2)}
@@ -481,6 +546,7 @@ async function sendStoreOwnerNotificationEmail(orderDetails) {
             headerSubtitle: 'You have a new order to process',
             headerGradientStart: '#F59E0B',
             headerGradientEnd: '#D97706',
+            storeLogoHtml: renderStoreLogoHtml(storeInfo.logoUrl, storeInfo.storeName),
             // Footer data
             footerMessage: 'Please log in to your admin panel to process this order.',
             storeName: orderDetails.storeName,
