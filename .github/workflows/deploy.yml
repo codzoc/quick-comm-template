@@ -7,27 +7,27 @@ on:
       skip_template_update:
         description: 'Skip template update'
         required: false
-        default: 'false'
+        default: true
         type: boolean
       skip_deploy_hosting:
         description: 'Skip deploy hosting'
         required: false
-        default: 'false'
+        default: false
         type: boolean
       skip_deploy_firestore:
         description: 'Skip deploy firestore'
         required: false
-        default: 'false'
+        default: false
         type: boolean
       skip_deploy_functions:
         description: 'Skip deploy functions'
         required: false
-        default: 'false'
+        default: true
         type: boolean
       skip_deploy_storage:
         description: 'Skip deploy storage'
         required: false
-        default: 'false'
+        default: false
         type: boolean
   
   # Automatic weekly template updates every Monday at 9 AM UTC
@@ -63,7 +63,7 @@ jobs:
         run: |
           if [[ "${{ github.event_name }}" == "schedule" ]] || \
              ([[ "${{ github.event_name }}" == "workflow_dispatch" ]] && \
-              [[ "${{ github.event.inputs.skip_template_update }}" != "true" ]] && \
+              [[ "${{ inputs.skip_template_update }}" != "true" ]] && \
               [[ "${{ github.ref }}" == "refs/heads/main" ]]); then
             echo "should_run=true" >> $GITHUB_OUTPUT
             echo "✅ Template update will run"
@@ -184,9 +184,57 @@ jobs:
         env:
           CI: true
 
+      - name: Normalize and validate Firebase config secret
+        env:
+          FIREBASE_CONFIG_RAW: ${{ secrets.VITE_FIREBASE_CONFIG }}
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+
+          let raw = (process.env.FIREBASE_CONFIG_RAW || '').trim();
+          if (!raw) {
+            throw new Error('VITE_FIREBASE_CONFIG is empty. Paste the Firebase config object from Firebase Console.');
+          }
+
+          // Allow users to paste either:
+          // 1) strict JSON, or
+          // 2) Firebase console JS snippet like "const firebaseConfig = { ... };"
+          raw = raw.replace(/^const\s+\w+\s*=\s*/, '').trim();
+          if (raw.endsWith(';')) raw = raw.slice(0, -1).trim();
+
+          let config;
+          try {
+            config = JSON.parse(raw);
+          } catch (jsonError) {
+            try {
+              config = Function('"use strict"; return (' + raw + ');')();
+            } catch (jsError) {
+              throw new Error(
+                'VITE_FIREBASE_CONFIG could not be parsed. Paste the config object directly from Firebase Console.'
+              );
+            }
+          }
+
+          const requiredKeys = [
+            'apiKey',
+            'authDomain',
+            'projectId',
+            'storageBucket',
+            'messagingSenderId',
+            'appId'
+          ];
+
+          const missing = requiredKeys.filter((key) => !config[key]);
+          if (missing.length > 0) {
+            throw new Error(`VITE_FIREBASE_CONFIG is missing keys: ${missing.join(', ')}`);
+          }
+
+          fs.writeFileSync('config.json', JSON.stringify(config));
+          console.log('✅ VITE_FIREBASE_CONFIG is valid');
+          NODE
+
       - name: Create .env and .firebaserc from config
         run: |
-          echo '${{ secrets.VITE_FIREBASE_CONFIG }}' > config.json
           cat config.json | jq -r '"VITE_FIREBASE_API_KEY=" + .apiKey' > .env
           cat config.json | jq -r '"VITE_FIREBASE_AUTH_DOMAIN=" + .authDomain' >> .env
           cat config.json | jq -r '"VITE_FIREBASE_PROJECT_ID=" + .projectId' >> .env
@@ -194,7 +242,7 @@ jobs:
           cat config.json | jq -r '"VITE_FIREBASE_MESSAGING_SENDER_ID=" + .messagingSenderId' >> .env
           cat config.json | jq -r '"VITE_FIREBASE_APP_ID=" + .appId' >> .env
           cat config.json | jq -r '"VITE_FIREBASE_MEASUREMENT_ID=" + .measurementId' >> .env
-          cat config.json | jq '{projects: {default: .projectId}}' > .firebaserc
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' | jq '{projects: {default: .project_id}}' > .firebaserc
           rm config.json
 
       - name: Build project
@@ -227,11 +275,9 @@ jobs:
       project_id: ${{ steps.firebase-config.outputs.project_id }}
     
     steps:
-      - name: Create .firebaserc from config
+      - name: Create .firebaserc from service account
         run: |
-          echo '${{ secrets.VITE_FIREBASE_CONFIG }}' > config.json
-          cat config.json | jq '{projects: {default: .projectId}}' > .firebaserc
-          rm config.json
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' | jq '{projects: {default: .project_id}}' > .firebaserc
 
       - name: Extract project ID
         id: firebase-config
@@ -308,11 +354,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Create .firebaserc from config
+      - name: Create .firebaserc from service account
         run: |
-          echo '${{ secrets.VITE_FIREBASE_CONFIG }}' > config.json
-          cat config.json | jq '{projects: {default: .projectId}}' > .firebaserc
-          rm config.json
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' | jq '{projects: {default: .project_id}}' > .firebaserc
 
       - name: Extract project ID
         id: firebase-config
@@ -329,7 +373,7 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Deploy Firestore Rules and Indexes
-        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.event.inputs.skip_deploy_firestore != 'true')
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && !inputs.skip_deploy_firestore)
         uses: w9jds/firebase-action@master
         with:
           args: deploy --only firestore --project ${{ steps.firebase-config.outputs.project_id }}
@@ -354,11 +398,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Create .firebaserc from config
+      - name: Create .firebaserc from service account
         run: |
-          echo '${{ secrets.VITE_FIREBASE_CONFIG }}' > config.json
-          cat config.json | jq '{projects: {default: .projectId}}' > .firebaserc
-          rm config.json
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' | jq '{projects: {default: .project_id}}' > .firebaserc
 
       - name: Extract project ID
         id: firebase-config
@@ -375,7 +417,7 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Deploy Storage Rules
-        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.event.inputs.skip_deploy_storage != 'true')
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && !inputs.skip_deploy_storage)
         uses: w9jds/firebase-action@master
         with:
           args: deploy --only storage --project ${{ steps.firebase-config.outputs.project_id }} --non-interactive
@@ -400,11 +442,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Create .firebaserc from config
+      - name: Create .firebaserc from service account
         run: |
-          echo '${{ secrets.VITE_FIREBASE_CONFIG }}' > config.json
-          cat config.json | jq '{projects: {default: .projectId}}' > .firebaserc
-          rm config.json
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' | jq '{projects: {default: .project_id}}' > .firebaserc
 
       - name: Extract project ID
         id: firebase-config
@@ -432,7 +472,7 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Deploy Functions
-        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.event.inputs.skip_deploy_functions != 'true')
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && !inputs.skip_deploy_functions)
         uses: w9jds/firebase-action@master
         with:
           args: deploy --only functions --force --project ${{ steps.firebase-config.outputs.project_id }}
@@ -463,11 +503,9 @@ jobs:
           name: build-output
           path: dist/
 
-      - name: Create .firebaserc from config
+      - name: Create .firebaserc from service account
         run: |
-          echo '${{ secrets.VITE_FIREBASE_CONFIG }}' > config.json
-          cat config.json | jq '{projects: {default: .projectId}}' > .firebaserc
-          rm config.json
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' | jq '{projects: {default: .project_id}}' > .firebaserc
 
       - name: Extract project ID
         id: firebase-config
@@ -487,7 +525,7 @@ jobs:
           FIREBASE_CLI_PREVIEWS: hostingchannels
 
       - name: Deploy to Firebase Hosting (Production)
-        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.event.inputs.skip_deploy_hosting != 'true')
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && !inputs.skip_deploy_hosting)
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'

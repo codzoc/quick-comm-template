@@ -8,13 +8,23 @@ A simple, browser-only React + Firebase e-commerce template designed for non-cod
 
 1. **Create your repo**: Click "Use this template" → Create private repository
 2. **Set up Firebase**: Create Firebase project, enable Firestore, Authentication, and Hosting
-3. **Add secrets**: Copy 2 JSON configs to GitHub Secrets (use [JSON validator](https://jsonformatter.curiousconcept.com/))
+3. **Add secrets**: Copy 2 values to GitHub Secrets (`VITE_FIREBASE_CONFIG` and `FIREBASE_SERVICE_ACCOUNT`)
 4. **Create admin user**: Add your email/password in Firebase Console + Firestore admins collection
 5. **Deploy**: Run GitHub Actions workflow → Your store is live!
 
 **Helpful Tools:**
-- 🔧 [JSON Validator](https://jsonformatter.curiousconcept.com/) - Validate Firebase config
 - 🖼️ Built-in image upload with automatic compression and optimization
+
+### Copy/Paste Owner Checklist
+
+Use this while setting up your own copy of the template:
+
+- [ ] Repository created from template (private recommended)
+- [ ] Firebase project created with Firestore, Authentication, Storage, and Hosting enabled
+- [ ] GitHub secrets added: `VITE_FIREBASE_CONFIG` and `FIREBASE_SERVICE_ACCOUNT`
+- [ ] First admin added in Firebase Auth + `admins` Firestore collection
+- [ ] `Deploy` workflow run successfully from GitHub Actions
+- [ ] Store opens at `https://YOUR-PROJECT-ID.web.app`
 
 ---
 
@@ -44,9 +54,11 @@ Want to update immediately? Here's how:
 
 1. **Go to your repository** on GitHub
 2. Click on the **Actions** tab
-3. Select **"Update from template"** workflow from the left sidebar
-4. Click **"Run workflow"** → Click **"Run workflow"** button
-5. Wait 1-2 minutes - **your main branch is updated automatically!**
+3. Select **"Deploy"** workflow from the left sidebar
+4. Click **"Run workflow"**
+5. Keep **Skip template update** unchecked
+6. (Optional) Set deploy skip toggles to `true` if you only want to pull template updates
+7. Wait 1-2 minutes - **your main branch is updated automatically!**
 
 That's it! Your store is now running the latest version.
 
@@ -102,8 +114,8 @@ When conflicts occur, the workflow automatically creates a PR. Then you:
 
 Prefer manual control?
 
-1. Edit `.github/workflows/update-from-template.yml`
-2. Remove or comment out the `schedule:` section (lines 12-13)
+1. Edit `.github/workflows/deploy.yml`
+2. Remove or comment out the `schedule:` section (`cron: '0 9 * * 1'`)
 3. Commit the change
 
 Now updates only happen when you manually trigger the workflow.
@@ -213,7 +225,6 @@ All images are automatically optimized for fast loading and stored securely in F
 - No local development environment needed!
 
 ### Helpful Tools
-- **JSON Validator**: [jsonformatter.curiousconcept.com](https://jsonformatter.curiousconcept.com/) - Validate and format your Firebase config JSON
 - **Built-in Image Upload**: All images are automatically compressed and optimized when uploaded through the admin panel
 
 ---
@@ -290,7 +301,7 @@ You only need **2 secrets** for the entire setup:
 
 | Secret Name | Value | Where to Find |
 |------------|-------|---------------|
-| `VITE_FIREBASE_CONFIG` | Your complete Firebase config as compact JSON | Firebase Config (see below) |
+| `VITE_FIREBASE_CONFIG` | Firebase config object from Firebase Console (JSON or JS object snippet) | Firebase Config (see below) |
 | `FIREBASE_SERVICE_ACCOUNT` | Service account JSON | See below |
 
 ### How to Set Up VITE_FIREBASE_CONFIG
@@ -300,12 +311,11 @@ You only need **2 secrets** for the entire setup:
 3. Click the web icon `</>`
 4. Register your app with a nickname (if not already done)
 5. Copy the Firebase configuration object
-6. **Validate and format the JSON**:
-   - Go to [jsonformatter.curiousconcept.com](https://jsonformatter.curiousconcept.com/)
-   - Paste your Firebase config
-   - Click "Process" to validate
-   - Copy the compact (single-line) output
-7. Paste the validated JSON as the secret value:
+6. Paste it directly into the `VITE_FIREBASE_CONFIG` secret value
+   - You can paste either:
+     - JSON object, or
+     - JavaScript snippet from Firebase Console (for example `const firebaseConfig = { ... };`)
+7. Example format:
 
 ```json
 {"apiKey":"YOUR_API_KEY","authDomain":"your-project.firebaseapp.com","projectId":"your-project-id","storageBucket":"your-project.firebasestorage.app","messagingSenderId":"123456789","appId":"1:123456789:web:abcdef","measurementId":"G-XXXXXXXXXX"}
@@ -316,7 +326,7 @@ You only need **2 secrets** for the entire setup:
 {"apiKey":"AIzaSyA4P67skiUQu5MqHvN93cgHUKC63HS6zv8","authDomain":"snackspot-kochi.firebaseapp.com","projectId":"snackspot-kochi","storageBucket":"snackspot-kochi.firebasestorage.app","messagingSenderId":"1035236098674","appId":"1:1035236098674:web:ed56b3cc184aa8fa35b8eb","measurementId":"G-KBE2534FRQ"}
 ```
 
-**Important**: The JSON must be valid RFC 8259 format - all keys in quotes, no trailing commas, compact single-line. Use the JSON validator to ensure it's correct!
+**Important**: The workflow validates this automatically and will show an actionable error in Actions logs if anything is missing.
 
 ### Get Firebase Service Account
 
@@ -328,6 +338,7 @@ You only need **2 secrets** for the entire setup:
    - Or go to [Google Cloud Console IAM](https://console.cloud.google.com/iam-admin/iam)
    - Find the service account (looks like `firebase-adminsdk-xxxxx@your-project.iam.gserviceaccount.com`)
    - Click the pencil icon to edit
+   - **Beginner shortcut (fastest):** temporarily grant **Owner** role, complete first deployment, then reduce to least-privilege roles below.
    - Ensure it has these roles:
      - **"Editor"** - General Firebase access
      - **"Firebase Rules Admin"** - Deploy Firestore rules
@@ -394,19 +405,23 @@ The first deployment will automatically set up everything you need:
 
 1. In your forked repository, go to the "Actions" tab
 2. Click "Enable GitHub Actions" if prompted
-3. Click on "Firebase Deploy" workflow
+3. Click on "Deploy" workflow
 4. Click "Run workflow" > "Run workflow" on the main branch
-5. Wait for the deployment to complete (2-3 minutes)
-6. This will automatically:
+5. Keep the default toggles for fastest first launch:
+   - ✅ Skip template update = true (faster; no upstream sync)
+   - ✅ Skip deploy functions = true (payments/emails can be enabled later)
+6. Wait for the deployment to complete (usually faster for first launch)
+7. This will automatically:
    - Parse your `VITE_FIREBASE_CONFIG` secret
    - Generate `.env` file with all Firebase environment variables
-   - Generate `.firebaserc` file with your project ID
+   - Generate project config automatically for deployment
    - Build your site
    - Deploy Firestore security rules
    - Deploy Firestore indexes
    - Deploy Storage security rules
-   - Deploy Cloud Functions
    - Deploy to Firebase Hosting
+8. Open your live storefront at `https://YOUR-PROJECT-ID.web.app`
+9. Later, when you enable Stripe/Razorpay or email webhooks, re-run **Deploy** with **Skip deploy functions = false**
 
 **Note**: You don't need to create any local `.env` or `.firebaserc` files - the GitHub Actions workflow handles everything automatically from your secrets!
 
@@ -464,14 +479,19 @@ You can customize your store in two ways:
 ### Option B: Through Code (Advanced)
 
 **Customize Theme Manually**:
-1. Edit `src/config/theme.js` in GitHub:
+1. Edit `src/config/themeTemplates.js` in GitHub:
    ```javascript
-   fontFamily: 'Roboto', // Try: Poppins, Inter, Montserrat, Lato
-   colors: {
-     primary: '#3B82F6',  // Your brand color
-     secondary: '#10B981',
-     // ... etc
-   }
+   // Choose which template is applied by default
+   export const defaultTemplate = 'professional';
+
+   // Then customize the template colors/font you want to use
+   professional: {
+     fontFamily: 'Roboto',
+     colors: {
+       primary: '#3B82F6',
+       secondary: '#10B981'
+     }
+   };
    ```
 2. The Google Font will load automatically!
 
@@ -709,28 +729,26 @@ The main customer-facing page is in `src/pages/StoreFront.jsx`. This file is des
 
 ## Troubleshooting
 
-### Local Quality Checks
-- `npm run build` is available and recommended before deploying
-- `npm run lint` is currently **not configured** in this template (no `lint` script in `package.json`)
+### Browser-Only Deployment Checks
+- Confirm both secrets exist in GitHub Actions settings:
+  - `VITE_FIREBASE_CONFIG` (Firebase config object from console)
+  - `FIREBASE_SERVICE_ACCOUNT` (full service account JSON)
+- Run the **Deploy** workflow from GitHub Actions and check step logs if anything fails
+- No local CLI, terminal, or editor is required for setup and deployment
 
 ### Build Fails in GitHub Actions
 - Check that both secrets are set correctly:
-  - `VITE_FIREBASE_CONFIG` must be valid JSON (all keys in quotes)
+  - `VITE_FIREBASE_CONFIG` must include: `apiKey`, `authDomain`, `projectId`, `storageBucket`, `messagingSenderId`, `appId`
   - `FIREBASE_SERVICE_ACCOUNT` must contain the complete service account JSON
 - Verify the service account has proper permissions in Firebase Console
 - Check the error logs in Actions tab for specific errors
 
 ### Invalid JSON Error
 If you see "parse error" or "Invalid JSON" in the Actions logs:
-- Make sure `VITE_FIREBASE_CONFIG` is formatted as a single-line JSON
-- All keys must be in double quotes: `"apiKey"`, `"authDomain"`, etc.
-- No trailing commas
-- The JSON must be valid RFC 8259 format
-- **Validate your JSON** at [jsonformatter.curiousconcept.com](https://jsonformatter.curiousconcept.com/)
-  1. Paste your Firebase config
-  2. Click "Process"
-  3. Copy the validated compact output
-  4. Update your GitHub secret with the corrected JSON
+- Paste the Firebase config object directly from Firebase Console
+- If you pasted `const firebaseConfig = ...`, keep the object complete
+- Ensure these keys exist: `apiKey`, `authDomain`, `projectId`, `storageBucket`, `messagingSenderId`, `appId`
+- Update the `VITE_FIREBASE_CONFIG` secret and rerun **Deploy**
 
 ### Firestore Rules Deployment Fails
 
@@ -933,14 +951,14 @@ File: `src/pages/StoreFront.jsx` (search for "customerInfo")
 The GitHub Actions workflow automatically handles all Firebase deployments:
 
 ### On Every Push to Main
-1. Parses your `VITE_FIREBASE_CONFIG` secret and generates `.env` and `.firebaserc` files
+1. Parses your `VITE_FIREBASE_CONFIG` secret and generates `.env` automatically
 2. Builds your React app with all configuration
 3. Deploys Firestore security rules from [firestore.rules](firestore.rules)
 4. Deploys Firestore indexes from [firestore.indexes.json](firestore.indexes.json)
 5. Deploys the built site to Firebase Hosting (production)
 
 ### On Every Pull Request
-1. Parses your `VITE_FIREBASE_CONFIG` secret and generates configuration files
+1. Parses your `VITE_FIREBASE_CONFIG` secret and generates build configuration
 2. Builds your React app
 3. Deploys Firestore rules and indexes to your project
 4. Creates a preview deployment URL
@@ -953,7 +971,7 @@ The GitHub Actions workflow automatically handles all Firebase deployments:
 - Firestore rules stay in sync with your code
 - Test everything (including database rules) in PR previews
 - Automatic rollback by reverting commits
-- Easy to copy Firebase config - just paste the JSON object as-is
+- Easy to copy Firebase config - paste the object directly from Firebase Console
 
 ### Modifying Firestore Rules
 
@@ -1060,7 +1078,7 @@ After saving Stripe settings, deploy your Firebase Functions:
 
 1. Go to your GitHub repository
 2. Click **Actions** tab
-3. Click **Firebase Deploy** workflow
+3. Click **Deploy** workflow
 4. Click **Run workflow** → **Run workflow**
 5. Wait for deployment to complete (3-5 minutes)
 
@@ -1120,7 +1138,7 @@ If you haven't already deployed functions for Stripe:
 
 1. Go to your GitHub repository
 2. Click **Actions** tab
-3. Click **Firebase Deploy** workflow
+3. Click **Deploy** workflow
 4. Click **Run workflow** → **Run workflow**
 5. Wait for deployment to complete (3-5 minutes)
 
@@ -1331,7 +1349,7 @@ Payment processing requires Firebase Cloud Functions. The deployment is automati
 
 **Deployment Steps**:
 1. Functions are automatically deployed when you push to `main` branch
-2. Or manually trigger via GitHub Actions → Firebase Deploy workflow
+2. Or manually trigger via GitHub Actions → Deploy workflow
 3. Functions appear in Firebase Console → Functions tab
 
 **Monitoring Functions**:
@@ -1381,7 +1399,7 @@ quick-comm-template/
 │   ├── config/             # Configuration files
 │   │   ├── business.js     # Store name, logo
 │   │   ├── firebase.js     # Firebase setup
-│   │   └── theme.js        # Colors, fonts, spacing
+│   │   └── themeTemplates.js # Theme templates and default selection
 │   ├── context/            # React context (cart state)
 │   ├── pages/
 │   │   ├── StoreFront.jsx  # Main customer page ⭐
@@ -1476,8 +1494,8 @@ A: Use the built-in image upload feature in the admin panel (recommended):
 **Q: Should I compress my images?**
 A: Images are automatically compressed and optimized when uploaded through the admin panel. Product images are resized to max 1024px width, and logos to max 512px width. No manual compression needed!
 
-**Q: How do I validate my Firebase JSON config?**
-A: Use [jsonformatter.curiousconcept.com](https://jsonformatter.curiousconcept.com/) to validate and format your JSON correctly.
+**Q: What format should `VITE_FIREBASE_CONFIG` be in?**
+A: Paste the Firebase config object directly from Firebase Console. The workflow accepts JSON or the JS-style config snippet and validates required keys automatically.
 
 **Q: Can I change the currency?**
 A: Yes! Go to Admin Panel > Settings > Pricing tab and select your currency. It updates throughout the entire site.
