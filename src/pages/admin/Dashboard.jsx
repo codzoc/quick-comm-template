@@ -248,7 +248,7 @@ function AdminDashboard() {
                   Setup checklist
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Finish these steps to open your store. You can still use image URLs instead of uploads.
+                  Finish these steps to open your store. If Storage is not set up, use Image URL instead of upload.
                 </Typography>
               </Box>
               <Button size="small" onClick={dismissChecklist}>

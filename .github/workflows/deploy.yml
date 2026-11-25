@@ -388,11 +388,13 @@ jobs:
         env:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
-  # Deploy Storage Rules - runs in parallel with other deployments
+  # Always try Storage rules. Failures (Storage not enabled, no billing) must not
+  # fail Hosting/Firestore — Spark users can still launch with image URLs.
   deploy-storage:
     runs-on: ubuntu-latest
     needs: setup-firebase
     if: always() && needs.setup-firebase.result == 'success'
+    continue-on-error: true
     
     steps:
       - name: Checkout code
@@ -417,7 +419,9 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Deploy Storage Rules
-        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && !inputs.skip_deploy_storage)
+        id: deploy-storage-prod
+        continue-on-error: true
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.skip_deploy_storage != true)
         uses: w9jds/firebase-action@master
         with:
           args: deploy --only storage --project ${{ steps.firebase-config.outputs.project_id }} --non-interactive
@@ -425,6 +429,8 @@ jobs:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
       - name: Deploy Storage Rules (Preview)
+        id: deploy-storage-preview
+        continue-on-error: true
         if: github.event_name == 'pull_request'
         uses: w9jds/firebase-action@master
         with:
@@ -432,8 +438,13 @@ jobs:
         env:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
+      - name: Storage is optional
+        if: steps.deploy-storage-prod.outcome == 'failure' || steps.deploy-storage-preview.outcome == 'failure'
+        run: |
+          echo "::notice title=Store still deployed::Firebase Storage rules did not deploy (Storage may be off, or billing may be required). Your store still goes live. Use Image URL or /images/... paths until you enable Storage for file uploads."
+
   # Always try Cloud Functions. Failures (no billing, missing IAM) must not
-  # fail Hosting/Firestore/Storage — those jobs run in parallel and this job
+  # fail Hosting/Firestore — those jobs run in parallel and this job
   # uses continue-on-error so the overall Deploy stays green for non-coders.
   deploy-functions:
     runs-on: ubuntu-latest

@@ -6,13 +6,13 @@ A browser-first React + Firebase store for non-coders. Launch with Cash on Deliv
 
 ### Track 1 — Free launch (Spark)
 
-Works with Firebase Hosting, Auth, Firestore, and COD. Images can be **uploaded** (Storage) or pasted as **URLs** / `/images/...` paths.
+Works with Firebase Hosting, Auth, Firestore, and COD. Images can be pasted as **URLs** / `/images/...` paths. File **upload** is extra if Storage is enabled.
 
 1. Use this template → private repository
-2. Create a Firebase project: Firestore, Authentication (email/password), Hosting. Storage is optional if you only use image URLs.
+2. Create a Firebase project: Firestore, Authentication (email/password), Hosting. Storage is optional (needed only for admin file uploads).
 3. Add GitHub secrets: `VITE_FIREBASE_CONFIG` and `FIREBASE_SERVICE_ACCOUNT`
 4. Create an admin (Auth user + `admins/{email}` Firestore doc)
-5. Run **Deploy**. Functions are always attempted; if they fail (no billing), your store still goes live with COD.
+5. Run **Deploy**. Storage and Functions are always attempted; if they fail (not enabled / no billing), your store still goes live with COD and image URLs.
 
 ### Track 2 — Upgrade later (Blaze + Functions)
 
@@ -31,7 +31,7 @@ The admin dashboard includes a setup checklist for store name, theme, first prod
 - [ ] Firebase project created with Firestore, Authentication, and Hosting (Storage if you will upload files)
 - [ ] GitHub secrets added: `VITE_FIREBASE_CONFIG` and `FIREBASE_SERVICE_ACCOUNT`
 - [ ] First admin added in Firebase Auth + `admins` Firestore collection
-- [ ] `Deploy` workflow run successfully (a Functions warning is OK — the store still deploys)
+- [ ] `Deploy` workflow run successfully (Storage or Functions warnings are OK — the store still deploys)
 - [ ] Store opens at `https://YOUR-PROJECT-ID.web.app`
 
 ### Optional local / AI helpers
@@ -285,7 +285,7 @@ All images are automatically optimized for fast loading and stored securely in F
 4. Enable "Email/Password"
 5. Click "Save"
 
-#### C. Enable Storage (needed for file uploads; skip if you only use image URLs)
+#### C. Enable Storage (optional — only if you want admin file uploads)
 1. Go to "Build" > "Storage"
 2. Click "Get Started"
 3. Click "Next" through the setup wizard
@@ -294,8 +294,9 @@ All images are automatically optimized for fast loading and stored securely in F
 6. Click "Done"
 
 **Important**:
-- Storage is required only if you upload files in the admin panel. Image URLs and `/images/...` paths work without Storage.
-- The security rules will be automatically deployed via GitHub Actions
+- Skip this if you will paste image URLs or use `/images/...` paths. The store works on Spark without Storage.
+- If Storage is not enabled, the Deploy job still tries Storage rules, then continues — Hosting is not blocked.
+- The security rules will be automatically deployed via GitHub Actions when Storage is available.
 - Storage rules currently allow any authenticated user to upload (admin panel access is protected separately by Firestore rules)
 - For stricter security, you can grant the Storage service account "Cloud Datastore User" IAM role and update rules to use admin-only access (see troubleshooting section)
 
@@ -434,12 +435,12 @@ The first deployment will automatically set up everything you need:
    - Build your site
    - Deploy Firestore security rules
    - Deploy Firestore indexes
-   - Deploy Storage security rules
+   - Try to deploy Storage security rules (file uploads)
    - Deploy to Firebase Hosting
    - Try to deploy Cloud Functions (emails and online payments)
 8. Open your live storefront at `https://YOUR-PROJECT-ID.web.app`
 
-**If Functions fail:** that is expected on the free Firebase plan. Hosting still deploys, so your store and admin panel work. COD works without Functions. Enable billing later and run Deploy again for emails, Stripe, and Razorpay.
+**If Storage or Functions fail:** that is expected if Storage is not enabled or you are on the free plan. Hosting still deploys, so your store and admin panel work. Use **Image URL** (or `/images/...`) for products and logos. Enable Storage later for uploads, and billing later for emails, Stripe, and Razorpay.
 
 **Note**: You don't need to create any local `.env` or `.firebaserc` files - the GitHub Actions workflow handles everything automatically from your secrets!
 
@@ -824,7 +825,11 @@ This means you need to add the "Firebase Rules Admin" role specifically:
 
 ### Cloud Functions Deployment Fails
 
-**This is OK on first launch.** Deploy always tries Functions. If billing is off or a permission is missing, that job is marked as a warning and **does not stop** Hosting, Firestore, or Storage. Your store still goes live with COD.
+**This is OK on first launch.** Deploy always tries Functions. If billing is off or a permission is missing, that job is marked as a warning and **does not stop** Hosting or Firestore. Your store still goes live with COD.
+
+### Storage Deployment Fails
+
+**This is OK on first launch.** Deploy always tries Storage rules. If Storage is not enabled (or billing is required), that job is a warning and **does not stop** Hosting or Firestore. Use **Image URL** or files in `public/images/` until you enable Storage, then run Deploy again for uploads.
 
 **Error: "Missing required permission cloudfunctions.functions.setIamPolicy"** (only needed when you want emails/online payments)
 
@@ -906,6 +911,8 @@ The service account used in `FIREBASE_SERVICE_ACCOUNT` secret needs:
 
 ### Images Not Loading / Upload Permission Denied
 
+**If Storage did not deploy:** use **Image URL** in the admin panel (`https://…` or `/images/product.jpg`) instead of Upload. Enable Storage in Firebase Console later if you want file uploads.
+
 **Error: "403 Forbidden" or "storage/unauthorized" when uploading images**
 
 This usually means you're not authenticated. Fix it by:
@@ -974,7 +981,8 @@ The GitHub Actions workflow automatically handles all Firebase deployments:
 3. Deploys Firestore security rules from [firestore.rules](firestore.rules)
 4. Deploys Firestore indexes from [firestore.indexes.json](firestore.indexes.json)
 5. Deploys the built site to Firebase Hosting (production)
-6. Always tries Cloud Functions (emails, Stripe, Razorpay). If that job fails, the rest of the deploy still succeeds.
+6. Always tries Storage rules (file uploads). If that job fails, the rest of the deploy still succeeds.
+7. Always tries Cloud Functions (emails, Stripe, Razorpay). If that job fails, the rest of the deploy still succeeds.
 
 ### On Every Pull Request
 1. Parses your `VITE_FIREBASE_CONFIG` secret and generates build configuration
@@ -1499,7 +1507,7 @@ A: Yes! Guest checkout is available. Customers can optionally create an account 
 A: Yes! Configure custom domain in Firebase Hosting settings
 
 **Q: How much does it cost?**
-A: The storefront, admin, COD, and image URLs work on Firebase Spark (free). Stripe, Razorpay, refunds, and email notifications need Cloud Functions on the Blaze plan. GitHub is free for private repos on typical usage.
+A: The storefront, admin, COD, and image URLs work on Firebase Spark (free), even if Storage or Functions do not deploy. File uploads need Storage enabled. Stripe, Razorpay, refunds, and email notifications need Cloud Functions on the Blaze plan. GitHub is free for private repos on typical usage.
 
 **Q: Where should I upload product images?**
 A: Two options, both first-class in the admin panel:
