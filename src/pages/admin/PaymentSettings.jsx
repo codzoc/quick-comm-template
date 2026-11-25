@@ -87,7 +87,7 @@ function PaymentSettings() {
             </Typography>
 
             <Alert severity="info" sx={{ mb: 3 }}>
-                COD works on the free Firebase plan. Stripe, Razorpay, refunds, and emails need Cloud Functions (Blaze billing). After enabling billing, set the GitHub Actions variable <strong>DEPLOY_FUNCTIONS</strong> to <code>true</code>, or run Deploy with <strong>Skip deploy functions = false</strong>.
+                COD works on the free Firebase plan. Stripe, Razorpay, refunds, and emails need Cloud Functions, which require billing. Deploy always tries Functions; if that step fails, your store still goes live. After you enable billing in Firebase, run Deploy again.
             </Alert>
 
             {success && <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess('')}>{success}</Alert>}

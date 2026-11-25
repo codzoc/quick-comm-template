@@ -22,7 +22,7 @@ on:
       skip_deploy_functions:
         description: 'Skip deploy functions'
         required: false
-        default: true
+        default: false
         type: boolean
       skip_deploy_storage:
         description: 'Skip deploy storage'
@@ -432,12 +432,14 @@ jobs:
         env:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
-  # Deploy Functions - opt-in so Spark/free stores stay safe.
-  # Enable later with repo variable DEPLOY_FUNCTIONS=true, or a manual workflow run with Skip deploy functions = false.
+  # Always try Cloud Functions. Failures (no billing, missing IAM) must not
+  # fail Hosting/Firestore/Storage — those jobs run in parallel and this job
+  # uses continue-on-error so the overall Deploy stays green for non-coders.
   deploy-functions:
     runs-on: ubuntu-latest
     needs: setup-firebase
-    if: always() && needs.setup-firebase.result == 'success' && ((github.event_name == 'workflow_dispatch' && inputs.skip_deploy_functions != true) || (github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_FUNCTIONS == 'true') || (github.event_name == 'pull_request' && vars.DEPLOY_FUNCTIONS == 'true'))
+    if: always() && needs.setup-firebase.result == 'success'
+    continue-on-error: true
     
     steps:
       - name: Checkout code
@@ -461,6 +463,8 @@ jobs:
           cache-dependency-path: functions/package-lock.json
 
       - name: Install Functions Dependencies
+        continue-on-error: true
+        id: functions-install
         working-directory: functions
         run: npm ci
 
@@ -473,11 +477,29 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Deploy Functions
+        id: deploy-functions-prod
+        continue-on-error: true
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.skip_deploy_functions != true)
         uses: w9jds/firebase-action@master
         with:
           args: deploy --only functions --force --project ${{ steps.firebase-config.outputs.project_id }}
         env:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Deploy Functions (Preview)
+        id: deploy-functions-preview
+        continue-on-error: true
+        if: github.event_name == 'pull_request'
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only functions --force --project ${{ steps.firebase-config.outputs.project_id }}
+        env:
+          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Functions are optional
+        if: steps.deploy-functions-prod.outcome == 'failure' || steps.deploy-functions-preview.outcome == 'failure' || steps.functions-install.outcome == 'failure'
+        run: |
+          echo "::notice title=Store still deployed::Cloud Functions did not deploy (often because billing is off). Your store, admin panel, and Cash on Delivery still work. Enable billing in Firebase later if you want emails, Stripe, or Razorpay."
 
   # Deploy Hosting - runs in parallel with other deployments
   deploy-hosting:

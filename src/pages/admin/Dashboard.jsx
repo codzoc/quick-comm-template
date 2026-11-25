@@ -135,7 +135,7 @@ function AdminDashboard() {
           label: 'Optional: payments & emails',
           done: hasOnlineOrEmail,
           optional: true,
-          action: 'Enable Stripe/Razorpay/email after deploying Functions',
+          action: 'Enable billing in Firebase, then run Deploy again for Stripe/Razorpay/email',
           href: '/admin/settings?tab=5'
         }
       ];

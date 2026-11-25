@@ -12,14 +12,14 @@ Works with Firebase Hosting, Auth, Firestore, and COD. Images can be **uploaded*
 2. Create a Firebase project: Firestore, Authentication (email/password), Hosting. Storage is optional if you only use image URLs.
 3. Add GitHub secrets: `VITE_FIREBASE_CONFIG` and `FIREBASE_SERVICE_ACCOUNT`
 4. Create an admin (Auth user + `admins/{email}` Firestore doc)
-5. Run **Deploy** with **Skip deploy functions = true** (default)
+5. Run **Deploy**. Functions are always attempted; if they fail (no billing), your store still goes live with COD.
 
 ### Track 2 — Upgrade later (Blaze + Functions)
 
 Needed for Stripe, Razorpay, refunds, and email notifications.
 
 1. Enable Cloud Billing on the Firebase/Google Cloud project
-2. Set GitHub Actions variable `DEPLOY_FUNCTIONS` to `true`, **or** re-run Deploy with **Skip deploy functions = false**
+2. Run **Deploy** again (Functions will succeed once billing is on)
 3. Configure Stripe/Razorpay and Gmail SMTP in Admin → Settings
 4. Add payment webhook URLs from Firebase Functions
 
@@ -31,7 +31,7 @@ The admin dashboard includes a setup checklist for store name, theme, first prod
 - [ ] Firebase project created with Firestore, Authentication, and Hosting (Storage if you will upload files)
 - [ ] GitHub secrets added: `VITE_FIREBASE_CONFIG` and `FIREBASE_SERVICE_ACCOUNT`
 - [ ] First admin added in Firebase Auth + `admins` Firestore collection
-- [ ] `Deploy` workflow run successfully (functions skipped for first launch)
+- [ ] `Deploy` workflow run successfully (a Functions warning is OK — the store still deploys)
 - [ ] Store opens at `https://YOUR-PROJECT-ID.web.app`
 
 ### Optional local / AI helpers
@@ -425,12 +425,8 @@ The first deployment will automatically set up everything you need:
 2. Click "Enable GitHub Actions" if prompted
 3. Click on "Deploy" workflow
 4. Click "Run workflow" > "Run workflow" on the main branch
-5. Keep the default toggles for fastest first launch:
-   - ✅ Skip template update = true (faster; no upstream sync)
-   - ✅ Skip deploy functions = true (Spark-safe; payments/emails can be enabled later)
-   
-   Functions do **not** deploy on every push unless you set the repository variable `DEPLOY_FUNCTIONS=true`.
-6. Wait for the deployment to complete (usually faster for first launch)
+5. Keep **Skip template update = true** for the first launch (faster; no upstream sync). Leave the other skip toggles off so Hosting, Firestore, Storage, and Functions all try to deploy.
+6. Wait for the deployment to complete.
 7. This will automatically:
    - Parse your `VITE_FIREBASE_CONFIG` secret
    - Generate `.env` file with all Firebase environment variables
@@ -440,8 +436,10 @@ The first deployment will automatically set up everything you need:
    - Deploy Firestore indexes
    - Deploy Storage security rules
    - Deploy to Firebase Hosting
+   - Try to deploy Cloud Functions (emails and online payments)
 8. Open your live storefront at `https://YOUR-PROJECT-ID.web.app`
-9. Later, when you enable Stripe/Razorpay or email webhooks, re-run **Deploy** with **Skip deploy functions = false**
+
+**If Functions fail:** that is expected on the free Firebase plan. Hosting still deploys, so your store and admin panel work. COD works without Functions. Enable billing later and run Deploy again for emails, Stripe, and Razorpay.
 
 **Note**: You don't need to create any local `.env` or `.firebaserc` files - the GitHub Actions workflow handles everything automatically from your secrets!
 
@@ -826,7 +824,9 @@ This means you need to add the "Firebase Rules Admin" role specifically:
 
 ### Cloud Functions Deployment Fails
 
-**Error: "Missing required permission cloudfunctions.functions.setIamPolicy"**
+**This is OK on first launch.** Deploy always tries Functions. If billing is off or a permission is missing, that job is marked as a warning and **does not stop** Hosting, Firestore, or Storage. Your store still goes live with COD.
+
+**Error: "Missing required permission cloudfunctions.functions.setIamPolicy"** (only needed when you want emails/online payments)
 
 This error occurs when deploying Firebase Cloud Functions (for payment webhooks and email notifications). The service account needs additional permissions to deploy HTTPS functions.
 
@@ -974,7 +974,7 @@ The GitHub Actions workflow automatically handles all Firebase deployments:
 3. Deploys Firestore security rules from [firestore.rules](firestore.rules)
 4. Deploys Firestore indexes from [firestore.indexes.json](firestore.indexes.json)
 5. Deploys the built site to Firebase Hosting (production)
-6. Deploys Cloud Functions only if the repository variable `DEPLOY_FUNCTIONS` is `true`
+6. Always tries Cloud Functions (emails, Stripe, Razorpay). If that job fails, the rest of the deploy still succeeds.
 
 ### On Every Pull Request
 1. Parses your `VITE_FIREBASE_CONFIG` secret and generates build configuration
@@ -1367,8 +1367,8 @@ Payment processing requires Firebase Cloud Functions. The deployment is automati
 - Customer signup welcome email trigger (`onCustomerSignup`)
 
 **Deployment Steps**:
-1. Enable billing, then set repository variable `DEPLOY_FUNCTIONS=true` **or** run Deploy with **Skip deploy functions = false**
-2. Functions appear in Firebase Console → Functions tab
+1. Deploy always tries Functions. Enable Cloud Billing so this step can succeed.
+2. Run **Deploy** (or push to `main`). Functions appear in Firebase Console → Functions tab.
 
 **Monitoring Functions**:
 - View logs in Firebase Console → Functions → Logs
