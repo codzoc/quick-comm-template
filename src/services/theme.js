@@ -1,6 +1,6 @@
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { themeTemplates, defaultTemplate, getThemeTemplate } from '../config/themeTemplates';
+import { defaultTemplate, getThemeTemplate } from '../config/themeTemplates';
 
 const COLLECTION_NAME = 'settings';
 const THEME_DOC_ID = 'theme';
@@ -10,71 +10,17 @@ const THEME_DOC_ID = 'theme';
  * Used as fallback when no theme is set in Firebase
  */
 const defaultTheme = {
-  fontFamily: 'Poppins',
+  ...getThemeTemplate(defaultTemplate),
   colors: {
-    primary: '#3B82F6',
-    primaryHover: '#2563EB',
-    secondary: '#10B981',
-    background: '#FFFFFF',
-    surface: '#F9FAFB',
-    text: '#1F2937',
-    textLight: '#6B7280',
-    border: '#E5E7EB',
-    error: '#EF4444',
-    success: '#10B981',
-    warning: '#F59E0B',
-    info: '#3B82F6',
-    disabled: '#D1D5DB',
-    outOfStock: '#DC2626'
-  },
-  spacing: {
-    xs: '4px',
-    sm: '8px',
-    md: '16px',
-    lg: '24px',
-    xl: '32px',
-    xxl: '48px'
-  },
-  borderRadius: {
-    sm: '4px',
-    md: '8px',
-    lg: '12px',
-    full: '9999px'
+    ...getThemeTemplate(defaultTemplate).colors,
+    disabled: '#cbd5e1',
+    outOfStock: '#dc2626'
   },
   breakpoints: {
     mobile: '640px',
     tablet: '768px',
     desktop: '1024px',
     wide: '1280px'
-  },
-  shadows: {
-    sm: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-    md: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-    lg: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-    xl: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
-  },
-  fontSize: {
-    xs: '12px',
-    sm: '14px',
-    base: '16px',
-    lg: '18px',
-    xl: '20px',
-    '2xl': '24px',
-    '3xl': '30px',
-    '4xl': '36px'
-  },
-  fontWeight: {
-    normal: '400',
-    medium: '500',
-    semibold: '600',
-    bold: '700'
-  },
-  zIndex: {
-    base: 1,
-    dropdown: 100,
-    sticky: 200,
-    modal: 300,
-    toast: 400
   }
 };
 
@@ -161,6 +107,16 @@ export async function updateThemeTemplate(templateKey, customOverrides = {}) {
  * Get current theme template key
  * @returns {Promise<string>} Current template key
  */
+export async function hasSavedTheme() {
+  try {
+    const snap = await getDoc(doc(db, COLLECTION_NAME, THEME_DOC_ID));
+    return snap.exists();
+  } catch (error) {
+    console.error('Error checking saved theme:', error);
+    return false;
+  }
+}
+
 export async function getCurrentTemplate() {
   try {
     const docRef = doc(db, COLLECTION_NAME, THEME_DOC_ID);
@@ -191,5 +147,6 @@ export default {
   updateTheme,
   updateThemeTemplate,
   getCurrentTemplate,
+  hasSavedTheme,
   getDefaultTheme
 };

@@ -15,41 +15,59 @@ import './theme.css';
 function applyThemeVariables(theme) {
   const root = document.documentElement;
 
-  // Colors
-  Object.entries(theme.colors).forEach(([key, value]) => {
+  Object.entries(theme.colors || {}).forEach(([key, value]) => {
     const cssVarName = `--color-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
     root.style.setProperty(cssVarName, value);
   });
 
-  // Spacing
-  Object.entries(theme.spacing).forEach(([key, value]) => {
+  Object.entries(theme.spacing || {}).forEach(([key, value]) => {
     root.style.setProperty(`--spacing-${key}`, value);
   });
 
-  // Border Radius
-  Object.entries(theme.borderRadius).forEach(([key, value]) => {
+  Object.entries(theme.borderRadius || {}).forEach(([key, value]) => {
     root.style.setProperty(`--border-radius-${key}`, value);
   });
 
-  // Shadows
-  Object.entries(theme.shadows).forEach(([key, value]) => {
+  Object.entries(theme.shadows || {}).forEach(([key, value]) => {
     root.style.setProperty(`--shadow-${key}`, value);
   });
 
-  // Font Sizes
-  Object.entries(theme.fontSize).forEach(([key, value]) => {
+  Object.entries(theme.fontSize || {}).forEach(([key, value]) => {
     root.style.setProperty(`--font-size-${key}`, value);
   });
 
-  // Font Weights
-  Object.entries(theme.fontWeight).forEach(([key, value]) => {
+  Object.entries(theme.fontWeight || {}).forEach(([key, value]) => {
     root.style.setProperty(`--font-weight-${key}`, value);
   });
 
-  // Z-index
-  Object.entries(theme.zIndex).forEach(([key, value]) => {
+  Object.entries(theme.zIndex || {}).forEach(([key, value]) => {
     root.style.setProperty(`--z-index-${key}`, value);
   });
+
+  Object.entries(theme.transitions || {}).forEach(([key, value]) => {
+    root.style.setProperty(`--transition-${key}`, value);
+  });
+
+  root.style.setProperty('--backdrop-filter', theme.backdrop || 'none');
+  if (theme.backdrop) {
+    root.style.setProperty('--header-bg', 'rgba(255, 255, 255, 0.12)');
+  } else {
+    root.style.setProperty('--header-bg', 'color-mix(in srgb, var(--color-background) 88%, transparent)');
+  }
+
+  const background = theme.colors?.background || '';
+  if (typeof background === 'string' && background.includes('gradient')) {
+    root.style.setProperty('--page-atmosphere', background);
+    document.body.style.backgroundColor = 'transparent';
+  } else {
+    root.style.setProperty('--page-atmosphere', 'radial-gradient(ellipse 80% 50% at 50% -10%, color-mix(in srgb, var(--color-primary) 8%, transparent), transparent 70%)');
+    document.body.style.backgroundColor = '';
+  }
+
+  if (theme.colors?.primary) {
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', theme.colors.primary);
+  }
 }
 
 /**

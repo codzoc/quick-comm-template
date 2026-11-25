@@ -22,7 +22,7 @@ import {
   FormControlLabel,
   Switch
 } from '@mui/material';
-import { Edit, Trash2, Plus, X, Upload, Trash } from 'lucide-react';
+import { Edit, Trash2, Plus, X, Upload, Trash, Link as LinkIcon } from 'lucide-react';
 import { onAuthChange } from '../../services/auth';
 import { getAllProducts, createProduct, updateProduct, deleteProduct } from '../../services/products';
 import { uploadProductImages } from '../../services/imageUpload';
@@ -30,6 +30,7 @@ import { getStoreInfo } from '../../services/storeInfo';
 import AdminLayout from '../../components/AdminLayout';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ErrorMessage from '../../components/ErrorMessage';
+import { MultiImageSourceField, isLikelyImageUrl } from '../../components/ImageSourceField';
 import './AdminStyles.css';
 
 function AdminProducts() {
@@ -342,6 +343,27 @@ function AdminProducts() {
       updated[rowId] = URL.createObjectURL(file);
       return updated;
     });
+  };
+
+  const handleConfigurationImageUrl = (rowId, url) => {
+    const next = (url || '').trim();
+    setConfigurationImageFiles((prev) => {
+      const updated = { ...prev };
+      delete updated[rowId];
+      return updated;
+    });
+    setConfigurationImagePreviews((prev) => {
+      const updated = { ...prev };
+      if (updated[rowId]) URL.revokeObjectURL(updated[rowId]);
+      delete updated[rowId];
+      return updated;
+    });
+    setFormData((prev) => ({
+      ...prev,
+      configurations: prev.configurations.map((row) => (
+        row.id === rowId ? { ...row, image: next } : row
+      ))
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -861,6 +883,16 @@ function AdminProducts() {
                                     Upload
                                   </Button>
                                 </label>
+                                <TextField
+                                  size="small"
+                                  placeholder="or image URL"
+                                  value={isLikelyImageUrl(row.image) && !configurationImageFiles[row.id] ? row.image : ''}
+                                  onChange={(e) => handleConfigurationImageUrl(row.id, e.target.value)}
+                                  sx={{ mt: 0.75, minWidth: 140 }}
+                                  InputProps={{
+                                    startAdornment: <LinkIcon size={12} style={{ marginRight: 6, opacity: 0.6 }} />
+                                  }}
+                                />
                                 {(configurationImagePreviews[row.id] || row.image) && (
                                   <Box
                                     component="img"
@@ -882,7 +914,7 @@ function AdminProducts() {
                                 )}
                                 {(row.image || configurationImageFiles[row.id]) && (
                                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                                    {configurationImageFiles[row.id] ? 'New image selected' : 'Image uploaded'}
+                                    {configurationImageFiles[row.id] ? 'New image selected' : 'Image set'}
                                   </Typography>
                                 )}
                               </TableCell>
@@ -934,143 +966,17 @@ function AdminProducts() {
                 </Grid>
               )}
               <Grid item xs={12}>
-                <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-                  Product Images *
-                </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                  Upload one or more images. First image will be the main display image. Max width: 1024px, auto-compressed.
-                </Typography>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleImageFilesChange}
-                  style={{ display: 'none' }}
-                  id="product-image-upload"
+                <MultiImageSourceField
+                  images={formData.images || []}
+                  onImagesChange={(images) => setFormData({ ...formData, images, imagePath: images[0] || '' })}
+                  pendingFiles={imageFiles}
+                  onFilesChange={handleImageFilesChange}
+                  onRemovePendingFile={removeImageFile}
+                  uploading={uploadingImages}
                 />
-                <label htmlFor="product-image-upload">
-                  <Button
-                    component="span"
-                    variant="outlined"
-                    startIcon={<Upload size={18} />}
-                    sx={{ mb: 2 }}
-                  >
-                    Upload Images
-                  </Button>
-                </label>
-                
-                {/* Preview uploaded images */}
-                {formData.images && formData.images.length > 0 && (
-                  <Box sx={{ mt: 2, mb: 2 }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                      Uploaded Images:
-                    </Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                      {formData.images.map((url, index) => (
-                        <Box key={index} sx={{ position: 'relative' }}>
-                          <Box
-                            component="img"
-                            src={url}
-                            alt={`Product image ${index + 1}`}
-                            sx={{
-                              width: 80,
-                              height: 80,
-                              objectFit: 'cover',
-                              borderRadius: 1,
-                              border: '1px solid',
-                              borderColor: 'divider'
-                            }}
-                            onError={(e) => {
-                              e.target.src = '/images/placeholder.png';
-                            }}
-                          />
-                          {index === 0 && (
-                            <Chip
-                              label="Main"
-                              size="small"
-                              color="primary"
-                              sx={{
-                                position: 'absolute',
-                                top: -8,
-                                left: -8,
-                                fontSize: '10px',
-                                height: '20px'
-                              }}
-                            />
-                          )}
-                          <IconButton
-                            size="small"
-                            onClick={() => removeUploadedImage(index)}
-                            sx={{
-                              position: 'absolute',
-                              top: -8,
-                              right: -8,
-                              backgroundColor: 'error.main',
-                              color: 'white',
-                              width: 24,
-                              height: 24,
-                              '&:hover': {
-                                backgroundColor: 'error.dark'
-                              }
-                            }}
-                          >
-                            <X size={14} />
-                          </IconButton>
-                        </Box>
-                      ))}
-                    </Box>
-                  </Box>
-                )}
-                
-                {/* Preview new image files to upload */}
-                {imageFiles.length > 0 && (
-                  <Box sx={{ mt: 2, mb: 2 }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                      New Images to Upload:
-                    </Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                      {imageFiles.map((file, index) => (
-                        <Box key={index} sx={{ position: 'relative' }}>
-                          <Box
-                            component="img"
-                            src={URL.createObjectURL(file)}
-                            alt={`Preview ${index + 1}`}
-                            sx={{
-                              width: 80,
-                              height: 80,
-                              objectFit: 'cover',
-                              borderRadius: 1,
-                              border: '1px solid',
-                              borderColor: 'divider'
-                            }}
-                          />
-                          <IconButton
-                            size="small"
-                            onClick={() => removeImageFile(index)}
-                            sx={{
-                              position: 'absolute',
-                              top: -8,
-                              right: -8,
-                              backgroundColor: 'error.main',
-                              color: 'white',
-                              width: 24,
-                              height: 24,
-                              '&:hover': {
-                                backgroundColor: 'error.dark'
-                              }
-                            }}
-                          >
-                            <X size={14} />
-                          </IconButton>
-                        </Box>
-                      ))}
-                    </Box>
-                  </Box>
-                )}
-                
                 {(!formData.images || formData.images.length === 0) && imageFiles.length === 0 && (
                   <Typography variant="caption" color="error" sx={{ display: 'block', mt: 1 }}>
-                    At least one image is required
+                    At least one image is required (upload or URL)
                   </Typography>
                 )}
               </Grid>

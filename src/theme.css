@@ -1,30 +1,26 @@
 /**
  * Theme CSS Variables
- * Auto-generated from theme.js configuration
- * These are set dynamically in main.jsx
+ * Defaults match the Professional template; overridden at runtime from Firestore.
  */
 
 :root {
-  /* Font Family (loaded from Google Fonts) */
-  --font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  --font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
-  /* Colors */
-  --color-primary: #3B82F6;
-  --color-primary-hover: #2563EB;
-  --color-secondary: #10B981;
-  --color-background: #FFFFFF;
-  --color-surface: #F9FAFB;
-  --color-text: #1F2937;
-  --color-text-light: #6B7280;
-  --color-border: #E5E7EB;
-  --color-error: #EF4444;
-  --color-success: #10B981;
-  --color-warning: #F59E0B;
-  --color-info: #3B82F6;
-  --color-disabled: #D1D5DB;
-  --color-out-of-stock: #DC2626;
+  --color-primary: #0f766e;
+  --color-primary-hover: #115e59;
+  --color-secondary: #334155;
+  --color-background: #ffffff;
+  --color-surface: #f8fafc;
+  --color-text: #0f172a;
+  --color-text-light: #64748b;
+  --color-border: #e2e8f0;
+  --color-error: #dc2626;
+  --color-success: #059669;
+  --color-warning: #d97706;
+  --color-info: #0284c7;
+  --color-disabled: #cbd5e1;
+  --color-out-of-stock: #dc2626;
 
-  /* Spacing */
   --spacing-xs: 4px;
   --spacing-sm: 8px;
   --spacing-md: 16px;
@@ -32,19 +28,16 @@
   --spacing-xl: 32px;
   --spacing-xxl: 48px;
 
-  /* Border Radius */
-  --border-radius-sm: 4px;
-  --border-radius-md: 8px;
-  --border-radius-lg: 12px;
+  --border-radius-sm: 8px;
+  --border-radius-md: 12px;
+  --border-radius-lg: 16px;
   --border-radius-full: 9999px;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.07);
+  --shadow-lg: 0 12px 24px rgba(15, 23, 42, 0.09);
+  --shadow-xl: 0 20px 36px rgba(15, 23, 42, 0.11);
 
-  /* Typography */
   --font-size-xs: 12px;
   --font-size-sm: 14px;
   --font-size-base: 16px;
@@ -59,27 +52,16 @@
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
 
-  /* Z-index */
   --z-index-base: 1;
   --z-index-dropdown: 100;
   --z-index-sticky: 200;
   --z-index-modal: 300;
   --z-index-toast: 400;
 
-  /* Transitions */
   --transition-fast: 0.15s ease;
   --transition-base: 0.2s ease;
   --transition-slow: 0.3s ease;
-}
 
-/* Dark mode support (optional for future) */
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* Uncomment to enable dark mode */
-    /* --color-background: #1F2937;
-    --color-surface: #374151;
-    --color-text: #F9FAFB;
-    --color-text-light: #D1D5DB;
-    --color-border: #4B5563; */
-  }
+  --backdrop-filter: none;
+  --header-bg: color-mix(in srgb, var(--color-background) 88%, transparent);
 }

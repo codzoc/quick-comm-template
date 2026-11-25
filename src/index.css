@@ -12,19 +12,23 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-size-adjust: 100%;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
 }
 
 body {
   margin: 0;
-  font-family: var(--font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif);
+  font-family: var(--font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--color-background);
+  background-image: var(--page-atmosphere, radial-gradient(ellipse 80% 50% at 50% -10%, color-mix(in srgb, var(--color-primary) 8%, transparent), transparent 70%));
+  background-attachment: fixed;
+  background-size: cover;
   color: var(--color-text);
   line-height: 1.5;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 #root {
@@ -33,7 +37,6 @@ body {
   flex-direction: column;
 }
 
-/* Typography */
 h1,
 h2,
 h3,
@@ -42,18 +45,19 @@ h5,
 h6 {
   font-weight: var(--font-weight-semibold);
   line-height: 1.2;
+  letter-spacing: -0.02em;
 }
 
 a {
   color: var(--color-primary);
   text-decoration: none;
+  transition: color var(--transition-fast);
 }
 
 a:hover {
-  text-decoration: underline;
+  color: var(--color-primary-hover);
 }
 
-/* Form Elements */
 input,
 textarea,
 select,
@@ -74,20 +78,17 @@ select:focus {
   outline: none;
 }
 
-/* Images */
 img {
   max-width: 100%;
   height: auto;
   display: block;
 }
 
-/* Utilities */
 .container {
   max-width: 1280px;
   width: 100%;
   margin: 0 auto;
-  padding: 0 var(--spacing-lg);
-  min-width: 480px; /* Ensure container doesn't shrink below 480px */
+  padding: 0 var(--spacing-md);
 }
 
 .sr-only {
@@ -102,10 +103,9 @@ img {
   border-width: 0;
 }
 
-/* Scrollbar Styling */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -121,43 +121,17 @@ img {
   background: var(--color-text-light);
 }
 
-/* Selection */
 ::selection {
   background-color: var(--color-primary);
   color: white;
 }
 
-/* Responsive styles - only up to 480px */
-/* With viewport width=480:
- * - Browser never shrinks layout below 480px
- * - On screens < 480px: Browser automatically scales down (no CSS needed)
- * - On screens >= 480px: Normal responsive behavior
- * 
- * Do NOT write styles below 480px - browser handles scaling automatically
- */
-
-/* With viewport width=480, browser handles all scaling automatically */
-/* We just need to prevent horizontal scroll and ensure layout doesn't break */
-html {
-  overflow-x: hidden;
-  /* Ensure browser respects 480px minimum */
-  min-width: 480px;
+@media (min-width: 768px) {
+  .container {
+    padding: 0 var(--spacing-lg);
+  }
 }
 
-body {
-  overflow-x: hidden;
-  /* Ensure browser respects 480px minimum */
-  min-width: 480px;
-}
-
-#root {
-  /* Ensure root maintains minimum width */
-  min-width: 480px;
-}
-
-/* Responsive container adjustments */
-/* Note: With width=480 viewport, CSS always sees 480px viewport */
-/* So min-width queries compare against 480px */
 @media (min-width: 1024px) {
   .container {
     padding: 0 var(--spacing-xl);
@@ -165,7 +139,6 @@ body {
 }
 
 /* Material-UI Component Overrides */
-/* Force MUI components to use theme font-family */
 .MuiTypography-root,
 .MuiTableCell-root,
 .MuiButton-root,
@@ -179,7 +152,5 @@ body {
 .MuiDialogActions-root,
 .MuiFormLabel-root,
 .MuiSelect-root {
-  font-family: var(--font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif) !important;
+  font-family: var(--font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif) !important;
 }

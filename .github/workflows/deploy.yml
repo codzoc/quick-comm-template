@@ -432,11 +432,12 @@ jobs:
         env:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
-  # Deploy Functions - runs in parallel with other deployments
+  # Deploy Functions - opt-in so Spark/free stores stay safe.
+  # Enable later with repo variable DEPLOY_FUNCTIONS=true, or a manual workflow run with Skip deploy functions = false.
   deploy-functions:
     runs-on: ubuntu-latest
     needs: setup-firebase
-    if: always() && needs.setup-firebase.result == 'success'
+    if: always() && needs.setup-firebase.result == 'success' && ((github.event_name == 'workflow_dispatch' && inputs.skip_deploy_functions != true) || (github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_FUNCTIONS == 'true') || (github.event_name == 'pull_request' && vars.DEPLOY_FUNCTIONS == 'true'))
     
     steps:
       - name: Checkout code
@@ -472,15 +473,6 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Deploy Functions
-        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && !inputs.skip_deploy_functions)
-        uses: w9jds/firebase-action@master
-        with:
-          args: deploy --only functions --force --project ${{ steps.firebase-config.outputs.project_id }}
-        env:
-          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-
-      - name: Deploy Functions (Preview)
-        if: github.event_name == 'pull_request'
         uses: w9jds/firebase-action@master
         with:
           args: deploy --only functions --force --project ${{ steps.firebase-config.outputs.project_id }}

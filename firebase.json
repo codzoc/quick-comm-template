@@ -12,6 +12,10 @@
         "function": "createRazorpayOrder"
       },
       {
+        "source": "/api/stripe/create-checkout",
+        "function": "createStripeCheckout"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

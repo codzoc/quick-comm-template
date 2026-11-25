@@ -43,6 +43,9 @@ exports.onCustomerSignup = functions.firestore
 // Export Razorpay order creation
 exports.createRazorpayOrder = functions.https.onRequest(require('./handlers/createRazorpayOrder'));
 
+// Export Stripe Checkout session creation
+exports.createStripeCheckout = functions.https.onRequest(require('./handlers/createStripeCheckout'));
+
 // Export Refund Order function (Callable)
 exports.refundOrder = functions.https.onCall(require('./handlers/refundOrder'));
 

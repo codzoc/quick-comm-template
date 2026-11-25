@@ -28,30 +28,39 @@ export async function initiateStripePayment({
             throw new Error('Failed to load Stripe');
         }
 
-        // Create checkout session via your backend/cloud function
-        // For now, we'll redirect to Stripe Checkout with the order details
-        // In production, you should create a checkout session via your backend
+        const lineItems = (items || []).map((item) => ({
+            name: item.product?.title || item.title || 'Item',
+            quantity: item.quantity || 1,
+            amount: Math.round(Number(item.product?.discountedPrice || item.product?.price || item.price || 0) * 100)
+        }));
 
-        const response = await fetch('YOUR_CLOUD_FUNCTION_URL/createStripeCheckout', {
+        const response = await fetch('/api/stripe/create-checkout', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
                 orderId,
-                amount: Math.round(amount * 100), // Convert to cents
+                amount: Math.round(amount * 100),
                 currency: currency.toLowerCase(),
                 customerEmail,
                 customerName,
-                items,
+                items: lineItems,
                 successUrl,
                 cancelUrl
             })
         });
 
-        const session = await response.json();
+        if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({}));
+            throw new Error(errorBody.error || 'Stripe checkout is not available. Deploy Cloud Functions (Blaze) to enable card payments.');
+        }
 
-        // Redirect to Stripe Checkout
+        const session = await response.json();
+        if (!session.id) {
+            throw new Error(session.error || 'Stripe did not return a checkout session');
+        }
+
         const result = await stripe.redirectToCheckout({
             sessionId: session.id
         });

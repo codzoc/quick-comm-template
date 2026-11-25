@@ -19,7 +19,7 @@ import {
   AccordionSummary,
   AccordionDetails
 } from '@mui/material';
-import { Save, Upload, X, ChevronDown } from 'lucide-react';
+import { Save, ChevronDown } from 'lucide-react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { onAuthChange } from '../../services/auth';
@@ -33,6 +33,7 @@ import { getCurrencyCode } from '../../utils/currency';
 import AdminLayout from '../../components/AdminLayout';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ThemeCustomizer from '../../components/ThemeCustomizer';
+import ImageSourceField from '../../components/ImageSourceField';
 import PaymentSettings from './PaymentSettings';
 import './AdminStyles.css';
 
@@ -173,8 +174,7 @@ function AdminStoreSettings() {
     setStoreInfo({ ...storeInfo, [field]: value });
   };
 
-  const handleLogoUpload = async (e, type = 'logo') => {
-    const file = e.target.files[0];
+  const handleLogoUpload = async (file, type = 'logo') => {
     if (!file) return;
 
     try {
@@ -194,12 +194,10 @@ function AdminStoreSettings() {
       } else {
         setUploadingIcon(false);
       }
-      e.target.value = ''; // Reset input
     }
   };
 
-  const handleStaticPageImageUpload = async (e, pageType) => {
-    const file = e.target.files[0];
+  const handleStaticPageImageUpload = async (file, pageType) => {
     if (!file) return;
 
     try {
@@ -210,7 +208,6 @@ function AdminStoreSettings() {
       alert('Failed to upload image: ' + err.message);
     } finally {
       setUploadingPageImage({ ...uploadingPageImage, [pageType]: false });
-      e.target.value = ''; // Reset input
     }
   };
 
@@ -321,121 +318,27 @@ function AdminStoreSettings() {
                 placeholder="Our Products"
               />
 
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-                  Logo Image
-                </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                  Full logo image with store name. Max width: 512px, auto-compressed.
-                </Typography>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleLogoUpload(e, 'logo')}
-                  style={{ display: 'none' }}
-                  id="logo-upload"
-                  disabled={uploadingLogo}
-                />
-                <label htmlFor="logo-upload">
-                  <Button
-                    component="span"
-                    variant="outlined"
-                    startIcon={<Upload size={18} />}
-                    disabled={uploadingLogo}
-                    sx={{ mb: 1 }}
-                  >
-                    {uploadingLogo ? 'Uploading...' : 'Upload Logo'}
-                  </Button>
-                </label>
-                {storeInfo.logoUrl && (
-                  <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Box
-                      component="img"
-                      src={storeInfo.logoUrl}
-                      alt="Logo preview"
-                      sx={{
-                        maxHeight: 100,
-                        maxWidth: 300,
-                        objectFit: 'contain',
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        borderRadius: 1,
-                        p: 1
-                      }}
-                      onError={(e) => {
-                        e.target.src = '/images/placeholder.png';
-                      }}
-                    />
-                    <Button
-                      size="small"
-                      variant="text"
-                      color="error"
-                      startIcon={<X size={16} />}
-                      onClick={() => handleStoreInfoChange('logoUrl', '')}
-                    >
-                      Remove
-                    </Button>
-                  </Box>
-                )}
-              </Box>
+              <ImageSourceField
+                label="Logo Image"
+                helperText="Upload a file (max 512px, auto-compressed) or paste an image URL / /images/logo.png path."
+                value={storeInfo.logoUrl || ''}
+                onChange={(url) => handleStoreInfoChange('logoUrl', url)}
+                onFileSelected={(file) => handleLogoUpload(file, 'logo')}
+                uploading={uploadingLogo}
+                inputId="logo-upload"
+                previewSx={{ maxHeight: 100, maxWidth: 300 }}
+              />
 
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-                  Store Icon
-                </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                  Square icon/logo for favicon and header. Max width: 512px, auto-compressed.
-                </Typography>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleLogoUpload(e, 'icon')}
-                  style={{ display: 'none' }}
-                  id="icon-upload"
-                  disabled={uploadingIcon}
-                />
-                <label htmlFor="icon-upload">
-                  <Button
-                    component="span"
-                    variant="outlined"
-                    startIcon={<Upload size={18} />}
-                    disabled={uploadingIcon}
-                    sx={{ mb: 1 }}
-                  >
-                    {uploadingIcon ? 'Uploading...' : 'Upload Icon'}
-                  </Button>
-                </label>
-                {storeInfo.storeIcon && (
-                  <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Box
-                      component="img"
-                      src={storeInfo.storeIcon}
-                      alt="Icon preview"
-                      sx={{
-                        width: 64,
-                        height: 64,
-                        objectFit: 'contain',
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        borderRadius: 1,
-                        p: 1
-                      }}
-                      onError={(e) => {
-                        e.target.src = '/images/placeholder.png';
-                      }}
-                    />
-                    <Button
-                      size="small"
-                      variant="text"
-                      color="error"
-                      startIcon={<X size={16} />}
-                      onClick={() => handleStoreInfoChange('storeIcon', '')}
-                    >
-                      Remove
-                    </Button>
-                  </Box>
-                )}
-              </Box>
+              <ImageSourceField
+                label="Store Icon"
+                helperText="Square icon for favicon and header. Upload or paste a URL."
+                value={storeInfo.storeIcon || ''}
+                onChange={(url) => handleStoreInfoChange('storeIcon', url)}
+                onFileSelected={(file) => handleLogoUpload(file, 'icon')}
+                uploading={uploadingIcon}
+                inputId="icon-upload"
+                previewSx={{ width: 64, height: 64 }}
+              />
 
               <Divider sx={{ my: 3 }} />
 
@@ -548,7 +451,7 @@ function AdminStoreSettings() {
             </Typography>
 
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Choose a pre-designed theme template for your store. Each template includes a complete design system with colors, spacing, shadows, and typography.
+              Choose a storefront look: Professional, Flat, Minimal, Soft, Modern, Sharp, Glassmorphism, or Custom. Each template sets colors, spacing, shadows, and typography.
             </Typography>
 
             <FormControl fullWidth sx={{ mb: 2 }}>
@@ -667,60 +570,16 @@ function AdminStoreSettings() {
                   />
                 </div>
 
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-                    About Page Image (Optional)
-                  </Typography>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleStaticPageImageUpload(e, 'about')}
-                    style={{ display: 'none' }}
-                    id="about-image-upload"
-                    disabled={uploadingPageImage.about}
-                  />
-                  <label htmlFor="about-image-upload">
-                    <Button
-                      component="span"
-                      variant="outlined"
-                      startIcon={<Upload size={18} />}
-                      disabled={uploadingPageImage.about}
-                      sx={{ mb: 1 }}
-                    >
-                      {uploadingPageImage.about ? 'Uploading...' : 'Upload Image'}
-                    </Button>
-                  </label>
-                  {staticPages.about?.imagePath && (
-                    <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Box
-                        component="img"
-                        src={staticPages.about.imagePath}
-                        alt="About page preview"
-                        sx={{
-                          maxHeight: 200,
-                          maxWidth: 300,
-                          objectFit: 'contain',
-                          border: '1px solid',
-                          borderColor: 'divider',
-                          borderRadius: 1,
-                          p: 1
-                        }}
-                        onError={(e) => {
-                          e.target.src = '/images/placeholder.png';
-                        }}
-                      />
-                      <Button
-                        size="small"
-                        variant="text"
-                        color="error"
-                        startIcon={<X size={16} />}
-                        onClick={() => handlePageContentChange('about', 'imagePath', '')}
-                      >
-                        Remove
-                      </Button>
-                    </Box>
-                  )}
-                </Box>
+                <ImageSourceField
+                  label="About Page Image (Optional)"
+                  helperText="Upload a file or paste an image URL / /images/banner-about.jpg path."
+                  value={staticPages.about?.imagePath || ''}
+                  onChange={(url) => handlePageContentChange('about', 'imagePath', url)}
+                  onFileSelected={(file) => handleStaticPageImageUpload(file, 'about')}
+                  uploading={Boolean(uploadingPageImage.about)}
+                  inputId="about-image-upload"
+                  previewSx={{ maxHeight: 200, maxWidth: 300 }}
+                />
 
                 <Button
                   variant="contained"

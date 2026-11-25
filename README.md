@@ -1,30 +1,47 @@
 # Quick Commerce Template
 
-A simple, browser-only React + Firebase e-commerce template designed for non-coders. Set up your online store entirely through your browser - no terminal, no coding required!
+A browser-first React + Firebase store for non-coders. Launch with Cash on Delivery on the free Firebase plan, then turn on payments and emails later.
 
-## Quick Start Summary
+## Two tracks
 
-**5 Simple Steps to Launch Your Store:**
+### Track 1 — Free launch (Spark)
 
-1. **Create your repo**: Click "Use this template" → Create private repository
-2. **Set up Firebase**: Create Firebase project, enable Firestore, Authentication, and Hosting
-3. **Add secrets**: Copy 2 values to GitHub Secrets (`VITE_FIREBASE_CONFIG` and `FIREBASE_SERVICE_ACCOUNT`)
-4. **Create admin user**: Add your email/password in Firebase Console + Firestore admins collection
-5. **Deploy**: Run GitHub Actions workflow → Your store is live!
+Works with Firebase Hosting, Auth, Firestore, and COD. Images can be **uploaded** (Storage) or pasted as **URLs** / `/images/...` paths.
 
-**Helpful Tools:**
-- 🖼️ Built-in image upload with automatic compression and optimization
+1. Use this template → private repository
+2. Create a Firebase project: Firestore, Authentication (email/password), Hosting. Storage is optional if you only use image URLs.
+3. Add GitHub secrets: `VITE_FIREBASE_CONFIG` and `FIREBASE_SERVICE_ACCOUNT`
+4. Create an admin (Auth user + `admins/{email}` Firestore doc)
+5. Run **Deploy** with **Skip deploy functions = true** (default)
+
+### Track 2 — Upgrade later (Blaze + Functions)
+
+Needed for Stripe, Razorpay, refunds, and email notifications.
+
+1. Enable Cloud Billing on the Firebase/Google Cloud project
+2. Set GitHub Actions variable `DEPLOY_FUNCTIONS` to `true`, **or** re-run Deploy with **Skip deploy functions = false**
+3. Configure Stripe/Razorpay and Gmail SMTP in Admin → Settings
+4. Add payment webhook URLs from Firebase Functions
+
+The admin dashboard includes a setup checklist for store name, theme, first product, pricing, and COD.
 
 ### Copy/Paste Owner Checklist
 
-Use this while setting up your own copy of the template:
-
 - [ ] Repository created from template (private recommended)
-- [ ] Firebase project created with Firestore, Authentication, Storage, and Hosting enabled
+- [ ] Firebase project created with Firestore, Authentication, and Hosting (Storage if you will upload files)
 - [ ] GitHub secrets added: `VITE_FIREBASE_CONFIG` and `FIREBASE_SERVICE_ACCOUNT`
 - [ ] First admin added in Firebase Auth + `admins` Firestore collection
-- [ ] `Deploy` workflow run successfully from GitHub Actions
+- [ ] `Deploy` workflow run successfully (functions skipped for first launch)
 - [ ] Store opens at `https://YOUR-PROJECT-ID.web.app`
+
+### Optional local / AI helpers
+
+These are **not** required for the browser setup:
+
+- `npm run setup:env` — paste your Firebase web config to write a local `.env`, then `npm run dev`
+- [Firebase MCP](https://firebase.google.com/docs/ai-assistance/mcp-server) (`npx firebase-tools@latest mcp`) and `/firebase:init` if you use Cursor or another AI client
+
+Production deploys stay on GitHub Actions.
 
 ---
 
@@ -189,11 +206,12 @@ All images are automatically optimized for fast loading and stored securely in F
 - Enhanced dashboard with order statistics and low stock alerts
 - **Store settings** with tabbed interface:
   - **General**: Store name, **logo upload**, **store icon upload**, contact info, social media
-  - **Appearance**: Theme templates (Professional, Vibrant, Minimal, Elegant, Modern)
+  - **Appearance**: Theme templates (Professional, Flat, Minimal, Soft, Modern, Sharp, Glassmorphism, Custom)
   - **Pages**: WYSIWYG editor for About, Terms, Privacy pages with **image upload**
   - **SEO**: Meta title, description, keywords
   - **Pricing**: Currency symbol, tax percentage, shipping cost
-  - **Payment**: Configure payment methods (COD, Stripe, Razorpay) and email notifications
+  - **Payment**: Configure payment methods (COD, Stripe, Razorpay)
+  - Email SMTP is on the **General** tab; online payments/emails need Cloud Functions (Track 2)
 - Settings tab persistence via URL parameters
 - **Built-in image upload** with automatic compression (logos max 512px width)
 
@@ -267,7 +285,7 @@ All images are automatically optimized for fast loading and stored securely in F
 4. Enable "Email/Password"
 5. Click "Save"
 
-#### C. Enable Storage ⚠️ **REQUIRED for Image Uploads**
+#### C. Enable Storage (needed for file uploads; skip if you only use image URLs)
 1. Go to "Build" > "Storage"
 2. Click "Get Started"
 3. Click "Next" through the setup wizard
@@ -275,8 +293,8 @@ All images are automatically optimized for fast loading and stored securely in F
 5. Choose a location (same as Firestore recommended)
 6. Click "Done"
 
-**Important**: 
-- Storage is required for uploading product images, logos, and other assets
+**Important**:
+- Storage is required only if you upload files in the admin panel. Image URLs and `/images/...` paths work without Storage.
 - The security rules will be automatically deployed via GitHub Actions
 - Storage rules currently allow any authenticated user to upload (admin panel access is protected separately by Firestore rules)
 - For stricter security, you can grant the Storage service account "Cloud Datastore User" IAM role and update rules to use admin-only access (see troubleshooting section)
@@ -323,7 +341,7 @@ You only need **2 secrets** for the entire setup:
 
 **Example:**
 ```json
-{"apiKey":"AIzaSyA4P67skiUQu5MqHvN93cgHUKC63HS6zv8","authDomain":"snackspot-kochi.firebaseapp.com","projectId":"snackspot-kochi","storageBucket":"snackspot-kochi.firebasestorage.app","messagingSenderId":"1035236098674","appId":"1:1035236098674:web:ed56b3cc184aa8fa35b8eb","measurementId":"G-KBE2534FRQ"}
+{"apiKey":"YOUR_API_KEY","authDomain":"your-project.firebaseapp.com","projectId":"your-project-id","storageBucket":"your-project.firebasestorage.app","messagingSenderId":"123456789","appId":"1:123456789:web:abcdef","measurementId":"G-XXXXXXXXXX"}
 ```
 
 **Important**: The workflow validates this automatically and will show an actionable error in Actions logs if anything is missing.
@@ -409,7 +427,9 @@ The first deployment will automatically set up everything you need:
 4. Click "Run workflow" > "Run workflow" on the main branch
 5. Keep the default toggles for fastest first launch:
    - ✅ Skip template update = true (faster; no upstream sync)
-   - ✅ Skip deploy functions = true (payments/emails can be enabled later)
+   - ✅ Skip deploy functions = true (Spark-safe; payments/emails can be enabled later)
+   
+   Functions do **not** deploy on every push unless you set the repository variable `DEPLOY_FUNCTIONS=true`.
 6. Wait for the deployment to complete (usually faster for first launch)
 7. This will automatically:
    - Parse your `VITE_FIREBASE_CONFIG` secret
@@ -445,12 +465,10 @@ You can customize your store in two ways:
 - Social media links (Facebook, Instagram, YouTube)
 
 **Appearance Tab**:
-- Choose from 5 theme templates:
-  - Professional (Blue & Modern)
-  - Vibrant (Purple & Energetic)
-  - Minimal (Clean & Simple)
-  - Elegant (Dark & Sophisticated)
-  - Modern (Teal & Fresh)
+- Choose a theme template:
+  - Professional (Teal commerce, default)
+  - Flat, Minimal, Soft, Modern, Sharp, Glassmorphism
+  - Custom (full color/font editor)
 
 **Pages Tab**:
 - Use the **WYSIWYG editor** to format content with:
@@ -589,12 +607,12 @@ After merging to `main`, GitHub Actions will deploy to production:
        - **Add Configuration** adds a new row (new variant)
        - **Add Attribute** adds a new text attribute column
        - Duplicate variant combinations are blocked before save
-   - **Product Images**: 
-     - Click "Upload Images" to select one or more images
-     - Images are automatically compressed and resized (max 1024px width)
+   - **Product Images**:
+     - **Upload** files (auto-compressed, max 1024px) **or** paste image URLs / `/images/product.jpg` paths
      - First image is the main display image
      - Additional images appear in a gallery slider when customers click the product image
      - Preview images before saving
+     - Storage is optional if you only use URLs or files in `public/images/`
    - **Stock**: Available quantity (cart validates against this)
    - **SEO Tags** (optional): Comma-separated keywords for search
 4. Click "Save"
@@ -633,7 +651,7 @@ After merging to `main`, GitHub Actions will deploy to production:
    - Contact information (phone, WhatsApp)
    - Social media links (Facebook, Instagram, YouTube)
 3. **Appearance Tab**:
-   - Select theme template (Professional, Vibrant, Minimal, Elegant, Modern)
+   - Select theme template (Professional, Flat, Minimal, Soft, Modern, Sharp, Glassmorphism, Custom)
    - Click "Apply Theme Template" and page will refresh with new theme
 4. **Pages Tab**:
    - **WYSIWYG Editor** for rich text formatting
@@ -956,6 +974,7 @@ The GitHub Actions workflow automatically handles all Firebase deployments:
 3. Deploys Firestore security rules from [firestore.rules](firestore.rules)
 4. Deploys Firestore indexes from [firestore.indexes.json](firestore.indexes.json)
 5. Deploys the built site to Firebase Hosting (production)
+6. Deploys Cloud Functions only if the repository variable `DEPLOY_FUNCTIONS` is `true`
 
 ### On Every Pull Request
 1. Parses your `VITE_FIREBASE_CONFIG` secret and generates build configuration
@@ -1024,7 +1043,7 @@ Email notifications are sent for order confirmations and payment confirmations u
    - **Copy the 16-character password** (you'll need this in the admin panel)
 
 2. **Configure in Admin Panel**:
-   - Go to Admin Panel → **Settings** → **Payment** tab
+   - Go to Admin Panel → **Settings** → **General** tab
    - Scroll to **Email Configuration** section
    - Enter your **Store Name** (appears in email sender)
    - Enter your **Gmail Address**
@@ -1238,7 +1257,7 @@ In test mode, Razorpay provides test payment options:
 - Check that 2-Step Verification is enabled on your Google Account
 - Try generating a new App Password
 - Check Firebase Functions logs for errors
-- Verify email settings are saved in Admin Panel → Settings → Payment tab
+- Verify email settings are saved in Admin Panel → Settings → General tab
 - Ensure customer email is provided during checkout
 - Check that store owner email is configured (defaults to SMTP email)
 
@@ -1329,7 +1348,7 @@ The email system uses a modular design with shared components:
 
 **Email Configuration**:
 
-- Configure Gmail SMTP in Admin Panel → Settings → Payment tab
+- Configure Gmail SMTP in Admin Panel → Settings → General tab
 - Store owner email (for notifications) defaults to SMTP email
 - Can be customized in email settings if needed
 - All emails use the configured store name and branding
@@ -1348,9 +1367,8 @@ Payment processing requires Firebase Cloud Functions. The deployment is automati
 - Customer signup welcome email trigger (`onCustomerSignup`)
 
 **Deployment Steps**:
-1. Functions are automatically deployed when you push to `main` branch
-2. Or manually trigger via GitHub Actions → Deploy workflow
-3. Functions appear in Firebase Console → Functions tab
+1. Enable billing, then set repository variable `DEPLOY_FUNCTIONS=true` **or** run Deploy with **Skip deploy functions = false**
+2. Functions appear in Firebase Console → Functions tab
 
 **Monitoring Functions**:
 - View logs in Firebase Console → Functions → Logs
@@ -1481,15 +1499,12 @@ A: Yes! Guest checkout is available. Customers can optionally create an account 
 A: Yes! Configure custom domain in Firebase Hosting settings
 
 **Q: How much does it cost?**
-A: Free for small stores (Firebase free tier). GitHub and Firebase both have generous free tiers.
+A: The storefront, admin, COD, and image URLs work on Firebase Spark (free). Stripe, Razorpay, refunds, and email notifications need Cloud Functions on the Blaze plan. GitHub is free for private repos on typical usage.
 
 **Q: Where should I upload product images?**
-A: Use the built-in image upload feature in the admin panel (recommended):
-- Click "Upload Images" when adding/editing products
-- Images are automatically compressed and resized (max 1024px width)
-- Multiple images per product supported - first image is main, others appear in gallery slider
-- Images are stored in Firebase Storage - no external hosting needed
-- Legacy option: Upload to `/public/images/` and use paths like `/images/product.jpg` (still supported)
+A: Two options, both first-class in the admin panel:
+- **Upload**: stored in Firebase Storage, auto-compressed (max 1024px). Requires Storage.
+- **Image URL**: paste `https://…` or a path like `/images/product.jpg` (put files in `public/images/` if you use paths). Storage is not required.
 
 **Q: Should I compress my images?**
 A: Images are automatically compressed and optimized when uploaded through the admin panel. Product images are resized to max 1024px width, and logos to max 512px width. No manual compression needed!
@@ -1501,7 +1516,7 @@ A: Paste the Firebase config object directly from Firebase Console. The workflow
 A: Yes! Go to Admin Panel > Settings > Pricing tab and select your currency. It updates throughout the entire site.
 
 **Q: What theme templates are available?**
-A: Professional, Vibrant, Minimal, Elegant, and Modern. Change in Admin Panel > Settings > Appearance.
+A: Professional (default), Flat, Minimal, Soft, Modern, Sharp, Glassmorphism, and Custom. Change in Admin Panel > Settings > Appearance.
 
 **Q: Can customers save their information?**
 A: Yes! Customers have two options:

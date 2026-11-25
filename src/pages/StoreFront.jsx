@@ -8,7 +8,7 @@ import { getStoreInfo } from '../services/storeInfo';
 import { getPaymentSettings } from '../services/payment';
 import { signUpCustomer, loginCustomer, checkEmailExists } from '../services/customerAuth';
 import { getDefaultAddress, addAddress, getCustomerAddresses } from '../services/addresses';
-import { initiateRazorpayPayment, createRazorpayOrder } from '../services/paymentGateway';
+import { initiateRazorpayPayment, createRazorpayOrder, initiateStripePayment } from '../services/paymentGateway';
 import { functions } from '../config/firebase'; // Import functions instance
 import { httpsCallable } from 'firebase/functions'; // Import httpsCallable
 import { ShoppingBag } from 'lucide-react';
@@ -727,12 +727,25 @@ function StoreFront() {
           }
         }
       } else if (selectedPaymentMethod === 'stripe') {
-        // Stripe - Create order and redirect to Stripe Checkout
-        // Note: This requires a backend endpoint to create Stripe Checkout session
-        // Ensure cart stays open and checkout form is visible
-        setShowCheckout(true);
-        setCheckoutError('Stripe integration requires backend setup. Please use COD or Razorpay for now.');
-        setSubmitting(false);
+        const order = await createOrder(orderData);
+
+        try {
+          await initiateStripePayment({
+            publishableKey: paymentSettings.stripe.publishableKey,
+            orderId: order.id,
+            amount: getCartGrandTotal(),
+            currency: storeInfo?.currencyCode || 'INR',
+            customerEmail: customerInfo.email,
+            customerName: customerInfo.name,
+            items: cartItems,
+            successUrl: `${window.location.origin}/?checkout=success&orderId=${encodeURIComponent(order.id)}`,
+            cancelUrl: `${window.location.origin}/?checkout=cancel`
+          });
+        } catch (paymentErr) {
+          setShowCheckout(true);
+          setCheckoutError(paymentErr.message || 'Stripe checkout is not available. Deploy Cloud Functions to enable card payments, or use COD.');
+          setSubmitting(false);
+        }
       }
 
     } catch (err) {

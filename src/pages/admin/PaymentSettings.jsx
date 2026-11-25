@@ -86,6 +86,10 @@ function PaymentSettings() {
                 Configure payment gateways and email notifications for your store.
             </Typography>
 
+            <Alert severity="info" sx={{ mb: 3 }}>
+                COD works on the free Firebase plan. Stripe, Razorpay, refunds, and emails need Cloud Functions (Blaze billing). After enabling billing, set the GitHub Actions variable <strong>DEPLOY_FUNCTIONS</strong> to <code>true</code>, or run Deploy with <strong>Skip deploy functions = false</strong>.
+            </Alert>
+
             {success && <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess('')}>{success}</Alert>}
             {error && <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>{error}</Alert>}
 
